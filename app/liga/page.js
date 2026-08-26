@@ -6,17 +6,12 @@ import { initSchema, getSettings, getImportStatus, getTeamwerte, sql } from "@/l
 import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
-import { verlangeLiga } from "@/lib/auth";
+import { sitzung, verlangeLiga } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function Liga({ searchParams }) {
-  const store = await cookies();
-  const token = store.get("kb_token")?.value;
-  if (!token) redirect("/login");
-
-  const meinName = store.get("kb_name")?.value ?? null;
-  const meineUid = store.get("kb_uid")?.value ?? null;
+  const { token, nutzer, name: meinName, uid: meineUid } = await sitzung();
 
   const p = await searchParams;
   const leagueId = p.league;
@@ -44,14 +39,16 @@ export default async function Liga({ searchParams }) {
   await initSchema();
 
   const overview = await kbFetch(`/v4/leagues/${leagueId}/overview`, token);
-  await getSettings(leagueId);
+  await getSettings(leagueId, nutzer);
+  // Nur füllen, was leer ist – eine frühere Version hat hier bei jedem
+  // Aufruf überschrieben und damit jede manuelle Korrektur verworfen.
   await sql`
     UPDATE liga_settings
     SET startbudget = COALESCE(startbudget, ${overview.b}),
         stichtag    = COALESCE(stichtag, ${overview.dt})
-    WHERE league_id = ${leagueId}`;
+    WHERE league_id = ${leagueId} AND user_id = ${nutzer}`;
 
-  const settings = await getSettings(leagueId);
+  const settings = await getSettings(leagueId, nutzer);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const me = await kbFetch(`/v4/leagues/${leagueId}/me`, token);
   const status = await getImportStatus(leagueId);
@@ -118,6 +115,9 @@ export default async function Liga({ searchParams }) {
   const lueckeStd = feedStart && feedStart > stich ? (feedStart - stich) / 3_600_000 : 0;
   const lueckeTage = Math.round((lueckeStd / 24) * 10) / 10;
 
+  const kaderStand = (await sql`
+    SELECT MAX(stand) AS stand FROM kader WHERE league_id = ${leagueId}`)[0]?.stand ?? null;
+
   const twVeraltet = !tw.stand || Date.now() - new Date(tw.stand) > 6 * 3600_000;
 
   return (
@@ -133,10 +133,7 @@ export default async function Liga({ searchParams }) {
         <div className="kb-aktionen">
           {/* Formulare statt Links: ein GET, das Daten verändert, lässt sich
               von einer fremden Seite aus auslösen. */}
-          <Aktion pfad="import" leagueId={leagueId}>Aktualisieren</Aktion>
-          <Aktion pfad="teamwerte" leagueId={leagueId}>Teamwerte laden</Aktion>
-          <Aktion pfad="rekonstruieren" leagueId={leagueId}>Historie nachladen</Aktion>
-          <Aktion pfad="kader" leagueId={leagueId}>Kader laden</Aktion>
+          <Aktion pfad="aktualisieren" leagueId={leagueId}>Alles aktualisieren</Aktion>
           <a href={`/liga/markt?league=${leagueId}`} className="kb-btn">Markt</a>
           <a href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Einstellungen</a>
           <Link href="/liga" className="kb-btn">Liga wechseln</Link>
@@ -168,12 +165,16 @@ export default async function Liga({ searchParams }) {
           <span className="kb-label">Teamwerte</span>
           {tw.stand ? zeitpunkt(tw.stand) : "nie geladen"}
         </div>
+        <div>
+          <span className="kb-label">Kader</span>
+          {kaderStand ? zeitpunkt(kaderStand) : "nie geladen"}
+        </div>
       </div>
 
       {twVeraltet && (
         <div className="kb-hinweis kb-hinweis--warn">
           Teamwerte fehlen oder sind älter als 6 Stunden – Liquidität und Max-Gebot stimmen erst
-          nach einem Klick auf &quot;Teamwerte laden&quot;.
+          nach einem Klick auf &quot;Alles aktualisieren&quot;.
         </div>
       )}
 
@@ -183,7 +184,7 @@ export default async function Liga({ searchParams }) {
           <p>
             Zwischen Stichtag und Feed-Beginn fehlen {lueckeTage} Tage, die Kickbase nicht mehr
             ausliefert. Transfers aus diesem Zeitraum holt &quot;Historie nachladen&quot;
-            zurück{status.rekonFertig ? " – das ist erledigt" : " – das ist noch offen"}.
+            zurück{status.rekonFertig ? " – das ist erledigt" : " – das läuft bei „Alles aktualisieren“ mit, solange es nicht fertig ist"}.
             {" "}Strafen lassen sich dagegen nicht automatisch nachladen: Sie hängen an keinem
             Spieler und existieren nur im Feed.
           </p>

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, sql } from "@/lib/db";
+import { initSchema, getSettings, getKorrekturen, sql } from "@/lib/db";
 import { euro } from "@/lib/format";
 import { sitzung, verlangeLiga, istMitglied } from "@/lib/auth";
 
@@ -16,10 +16,14 @@ async function speichern(formData) {
   // Die Liga-ID kommt aus dem Formular und ist damit manipulierbar. Ohne
   // diese Prüfung könnte jeder Angemeldete die Einstellungen und
   // Korrekturen einer fremden Liga überschreiben.
-  const { token } = await sitzung();
+  const { token, nutzer } = await sitzung();
   if (!(await istMitglied(leagueId, token))) {
     throw new Error("Kein Zugriff auf diese Liga");
   }
+
+  // Geschrieben wird ausschließlich in die eigene Zeile. Vorher lag hier
+  // eine Zeile je Liga – wer speicherte, überschrieb sie allen Mitspielern.
+  await getSettings(leagueId, nutzer);
 
   await sql`
     UPDATE liga_settings SET
@@ -29,19 +33,21 @@ async function speichern(formData) {
       login_aktiv  = ${formData.get("login_aktiv") === "on"},
       login_start  = ${formData.get("login_start") || null},
       notiz        = ${formData.get("notiz") || null}
-    WHERE league_id = ${leagueId}`;
+    WHERE league_id = ${leagueId} AND user_id = ${nutzer}`;
 
   for (const [key, wert] of formData.entries()) {
     if (!key.startsWith("korr_")) continue;
     const manager = key.slice(5);
     const betrag = Number(wert) || 0;
     if (betrag === 0) {
-      await sql`DELETE FROM korrektur WHERE league_id = ${leagueId} AND manager = ${manager}`;
+      await sql`
+        DELETE FROM korrektur
+        WHERE league_id = ${leagueId} AND user_id = ${nutzer} AND manager = ${manager}`;
     } else {
       await sql`
-        INSERT INTO korrektur (league_id, manager, betrag)
-        VALUES (${leagueId}, ${manager}, ${betrag})
-        ON CONFLICT (league_id, manager) DO UPDATE SET betrag = ${betrag}`;
+        INSERT INTO korrektur (league_id, user_id, manager, betrag)
+        VALUES (${leagueId}, ${nutzer}, ${manager}, ${betrag})
+        ON CONFLICT (league_id, user_id, manager) DO UPDATE SET betrag = ${betrag}`;
     }
   }
 
@@ -50,7 +56,7 @@ async function speichern(formData) {
 }
 
 export default async function Einstellungen({ searchParams }) {
-  const { token } = await sitzung();
+  const { token, nutzer, uid } = await sitzung();
 
   const p = await searchParams;
   // Kein Fallback auf eine feste Liga-ID: ohne Parameter landete man sonst
@@ -60,14 +66,11 @@ export default async function Einstellungen({ searchParams }) {
   await verlangeLiga(leagueId, token);
 
   await initSchema();
-  const settings = await getSettings(leagueId);
+  const settings = await getSettings(leagueId, nutzer);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
 
-  const korrekturen = new Map(
-    (await sql`SELECT manager, betrag FROM korrektur WHERE league_id = ${leagueId}`)
-      .map((r) => [r.manager, Number(r.betrag)])
-  );
+  const korrekturen = await getKorrekturen(leagueId, nutzer);
 
   const datum = (d) => (d ? new Date(d).toISOString().slice(0, 16) : "");
   const tag = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
@@ -76,6 +79,17 @@ export default async function Einstellungen({ searchParams }) {
     <main className="kb-seite kb-seite--schmal">
       <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
       <h1 className="kb-titel" style={{ margin: "10px 0 20px" }}>Einstellungen · {ranking.ti}</h1>
+
+      <div className="kb-hinweis kb-hinweis--info">
+        Diese Einstellungen gehören <strong>dir</strong>. Mitspieler derselben Liga haben
+        ihre eigenen — was du hier änderst, ändert bei ihnen nichts.
+        {!uid && (
+          <>
+            {" "}Zugeordnet wirst du dabei über deinen Anzeigenamen; änderst du den in
+            Kickbase, fängst du hier mit einem frischen Satz Einstellungen an.
+          </>
+        )}
+      </div>
 
       <form action={speichern}>
         <input type="hidden" name="league" value={leagueId} />

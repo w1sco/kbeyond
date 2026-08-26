@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getKader, getTeamwerte, sql } from "@/lib/db";
+import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { holePoolGecached } from "@/lib/rekonstruktion";
 import { sitzung, verlangeLiga } from "@/lib/auth";
@@ -22,7 +22,7 @@ const SCHWELLEN = [
 ];
 
 export default async function Markt({ searchParams }) {
-  const { token } = await sitzung();
+  const { token, nutzer } = await sitzung();
 
   const p = await searchParams;
   if (!p.league) redirect("/liga");
@@ -31,13 +31,14 @@ export default async function Markt({ searchParams }) {
 
   await initSchema();
 
-  const settings = await getSettings(leagueId);
+  const settings = await getSettings(leagueId, nutzer);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const manager = (ranking.us ?? []).filter((m) => m.adm !== true);
 
   const konten = await berechneKonten(leagueId, manager, settings, null);
   const tw = await getTeamwerte(leagueId);
   const kader = await getKader(leagueId);
+  const besitz = await getBesitz(leagueId);
   const pool = await holePoolGecached(token);
 
   // Kaufkraft der Liga: Kontostände plus das erlaubte Minus (Teamwert ÷ 3)
@@ -47,9 +48,14 @@ export default async function Markt({ searchParams }) {
     return s + Math.floor((t?.teamwert ?? 0) / 3);
   }, 0);
 
-  // Frei = im Bundesliga-Pool, aber in keinem Kader der Liga
+  // Ein Spieler gilt als vergeben, wenn ihn ein gespeicherter Kader führt
+  // ODER sein letzter Transfer einen Käufer hatte. Die zweite Quelle braucht
+  // keinen API-Abruf und trägt auch dann, wenn die Kaderliste von Kickbase in
+  // einem Format kommt, das wir nicht auswerten können.
+  const vergeben = new Set([...kader.besetzt, ...besitz.besitzer.keys()]);
+
   const frei = pool.spieler
-    .filter((s) => !kader.besetzt.has(String(s.id)))
+    .filter((s) => !vergeben.has(String(s.id)))
     .map((s) => ({ ...s, marktwert: s.marktwert == null ? null : Number(s.marktwert) }));
 
   const ohneWert = frei.filter((s) => s.marktwert == null).length;
@@ -57,7 +63,9 @@ export default async function Markt({ searchParams }) {
   const gefiltert = frei.filter((s) => (s.marktwert ?? 0) >= schwelle);
   const summeFrei = gefiltert.reduce((s, x) => s + (x.marktwert ?? 0), 0);
 
-  const kaderLeer = kader.zeilen.length === 0;
+  const nurAusKader = [...kader.besetzt].filter((id) => !besitz.besitzer.has(id)).length;
+  const nurAusEvents = [...besitz.besitzer.keys()].filter((id) => !kader.besetzt.has(id)).length;
+  const quellenLeer = vergeben.size === 0;
   const verhaeltnis = summeFrei > 0 ? summeKonten / summeFrei : null;
 
   return (
@@ -79,11 +87,24 @@ export default async function Markt({ searchParams }) {
         </div>
       </header>
 
-      {kaderLeer && (
+      {quellenLeer && (
         <div className="kb-hinweis kb-hinweis--warn">
-          Es sind noch keine Kader gespeichert — deshalb gilt hier gerade{" "}
-          <strong>jeder</strong> Spieler als frei. Klick auf „Kader laden“, dann stimmt die
-          Rechnung.
+          Weder Kader noch Transfers sind gespeichert — deshalb gilt hier gerade{" "}
+          <strong>jeder</strong> Spieler als frei. Auf der Ligaseite „Alles aktualisieren“
+          klicken, dann stimmt die Rechnung.
+        </div>
+      )}
+
+      {!quellenLeer && kader.zeilen.length === 0 && (
+        <div className="kb-hinweis kb-hinweis--info">
+          Die Zuordnung stammt allein aus den Transfers ({besitz.besitzer.size} Spieler) —
+          gespeicherte Kader gibt es noch keine. Spieler, die seit dem Liga-Reset nie
+          gehandelt wurden, gelten dadurch fälschlich als frei. „Alles aktualisieren“ auf
+          der Ligaseite lädt die Kader nach; klappt das nicht, zeigt die{" "}
+          <Link href={`/manager?league=${leagueId}&uid=${manager[0]?.i ?? ""}`}>
+            Manager-Diagnose
+          </Link>{" "}
+          was Kickbase stattdessen liefert.
         </div>
       )}
 
@@ -99,6 +120,13 @@ export default async function Markt({ searchParams }) {
           <span className="kb-label">Freie Spieler</span>
           <strong>{gefiltert.length}</strong>
           <span className="kb-leise"> von {frei.length}</span>
+        </div>
+        <div>
+          <span className="kb-label">Vergeben</span>
+          {vergeben.size}
+          <span className="kb-leise">
+            {" "}({kader.besetzt.size} aus Kadern{nurAusEvents > 0 ? `, ${nurAusEvents} nur aus Transfers` : ""})
+          </span>
         </div>
         <div>
           <span className="kb-label">Marktwert davon</span>

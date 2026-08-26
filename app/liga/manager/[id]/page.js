@@ -4,16 +4,14 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getTeamwerte, getKader, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
-import { verlangeLiga } from "@/lib/auth";
+import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
 
 export const dynamic = "force-dynamic";
 
 export default async function ManagerSeite({ params, searchParams }) {
-  const store = await cookies();
-  const token = store.get("kb_token")?.value;
-  if (!token) redirect("/login");
+  const { token, nutzer, uid: meineUid, name: meinName } = await sitzung();
 
   const { id } = await params;
   const p = await searchParams;
@@ -23,7 +21,7 @@ export default async function ManagerSeite({ params, searchParams }) {
 
   await initSchema();
 
-  const settings = await getSettings(leagueId);
+  const settings = await getSettings(leagueId, nutzer);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const alle = (ranking.us ?? []).filter((m) => m.adm !== true);
   const manager = alle.find((m) => String(m.i) === String(id));
@@ -41,8 +39,6 @@ export default async function ManagerSeite({ params, searchParams }) {
     );
   }
 
-  const meineUid = store.get("kb_uid")?.value ?? null;
-  const meinName = store.get("kb_name")?.value ?? null;
   const binIch =
     (meineUid && String(manager.i) === meineUid) || (meinName && manager.n === meinName);
 
