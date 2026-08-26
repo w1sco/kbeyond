@@ -19,11 +19,17 @@ export default async function Liga({ searchParams }) {
   await initSchema();
 
   const overview = await kbFetch(`/v4/leagues/${leagueId}/overview`, token);
+
+  // Zeile anlegen, BEVOR wir sie aktualisieren
+  await getSettings(leagueId);
+
   await sql`
     UPDATE liga_settings
-    SET startbudget = COALESCE(startbudget, ${overview.b}),
-        stichtag    = COALESCE(stichtag, ${overview.dt})
+    SET startbudget = ${overview.b},
+        stichtag    = ${overview.dt}
     WHERE league_id = ${leagueId}`;
+
+  const settings = await getSettings(leagueId);
 
   const settings = await getSettings(leagueId);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
