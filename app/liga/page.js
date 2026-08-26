@@ -203,12 +203,12 @@ export default async function Liga({ searchParams }) {
         unsicher={lueckeStd > 0}
       />
 
-      <p style={S.legende}>
+            <p style={S.legende}>
         Spaltenüberschrift antippen zum Sortieren, nochmal für die Gegenrichtung. ·
-        {" "}<strong>Liquidität</strong> = freies Guthaben ·
-        {" "}<strong>Limit</strong> = erlaubtes Minus (ein Drittel des Teamwerts) ·
-        {" "}<strong>Max-Gebot</strong> = Liquidität + Limit, also der höchste Betrag, den
-        ein Manager ohne vorherigen Verkauf bieten kann.
+        {" "}<strong>Gesamtwert</strong> = Liquidität + Teamwert, das Gesamtvermögen ·
+        {" "}<strong>Max-Gebot</strong> = Liquidität + Limit, der höchste Betrag ohne
+        vorherigen Verkauf ·
+        {" "}<strong>Limit</strong> = erlaubtes Minus (ein Drittel des Teamwerts)
       </p>
     </main>
   );
