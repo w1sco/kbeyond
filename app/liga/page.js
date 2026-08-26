@@ -70,14 +70,8 @@ export default async function Liga({ searchParams }) {
           Prüfung, ob die Kontostand-Berechnung exakt stimmt.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8, maxWidth: 700 }}>
-          {spieler.map((m) => (
-            
-              key={m.i}
-              href={`/api/ich?name=${encodeURIComponent(m.n)}&league=${leagueId}`}
-              style={S.ligaCard}
-            >
-              {m.n}
-            </a>
+       {spieler.map((m) => (
+            <a key={m.i} href={`/api/ich?name=${encodeURIComponent(m.n)}&league=${leagueId}`} style={S.ligaCard}>{m.n}</a>
           ))}
         </div>
       </main>
