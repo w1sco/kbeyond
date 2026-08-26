@@ -260,6 +260,7 @@ app/
   login/page.js                    Client-Komponente, Login-Formular → /liga
   liga/page.js                     Hauptseite: Auswahl, Kalibrierung, Status, Datenlücke
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
+  liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
   liga/einstellungen/page.js       Server Action, Grundwerte + Korrekturen pro Manager
   api/auth/login/route.js          Token → httpOnly-Cookie (kb_token, kb_uid, kb_name)
   api/ich/route.js                 Manuelle Selbstzuordnung → Cookie kb_name
@@ -280,7 +281,8 @@ lib/
   rekonstruktion.js rekonstruiere(), holeSpielerPool()
   ledger.js         loginBonus(), berechneKonten() — das Herzstück
   teamwerte.js      ladeTeamwerte()
-  format.js         euro, zeitpunkt, vorZeit, restzeit, position, normalisiereSpieler
+  format.js         euro, euroKurz, prozent, zeitpunkt, vorZeit, restzeit, position,
+                    normalisiereSpieler, findeSpielerListe
 ```
 
 ---
@@ -317,15 +319,31 @@ Alle Seitenaufrufe lesen aus der Datenbank, nie live von Kickbase. Ausnahme sind
 
 ## Kennzahlen in der Tabelle
 
-- **Liquidität** = berechneter Kontostand
+- **Kontostand** = berechnetes Guthaben (früher „Liquidität" genannt)
 - **Teamwert** = aus `dashboard.tv`, muss separat geladen werden (ein Request je Manager)
+- **Spieler** = Kadergröße aus `dashboard.t`
 - **Limit** = Teamwert ÷ 3 = erlaubtes Minus
-- **Max-Gebot** = Liquidität + Limit = höchstes Gebot ohne vorherigen Verkauf
-- **Gesamtwert** = Liquidität + Teamwert = Gesamtvermögen
+- **Max-Gebot** = Kontostand + Limit = höchstes Gebot ohne vorherigen Verkauf
+- **Gesamtwert** = Kontostand + Teamwert = Gesamtvermögen
+- **Liquidität** = Kontostand ÷ Gesamtwert, also der flüssige Anteil des Vermögens.
+  Ohne geladenen Teamwert nicht aussagekräftig, steht dann auf „–".
+- **Anpassungen** = Strafen + manuelle Korrektur gebündelt. Die Aufschlüsselung steht in
+  der aufgeklappten Detailzeile und auf der Managerseite.
 
-Werte von Managern in einer Liga mit Datenlücke werden mit `~` und `ca.` gekennzeichnet, die eigene Zeile mit `exakt`.
+Werte von Managern in einer Liga mit Datenlücke werden mit `~` und `ca.` gekennzeichnet,
+die eigene Zeile mit `exakt`.
 
----
+Der Managername führt zur **Managerseite** (`/liga/manager/{id}?league={liga}`): Kennzahlen,
+die vollständige Kontorechnung Posten für Posten, der aktuelle Kader und alle Transfers mit
+Quelle (Feed oder rekonstruiert).
+
+### Der Kader-Endpoint
+
+`/v4/leagues/{id}/managers/{uid}/squad` wurde nie ausgewertet, nur roh gedumpt — welches
+Feld die Spielerliste trägt, ist unbelegt. `findeSpielerListe()` rät deshalb nicht, sondern
+sucht das erste Array, dessen Einträge nach Spielern aussehen (bekannte Kandidaten `it`,
+`pl`, `players` zuerst). Findet es nichts, zeigt die Managerseite einen Hinweis auf die
+Diagnose-Seite statt einer leeren Tabelle.
 
 ## Nächste Schritte
 

@@ -210,16 +210,20 @@ export default async function Liga({ searchParams }) {
         konten={JSON.parse(JSON.stringify(konten))}
         meineId={treffer.i}
         unsicher={lueckeStd > 0}
+        leagueId={leagueId}
       />
 
       <p className="kb-legende">
-        Spaltenüberschrift antippen zum Sortieren, nochmal für die Gegenrichtung. Auf dem Handy
-        zeigt die Tabelle nur Gesamtwert, Max-Gebot und Liquidität – das <strong>+</strong> vor
-        dem Namen klappt den Rest auf. ·
-        {" "}<strong>Gesamtwert</strong> = Liquidität + Teamwert, das Gesamtvermögen ·
-        {" "}<strong>Max-Gebot</strong> = Liquidität + Limit, der höchste Betrag ohne
+        Managernamen führen zur Managerseite mit Finanzen, Transfers und Kader.
+        Spaltenüberschrift antippen zum Sortieren, nochmal für die Gegenrichtung. Auf dem
+        Handy zeigt die Tabelle nur Gesamtwert, Max-Gebot und Kontostand – das{" "}
+        <strong>+</strong> vor dem Namen klappt den Rest auf. ·
+        {" "}<strong>Gesamtwert</strong> = Kontostand + Teamwert, das Gesamtvermögen ·
+        {" "}<strong>Max-Gebot</strong> = Kontostand + Limit, der höchste Betrag ohne
         vorherigen Verkauf ·
-        {" "}<strong>Limit</strong> = erlaubtes Minus (ein Drittel des Teamwerts)
+        {" "}<strong>Limit</strong> = erlaubtes Minus (ein Drittel des Teamwerts) ·
+        {" "}<strong>Liquidität</strong> = Anteil des Vermögens, der flüssig ist ·
+        {" "}<strong>Anpassungen</strong> = Strafen und manuelle Korrektur zusammen
       </p>
     </main>
   );

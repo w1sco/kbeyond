@@ -1,20 +1,31 @@
 "use client";
 import { Fragment, useState, useMemo } from "react";
-import { euro, euroKurz } from "@/lib/format";
+import Link from "next/link";
+import { euro, euroKurz, prozent } from "@/lib/format";
 
 // sek = Sekundärspalte: verschwindet auf schmalen Displays in die
-// Detailzeile. Sichtbar bleiben Gesamtwert, Max-Gebot und Liquidität –
+// Detailzeile. Sichtbar bleiben Gesamtwert, Max-Gebot und Kontostand –
 // die drei Zahlen, mit denen man Manager vergleicht.
 const SPALTEN = [
-  { key: "gesamtwert", label: "Gesamtwert", kurz: "Gesamt" },
-  { key: "maxGebot",   label: "Max-Gebot",  kurz: "Gebot" },
-  { key: "konto",      label: "Liquidität", kurz: "Liquid." },
-  { key: "teamwert",   label: "Teamwert",   sek: true },
-  { key: "limit",      label: "Limit (⅓)",  sek: true },
-  { key: "strafen",    label: "Strafen",    sek: true },
-  { key: "korrektur",  label: "Korrektur",  sek: true },
-  { key: "punkte",     label: "Punkte",     sek: true },
+  { key: "gesamtwert",   label: "Gesamtwert",  kurz: "Gesamt" },
+  { key: "maxGebot",     label: "Max-Gebot",   kurz: "Gebot" },
+  { key: "konto",        label: "Kontostand",  kurz: "Konto" },
+  { key: "quote",        label: "Liquidität",  sek: true },
+  { key: "teamwert",     label: "Teamwert",    sek: true },
+  { key: "kaderGroesse", label: "Spieler",     sek: true },
+  { key: "limit",        label: "Limit (⅓)",   sek: true },
+  { key: "anpassungen",  label: "Anpassungen", sek: true },
+  { key: "punkte",       label: "Punkte",      sek: true },
 ];
+
+// Nur in der aufgeklappten Detailzeile: die Aufschlüsselung der
+// gebündelten Anpassungen.
+const EXTRA = [
+  { key: "strafen",   label: "davon Strafen" },
+  { key: "korrektur", label: "davon Korrektur" },
+];
+
+const DETAIL = [...SPALTEN, ...EXTRA];
 
 // Geldbetrag in zwei Fassungen: lang für den Desktop, kurz fürs Handy.
 // Welche sichtbar ist, entscheidet allein CSS – kein zweiter Renderpfad.
@@ -27,13 +38,24 @@ function Geld({ wert }) {
   );
 }
 
-export default function Tabelle({ konten, meineId, unsicher }) {
+export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
   const [sortKey, setSortKey] = useState("gesamtwert");
   const [absteigend, setAbsteigend] = useState(true);
   const [offen, setOffen] = useState(() => new Set());
 
   const sortiert = useMemo(() => {
-    const kopie = konten.map((k) => ({ ...k, gesamtwert: k.konto + k.teamwert }));
+    const kopie = konten.map((k) => {
+      const gesamtwert = k.konto + k.teamwert;
+      return {
+        ...k,
+        gesamtwert,
+        // Strafen sind bereits negativ, die Korrektur kann beides sein.
+        anpassungen: k.strafen + k.korrektur,
+        // Anteil des Vermögens, der flüssig ist. Ohne Teamwert (noch nicht
+        // geladen) ist die Quote nicht aussagekräftig.
+        quote: k.teamwert > 0 ? k.konto / gesamtwert : null,
+      };
+    });
     kopie.sort((a, b) => {
       if (sortKey === "name") {
         return absteigend ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name);
@@ -80,18 +102,26 @@ export default function Tabelle({ konten, meineId, unsicher }) {
             <Geld wert={k.konto} />
           </span>
         );
+      case "quote":
+        return k.quote == null
+          ? <span className="kb-gedaempft">–</span>
+          : <span className={k.quote < 0 ? "kb-minus" : undefined}>{prozent(k.quote)}</span>;
       case "teamwert":
-        return k.teamwert > 0 ? (
-          <>
-            <Geld wert={k.teamwert} />
-            {k.kaderGroesse > 0 && <span className="kb-leise"> ({k.kaderGroesse})</span>}
-          </>
-        ) : "–";
+        return k.teamwert > 0 ? <Geld wert={k.teamwert} /> : "–";
+      case "kaderGroesse":
+        return k.kaderGroesse > 0 ? k.kaderGroesse : <span className="kb-gedaempft">–</span>;
       case "limit":
         return k.limit > 0 ? <span className="kb-gedaempft"><Geld wert={k.limit} /></span> : "–";
+      case "anpassungen":
+        return k.anpassungen !== 0 ? (
+          <span className={k.anpassungen < 0 ? "kb-minus" : "kb-korrwert"}>
+            <Geld wert={k.anpassungen} />
+            {k.anzStrafen > 0 && <span className="kb-leise"> ({k.anzStrafen})</span>}
+          </span>
+        ) : <span className="kb-gedaempft">–</span>;
       case "strafen":
-        return k.anzStrafen > 0 ? (
-          <span className={k.strafen < 0 ? "kb-minus" : undefined}>
+        return k.strafen !== 0 ? (
+          <span className="kb-minus">
             <Geld wert={k.strafen} /> ({k.anzStrafen})
           </span>
         ) : <span className="kb-gedaempft">–</span>;
@@ -180,7 +210,12 @@ export default function Tabelle({ konten, meineId, unsicher }) {
                         {aufgeklappt ? "−" : "+"}
                       </button>
                       <span className="kb-rang">{i + 1}</span>
-                      <strong className="kb-name">{k.name}</strong>
+                      <Link
+                        href={`/liga/manager/${k.id}?league=${leagueId}`}
+                        className="kb-managerlink kb-name"
+                      >
+                        {k.name}
+                      </Link>
                       {binIch && <span className="kb-marke kb-marke--exakt">exakt</span>}
                       {!binIch && unsicher && <span className="kb-marke kb-marke--circa">ca.</span>}
                     </td>
@@ -195,13 +230,19 @@ export default function Tabelle({ konten, meineId, unsicher }) {
                     <tr className={`kb-detailzeile ${zeilenKlasse}`}>
                       <td colSpan={SPALTEN.length + 1}>
                         <div className="kb-detailgitter">
-                          {SPALTEN.map((s) => (
+                          {DETAIL.map((s) => (
                             <div key={s.key}>
                               <span className="kb-label">{s.label}</span>
                               {wert(k, s.key)}
                             </div>
                           ))}
                         </div>
+                        <Link
+                          href={`/liga/manager/${k.id}?league=${leagueId}`}
+                          className="kb-btn kb-detailknopf"
+                        >
+                          Managerseite öffnen →
+                        </Link>
                       </td>
                     </tr>
                   )}

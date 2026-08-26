@@ -353,6 +353,20 @@ th.kb-namensspalte { z-index: 3; }
   font-size: 12px;
 }
 
+.kb-managerlink {
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.kb-managerlink:hover {
+  color: var(--kb-akzent);
+  border-bottom-color: var(--kb-akzent);
+}
+
+.kb-detailknopf { margin-top: 10px; width: 100%; }
+
 .kb-minus     { color: var(--kb-schlecht); }
 .kb-gedaempft { color: var(--kb-text-schwach); }
 .kb-korrwert  { color: var(--kb-korrektur); }
@@ -366,6 +380,33 @@ th.kb-namensspalte { z-index: 3; }
 
 .kb-marke--exakt { color: var(--kb-gut); }
 .kb-marke--circa { color: #ea580c; }
+
+/* Schmale Nebentabellen (Kader, Transfers): weniger Mindestbreite, sie
+   scrollen auf dem Handy lieber waagerecht als Spalten zu verstecken. */
+.kb-tabelle--schmal { min-width: 560px; }
+
+/* Schlichte Zwei-Spalten-Liste für Beträge (Finanzen, Strafen) */
+.kb-liste {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb-liste td {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--kb-rand);
+}
+
+.kb-liste td:last-child { text-align: right; white-space: nowrap; }
+.kb-liste tr:last-child td { border-bottom: none; }
+
+.kb-liste-summe td {
+  border-top: 2px solid var(--kb-rand-stark);
+  border-bottom: none;
+  padding-top: 10px;
+  font-weight: 650;
+}
 
 /* Aufklapp-Knopf und Detailzeile: nur auf schmalen Displays sichtbar */
 .kb-aufklapp,
@@ -484,7 +525,9 @@ th.kb-namensspalte { z-index: 3; }
 
   /* Die Namensspalte darf nicht die drei Geldspalten aus dem Bild
      drängen – langer Name wird abgeschnitten, nicht die Zahl. */
-  .kb-namensspalte { min-width: 0; padding-left: 8px; padding-right: 4px; position: static; }
+  .kb-namensspalte { min-width: 0; padding-left: 8px; padding-right: 4px; }
+  .kb-tabelle:not(.kb-tabelle--schmal) .kb-namensspalte { position: static; }
+  .kb-tabelle--schmal { font-size: 12px; }
 
   .kb-name {
     display: inline-block;
