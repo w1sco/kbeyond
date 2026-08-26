@@ -395,14 +395,14 @@ th.kb-namensspalte { z-index: 3; }
 
 /* Die Sortier-Chips sind sonst handyexklusiv – der Marktfilter braucht sie
    auf jeder Breite. */
-.kb-sortleiste--immer {
+.kb-sortleiste.kb-sortleiste--immer {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 14px;
 }
 
-.kb-sortleiste--immer .kb-sortchip {
+.kb-sortleiste.kb-sortleiste--immer .kb-sortchip {
   flex: 0 0 auto;
   font-size: 12px;
   padding: 7px 14px;
@@ -414,7 +414,7 @@ th.kb-namensspalte { z-index: 3; }
   cursor: pointer;
 }
 
-.kb-sortleiste--immer .kb-sortchip--aktiv {
+.kb-sortleiste.kb-sortleiste--immer .kb-sortchip--aktiv {
   background: var(--kb-akzent);
   border-color: var(--kb-akzent);
   color: #fff;
@@ -468,6 +468,55 @@ th.kb-namensspalte { z-index: 3; }
 .kb-kurz { display: none; }
 
 .kb-voll { display: inline; }
+
+/* ------------------------------------------------------------------
+   Frag die Liga
+   ------------------------------------------------------------------ */
+
+.kb-fragzeile { display: flex; gap: 8px; }
+
+.kb-zugang {
+  padding: 14px;
+  background: var(--kb-flaeche-leise);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius-klein);
+  margin-bottom: 14px;
+}
+
+.kb-textknopf {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--kb-akzent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.kb-fragzeile .kb-btn--stark { flex: 0 0 auto; padding: 9px 20px; }
+
+.kb-antwort {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--kb-flaeche-leise);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius-klein);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.kb-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 2px;
+  background: var(--kb-akzent);
+  vertical-align: text-bottom;
+  animation: kb-blinken 1s steps(2) infinite;
+}
+
+@keyframes kb-blinken { 50% { opacity: 0; } }
 
 /* ------------------------------------------------------------------
    Verkaufsrechner
@@ -748,6 +797,9 @@ th.kb-namensspalte { z-index: 3; }
   .kb-detailgitter .kb-kurz { display: none; }
 
   .kb-roh { max-height: 300px; font-size: 10px; }
+
+  .kb-fragzeile { flex-direction: column; }
+  .kb-fragzeile .kb-btn--stark { width: 100%; }
 
   /* --- Formulare: Label über Feld statt daneben --- */
   .kb-feld { flex-direction: column; gap: 6px; }

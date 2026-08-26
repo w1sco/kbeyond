@@ -213,6 +213,47 @@ In `app/liga/page.js` werden `startbudget` und `stichtag` mit `COALESCE` vorbele
 
 ---
 
+## Frag die Liga
+
+Auf der Ligaseite lassen sich Fragen zum Datensatz stellen („Wen muss X verkaufen, um aus
+dem Minus zu kommen?"). Drei Anbieter stehen zur Wahl: Claude, ChatGPT, Gemini.
+
+### Jeder zahlt selbst
+
+**Der Server hat keinen eigenen API-Schlüssel.** Jeder Nutzer trägt seinen eigenen ein, er
+liegt im `localStorage` des Browsers und wird bei jeder Frage mitgeschickt, einmal benutzt
+und weder gespeichert noch protokolliert. Damit laufen die Kosten über den Zugang des
+Fragenden und nicht über den Betreiber.
+
+Ein serverseitiger Schlüssel als Rückfallebene wäre bequem und wurde bewusst nicht gebaut —
+er würde genau die Kosten zurückholen, die hier vermieden werden sollen.
+
+### Modellnamen werden erfragt, nicht geraten
+
+`/api/modelle` fragt beim Anbieter, welche Modelle der Schlüssel benutzen darf. Eine fest
+verdrahtete Liste wäre in wenigen Monaten falsch. Nur für Claude gibt es eine Vorauswahl
+(`claude-opus-5`), sonst steht der erste Treffer der Liste.
+
+### Der Datensatz
+
+`baueSchnappschuss()` erzeugt Text, keine JSON-Struktur: kompakter, und das Modell muss
+nichts entpacken. Enthalten sind alle Manager mit ihren Kennzahlen, die Kader und die 80
+wertvollsten freien Spieler — der lange Schwanz billiger Ergänzungsspieler bringt für
+Fragen nichts und kostet nur Kontext.
+
+Bei Claude steht der Datensatz in einem eigenen `system`-Block mit `cache_control`: die
+erste Frage zahlt ihn, jede weitere liest ihn zum Bruchteil. Deshalb steht die wechselnde
+Frage in der Nachricht und nicht im System-Teil — sonst wäre der Zwischenspeicher bei jeder
+Frage hinfällig.
+
+### Namen sind Daten, keine Anweisungen
+
+Manager- und Spielernamen stammen von Kickbase-Nutzern. Sie stehen zwischen klaren
+Markierungen, und die Anweisung sagt ausdrücklich, dass Text, der wie eine Anweisung
+aussieht, als Name zu behandeln ist.
+
+---
+
 ## Zugriffsschutz
 
 Die Datenbank ist für **alle** Nutzer dieselbe: Events, Einstellungen und Korrekturen
@@ -292,6 +333,10 @@ app/
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
   liga/markt/page.js               Markt: freie Spieler, Kaufkraft der Liga
   liga/markt/Freieliste.jsx        "use client" — sortier- und durchsuchbar
+  liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
+  api/frag/route.js                Frage → Antwortstrom
+  api/modelle/route.js             Modellliste beim Anbieter erfragen
+  api/aktualisieren/route.js       Feed, Teamwerte, Kader, Historie in einem Lauf
   _diagnose/Endpunkte.jsx          gemeinsamer Baustein der Diagnose-Seiten
   api/kader/route.js               Kader aller Manager laden
   liga/einstellungen/page.js       Server Action, Grundwerte + Korrekturen pro Manager
@@ -312,9 +357,11 @@ lib/
   db.js             sql, initSchema, getSettings, logImport, getImportStatus, getTeamwerte
   importer.js       importiere() — Feed, Batch-Insert via UNNEST
   rekonstruktion.js rekonstruiere(), holeSpielerPool()
+  anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi() — Zugriffsschutz
   kader.js          ladeKader() — Kader je Manager
   ledger.js         loginBonus(), berechneKonten() — das Herzstück
+  schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
   format.js         euro, euroKurz, prozent, zeitpunkt, vorZeit, restzeit, position,
                     normalisiereSpieler, findeSpielerListe
@@ -397,18 +444,18 @@ Diagnose-Seite statt einer leeren Tabelle.
 
 ## Nächste Schritte
 
-**Erledigt:** Mobile Responsiveness, Startseite, Managerseite mit Verkaufsrechner,
-Marktseite, Zugriffsschutz, Diagnose-Seiten auf Klassen umgestellt.
+**Erledigt:** Mobile Responsiveness, Managerseite mit Verkaufsrechner, Marktseite,
+Zugriffsschutz, persönliche Einstellungen je Nutzer, ein gebündelter Aktualisieren-Knopf,
+Frag-die-Liga mit drei Anbietern.
 
-1. **Nach dem ersten Spieltag den Punkte-Bonus verifizieren.** 10.000 €/Punkt ist bis heute
-   unbewiesen. Die Kalibrierung zeigt sofort, ob es stimmt.
-2. **Dunkelmodus.** Jetzt möglich, weil alle Seiten über Tokens laufen: ein zweiter Block
-   mit den Dunkelwerten in `globals.css`.
+1. **Punkte-Bonus nach dem ersten Spieltag verifizieren.** Bis dahin ist `sp` überall 0 und
+   der Posten trägt nichts bei — die Annahme 10.000 €/Punkt ist weiter unbewiesen.
+2. **Dunkelmodus.** Alle Seiten laufen über Tokens, es fehlt nur ein zweiter Block mit den
+   Dunkelwerten in `globals.css`.
 3. **Admin-Filter zur Einstellung machen.** `m.adm !== true` ist hart verdrahtet.
 4. **`markt/page.js` (der alte Transfermarkt) überarbeiten** — nicht zu verwechseln mit
-   `/liga/markt`. Zeigt die aktuellen Angebote, ist seit früh unangetastet.
-5. **Bietrechner:** wer kann bei welchem Spieler überhaupt mitbieten — die Zahlen dafür
-   (Max-Gebot je Manager, freie Spieler) stehen inzwischen alle bereit.
+   `/liga/markt`.
+5. **Bietrechner:** wer kann bei welchem Spieler mitbieten — alle Zahlen dafür stehen bereit.
 
 ## Arbeitsweise
 

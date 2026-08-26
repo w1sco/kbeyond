@@ -6,6 +6,7 @@ import { initSchema, getSettings, getImportStatus, getTeamwerte, sql } from "@/l
 import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
+import Frag from "./Frag";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -258,6 +259,8 @@ export default async function Liga({ searchParams }) {
           </div>
         )}
       </div>
+
+      <Frag leagueId={leagueId} />
 
       <Tabelle
         konten={JSON.parse(JSON.stringify(konten))}
