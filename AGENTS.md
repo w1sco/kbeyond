@@ -174,6 +174,16 @@ function loginBonus(tage) {
 
 Belegt durch: Liga 1 zeigte bei `day: 13` genau 20.000 €, Liga 2 bei `day: 13` volle 100.000 €. Gleicher Streak-Tag, unterschiedliche Beträge, weil die Resets unterschiedlich lange her waren.
 
+### Gezählt werden Mitternachte, keine 24-Stunden-Blöcke
+
+Die Gutschrift kommt um **0:00 Uhr für den neuen Tag**. Maßgeblich sind also Kalendertage
+in deutscher Zeit, nicht die seit dem Startzeitpunkt verstrichene Zeit.
+
+Eine frühere Fassung rechnete `floor((jetzt − referenz) / 24 h)`. Damit sprang der Zähler
+zur Uhrzeit des Startpunkts: Bei einem Reset um 00:48 wechselte er täglich um 00:48, und
+zwischen 0:00 und 0:48 stand die Rechnung einen ganzen Tag — im konstanten Bereich also
+100.000 € — daneben. `tageSeit()` in `lib/format.js` zählt jetzt Mitternachte.
+
 ### Timing-Falle
 
 Der Bonus wird um 0:00 Uhr gutgeschrieben. Lag der Liga-Reset später am selben Tag (Beispiel: 0:48), verfiel die Gutschrift für Nutzer, die vor dem Reset in der App waren. Diese Nutzer liegen dauerhaft **einen Tag** hinter der Staffelung zurück — im konstanten Bereich sind das genau 100.000 €, die sich nie mehr aufholen.
