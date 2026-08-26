@@ -19,7 +19,6 @@ export default async function Liga({ searchParams }) {
   const p = await searchParams;
   const leagueId = p.league;
 
-  // Ohne Liga-Parameter: Auswahl anzeigen
   if (!leagueId) {
     const ligen = await kbFetch("/v4/leagues/selection", token);
     return (
@@ -57,13 +56,11 @@ export default async function Liga({ searchParams }) {
 
   const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
 
-  // Wer bin ich? Erst über UID, dann über Cookie-Name
   const treffer =
     (meineUid && spieler.find((m) => String(m.i) === meineUid)) ||
     (meinName && spieler.find((m) => m.n === meinName)) ||
     null;
 
-  // Nicht zuzuordnen -> einmalig selbst auswählen
   if (!treffer) {
     return (
       <main style={S.main}>
