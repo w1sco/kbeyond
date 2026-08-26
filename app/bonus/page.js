@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { sql, initSchema } from "@/lib/db";
-import { euro } from "@/lib/format";
+import { euro, zeitpunkt } from "@/lib/format";
+import { DiagnoseKopf, LigaFehlt } from "../_diagnose/Endpunkte";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function BonusDiag({ searchParams }) {
   if (!token) redirect("/login");
 
   const p = await searchParams;
-  const leagueId = p.league ?? "6423644";
+  if (!p.league) return <LigaFehlt titel="Login-Bonus" />;
 
   await initSchema();
 
@@ -19,52 +20,58 @@ export default async function BonusDiag({ searchParams }) {
            (raw->>'day')::int AS tag,
            (raw->>'bn')::bigint AS betrag
     FROM events
-    WHERE league_id = ${leagueId} AND type = 22 AND raw ? 'bn'
+    WHERE league_id = ${p.league} AND type = 22 AND raw ? 'bn'
     ORDER BY dt ASC`;
 
-  const summe = zeilen.reduce((s, z) => s + Number(z.betrag), 0);
+  // Laufende Summe statt für jede Zeile neu aufzuaddieren
+  let kumuliert = 0;
+  const mitSumme = zeilen.map((z) => {
+    kumuliert += Number(z.betrag);
+    return { ...z, kumuliert };
+  });
 
   return (
-    <main style={{ maxWidth: 700, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" }}>
-      <h1 style={{ fontSize: 20 }}>Login-Bonus · Liga {leagueId}</h1>
-      <p style={{ color: "#64748b", fontSize: 13 }}>
-        {zeilen.length} Gutschriften · Summe {euro(summe)}
-      </p>
+    <main className="kb-seite kb-seite--schmal">
+      <DiagnoseKopf
+        titel="Login-Bonus"
+        unter={`Liga ${p.league} · ${zeilen.length} Gutschriften · Summe ${euro(kumuliert)}`}
+        leagueId={p.league}
+      />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginTop: 16 }}>
-        <thead>
-          <tr>
-            <th style={th}>#</th>
-            <th style={th}>Datum</th>
-            <th style={thR}>Streak-Tag</th>
-            <th style={thR}>Betrag</th>
-            <th style={thR}>kumuliert</th>
-          </tr>
-        </thead>
-        <tbody>
-          {zeilen.map((z, i) => {
-            const kum = zeilen.slice(0, i + 1).reduce((s, x) => s + Number(x.betrag), 0);
-            return (
-              <tr key={i}>
-                <td style={td}>{i + 1}</td>
-                <td style={td}>
-                  {new Date(z.dt).toLocaleString("de-DE", {
-                    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-                  })}
-                </td>
-                <td style={tdR}>{z.tag ?? "–"}</td>
-                <td style={tdR}>{euro(Number(z.betrag))}</td>
-                <td style={{ ...tdR, color: "#94a3b8" }}>{euro(kum)}</td>
+      <div className="kb-hinweis kb-hinweis--info">
+        Der <strong>Streak-Tag</strong> zählt kontoweit über alle Ligen, der <strong>Betrag</strong>
+        {" "}folgt einer ligaeigenen Staffelung ab dem Liga-Reset. Gleicher Tag kann deshalb in
+        zwei Ligen unterschiedlich viel Geld bedeuten.
+      </div>
+
+      {zeilen.length === 0 ? (
+        <p className="kb-info">Keine Bonus-Events gespeichert. Sie kommen nachts — das Feed-Fenster endet oft davor.</p>
+      ) : (
+        <div className="kb-tabellenrahmen">
+          <table className="kb-tabelle kb-tabelle--schmal">
+            <thead>
+              <tr>
+                <th className="kb-namensspalte">#</th>
+                <th>Datum</th>
+                <th>Streak-Tag</th>
+                <th>Betrag</th>
+                <th>kumuliert</th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {mitSumme.map((z, i) => (
+                <tr key={i} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
+                  <td className="kb-namensspalte">{i + 1}</td>
+                  <td>{zeitpunkt(z.dt)}</td>
+                  <td>{z.tag ?? "–"}</td>
+                  <td>{euro(Number(z.betrag))}</td>
+                  <td className="kb-gedaempft">{euro(z.kumuliert)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }
-
-const th = { textAlign: "left", padding: "7px 9px", borderBottom: "2px solid #e2e8f0", fontSize: 11, textTransform: "uppercase", color: "#64748b" };
-const thR = { ...th, textAlign: "right" };
-const td = { padding: "7px 9px", borderBottom: "1px solid #f1f5f9" };
-const tdR = { ...td, textAlign: "right" };

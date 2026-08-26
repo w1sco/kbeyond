@@ -1,9 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { kbFetch } from "@/lib/kickbase";
+import { probiere, DiagnoseKopf, Ergebnisse, LigaFehlt } from "../_diagnose/Endpunkte";
 
 export const dynamic = "force-dynamic";
 
+// Die meisten dieser Pfade sind belegt NICHT vorhanden (404/405/500) und
+// stehen hier als Nachweis: es gibt keinen Endpoint für Kontobewegungen
+// pro Manager. Nicht nochmal suchen, siehe AGENTS.md.
 const KANDIDATEN = (lid, uid) => [
   `/v4/leagues/${lid}/managers/${uid}/dashboard`,
   `/v4/leagues/${lid}/managers/${uid}/squad`,
@@ -26,56 +29,32 @@ export default async function ManagerDiag({ searchParams }) {
   if (!token) redirect("/login");
 
   const p = await searchParams;
-  const leagueId = p.league ?? "1762865";
-  const uid = p.uid ?? "1181911"; // Standard: deine eigene ID
-
-  const ergebnisse = [];
-  for (const pfad of KANDIDATEN(leagueId, uid)) {
-    try {
-      const daten = await kbFetch(pfad, token);
-      const text = JSON.stringify(daten);
-      ergebnisse.push({
-        pfad,
-        ok: true,
-        groesse: text.length,
-        // Hinweise auf Geldbewegungen
-        hatAmt: text.includes('"amt"'),
-        hatTrp: text.includes('"trp"'),
-        hatBn: text.includes('"bn"'),
-        vorschau: text.slice(0, 1500),
-      });
-    } catch (e) {
-      ergebnisse.push({ pfad, ok: false, fehler: e.message });
-    }
+  if (!p.league) return <LigaFehlt titel="Manager-Diagnose" />;
+  if (!p.uid) {
+    return (
+      <main className="kb-seite kb-seite--schmal">
+        <DiagnoseKopf titel="Manager-Diagnose" leagueId={p.league} />
+        <div className="kb-hinweis kb-hinweis--warn">
+          Diese Seite braucht zusätzlich eine Manager-ID: <code>?league={p.league}&amp;uid=…</code>
+        </div>
+      </main>
+    );
   }
 
-  const treffer = ergebnisse.filter((r) => r.ok);
+  const ergebnisse = await probiere(KANDIDATEN(p.league, p.uid), token);
 
   return (
-    <main style={{ padding: 24, fontFamily: "system-ui, sans-serif", maxWidth: 1000, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 20 }}>Manager-Diagnose</h1>
-      <p style={{ fontSize: 13, color: "#64748b" }}>
-        Liga {leagueId} · Manager-ID {uid} · {treffer.length} von {ergebnisse.length} Endpoints erreichbar
-      </p>
-      <p style={{ fontSize: 12, color: "#64748b" }}>
-        Gesucht: ein Endpoint mit Kontobewegungen (Feld <code>amt</code>) über den Feed-Zeitraum hinaus.
-      </p>
-
-      {ergebnisse.map((r) => (
-        <section key={r.pfad} style={{ marginTop: 18 }}>
-          <h2 style={{ fontSize: 13, fontFamily: "monospace" }}>
-            {r.pfad} → {r.ok ? `OK · ${r.groesse} Zeichen` : r.fehler}
-            {r.ok && r.hatAmt && <span style={{ color: "#16a34a" }}> · enthält amt</span>}
-            {r.ok && r.hatTrp && <span style={{ color: "#2563eb" }}> · enthält trp</span>}
-            {r.ok && r.hatBn && <span style={{ color: "#7c3aed" }}> · enthält bn</span>}
-          </h2>
-          {r.ok && (
-            <pre style={{ background: "#f8fafc", padding: 12, borderRadius: 8, fontSize: 11, overflowX: "auto", maxHeight: 240 }}>
-              {r.vorschau}
-            </pre>
-          )}
-        </section>
-      ))}
+    <main className="kb-seite">
+      <DiagnoseKopf
+        titel="Manager-Diagnose"
+        unter={`Liga ${p.league} · Manager-ID ${p.uid}`}
+        leagueId={p.league}
+      />
+      <div className="kb-hinweis kb-hinweis--info">
+        Die meisten dieser Pfade sind belegt nicht vorhanden. Sie stehen hier als Nachweis,
+        dass es keinen Endpoint für Kontobewegungen pro Manager gibt.
+      </div>
+      <Ergebnisse ergebnisse={ergebnisse} />
     </main>
   );
 }

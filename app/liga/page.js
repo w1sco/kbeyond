@@ -86,7 +86,9 @@ export default async function Liga({ searchParams }) {
   for (const k of konten) {
     const t = tw.map.get(String(k.id));
     k.teamwert = t?.teamwert ?? 0;
-    k.kaderGroesse = t?.spieler ?? 0;
+    // Kadergröße = Käufe − Verkäufe. dashboard.t ist NICHT die Kadergröße,
+    // sondern die Zahl aller Transfers – daher die unplausiblen 48.
+    k.kaderGroesse = k.anzKauf - k.anzVerkauf;
     k.limit = Math.floor(k.teamwert / 3);
     k.maxGebot = k.konto + k.limit;
   }

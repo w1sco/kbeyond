@@ -417,6 +417,41 @@ th.kb-namensspalte { z-index: 3; }
 .kb-voll { display: inline; }
 
 /* ------------------------------------------------------------------
+   Diagnose-Seiten
+   ------------------------------------------------------------------ */
+
+.kb-pfad {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 0 12px;
+  word-break: break-all;
+  color: var(--kb-text-leise);
+}
+
+.kb-roh {
+  background: var(--kb-flaeche-leise);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius-klein);
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-x: auto;
+  max-height: 420px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kb-pfadliste {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.kb-pfadliste code { font-size: 12px; word-break: break-all; }
+
+/* ------------------------------------------------------------------
    Formulare
    ------------------------------------------------------------------ */
 
@@ -614,6 +649,8 @@ th.kb-namensspalte { z-index: 3; }
      Zeile rundet, hier braucht man den genauen Wert. */
   .kb-detailgitter .kb-voll { display: inline; }
   .kb-detailgitter .kb-kurz { display: none; }
+
+  .kb-roh { max-height: 300px; font-size: 10px; }
 
   /* --- Formulare: Label über Feld statt daneben --- */
   .kb-feld { flex-direction: column; gap: 6px; }

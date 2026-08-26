@@ -1,97 +1,100 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { sql, initSchema } from "@/lib/db";
-import { euro } from "@/lib/format";
+import { euro, zeitpunkt } from "@/lib/format";
+import { DiagnoseKopf, LigaFehlt } from "../_diagnose/Endpunkte";
 
 export const dynamic = "force-dynamic";
+
+function Transfertabelle({ zeilen }) {
+  return (
+    <div className="kb-tabellenrahmen">
+      <table className="kb-tabelle kb-tabelle--schmal">
+        <thead>
+          <tr>
+            <th className="kb-namensspalte">Spieler</th>
+            <th>Käufer</th>
+            <th>Verkäufer</th>
+            <th>Preis</th>
+            <th>Datum</th>
+          </tr>
+        </thead>
+        <tbody>
+          {zeilen.map((r, i) => (
+            <tr key={r.id ?? i} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
+              <td className="kb-namensspalte">
+                {r.player_name} <span className="kb-leise">#{r.player_id}</span>
+              </td>
+              <td>{r.buyer ?? <span className="kb-gedaempft">Kickbase</span>}</td>
+              <td>{r.seller ?? <span className="kb-gedaempft">Kickbase</span>}</td>
+              <td>{euro(Number(r.price))}</td>
+              <td>{zeitpunkt(r.dt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default async function RK({ searchParams }) {
   const token = (await cookies()).get("kb_token")?.value;
   if (!token) redirect("/login");
 
   const p = await searchParams;
-  const leagueId = p.league ?? "6423644";
+  if (!p.league) return <LigaFehlt titel="Rekonstruierte Transfers" />;
 
   await initSchema();
 
   const rk = await sql`
     SELECT id, dt, buyer, seller, price, player_id, player_name
     FROM events
-    WHERE league_id = ${leagueId} AND id LIKE 'rk\_%'
+    WHERE league_id = ${p.league} AND id LIKE 'rk\_%'
     ORDER BY dt DESC`;
 
   // Gibt es zu jedem rk-Eintrag einen Feed-Eintrag für denselben Spieler?
   const ids = rk.map((r) => r.player_id);
   const feed = ids.length
     ? await sql`
-        SELECT dt, buyer, seller, price, player_id, player_name
+        SELECT id, dt, buyer, seller, price, player_id, player_name
         FROM events
-        WHERE league_id = ${leagueId} AND type = 15
+        WHERE league_id = ${p.league} AND type = 15
           AND id NOT LIKE 'rk\_%'
           AND player_id = ANY(${ids})
         ORDER BY dt DESC`
     : [];
 
   return (
-    <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" }}>
-      <h1 style={{ fontSize: 20 }}>Rekonstruierte Transfers · Liga {leagueId}</h1>
-      <p style={{ fontSize: 13, color: "#64748b" }}>{rk.length} Einträge</p>
+    <main className="kb-seite">
+      <DiagnoseKopf
+        titel="Rekonstruierte Transfers"
+        unter={`Liga ${p.league} · ${rk.length} Einträge aus der Spielerhistorie`}
+        leagueId={p.league}
+      />
 
-      <table style={t}>
-        <thead>
-          <tr>
-            <th style={th}>Datum</th>
-            <th style={th}>Spieler</th>
-            <th style={th}>Käufer</th>
-            <th style={th}>Verkäufer</th>
-            <th style={thR}>Preis</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rk.map((r) => (
-            <tr key={r.id}>
-              <td style={td}>{new Date(r.dt).toLocaleString("de-DE")}</td>
-              <td style={td}>{r.player_name} <span style={{ color: "#94a3b8" }}>#{r.player_id}</span></td>
-              <td style={td}>{r.buyer ?? <em style={{ color: "#94a3b8" }}>Kickbase</em>}</td>
-              <td style={td}>{r.seller ?? <em style={{ color: "#94a3b8" }}>Kickbase</em>}</td>
-              <td style={tdR}>{euro(Number(r.price))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="kb-hinweis kb-hinweis--info">
+        Rekonstruiert wird nur, was <strong>vor</strong> dem ältesten echten Feed-Eintrag liegt.
+        Diese Zeitgrenze ist die einzige Duplikatvermeidung — ein früherer Ansatz über
+        Fingerabdrücke hat 88 Duplikate erzeugt.
+      </div>
 
-      <h2 style={{ fontSize: 15, marginTop: 32 }}>Feed-Einträge zu denselben Spielern</h2>
-      <p style={{ fontSize: 12, color: "#64748b" }}>
-        Zum Vergleich – stimmen Preis und Zeit überein, war es ein Duplikat.
+      {rk.length === 0 ? (
+        <p className="kb-info">Noch nichts rekonstruiert.</p>
+      ) : (
+        <Transfertabelle zeilen={rk} />
+      )}
+
+      <h2 className="kb-abschnitt-titel" style={{ marginTop: 28 }}>
+        Feed-Einträge zu denselben Spielern
+      </h2>
+      <p className="kb-info">
+        Zum Vergleich — stimmen Preis und Zeit überein, war es ein Duplikat.
       </p>
-      <table style={t}>
-        <thead>
-          <tr>
-            <th style={th}>Datum</th>
-            <th style={th}>Spieler</th>
-            <th style={th}>Käufer</th>
-            <th style={th}>Verkäufer</th>
-            <th style={thR}>Preis</th>
-          </tr>
-        </thead>
-        <tbody>
-          {feed.map((r, i) => (
-            <tr key={i}>
-              <td style={td}>{new Date(r.dt).toLocaleString("de-DE")}</td>
-              <td style={td}>{r.player_name} <span style={{ color: "#94a3b8" }}>#{r.player_id}</span></td>
-              <td style={td}>{r.buyer ?? <em style={{ color: "#94a3b8" }}>Kickbase</em>}</td>
-              <td style={td}>{r.seller ?? <em style={{ color: "#94a3b8" }}>Kickbase</em>}</td>
-              <td style={tdR}>{euro(Number(r.price))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {feed.length === 0 ? (
+        <p className="kb-info">Keine Überschneidung. So soll es sein.</p>
+      ) : (
+        <Transfertabelle zeilen={feed} />
+      )}
     </main>
   );
 }
-
-const t = { width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 12 };
-const th = { textAlign: "left", padding: "7px 9px", borderBottom: "2px solid #e2e8f0", fontSize: 11, textTransform: "uppercase", color: "#64748b" };
-const thR = { ...th, textAlign: "right" };
-const td = { padding: "7px 9px", borderBottom: "1px solid #f1f5f9" };
-const tdR = { ...td, textAlign: "right" };

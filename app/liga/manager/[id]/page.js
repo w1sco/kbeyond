@@ -49,7 +49,9 @@ export default async function ManagerSeite({ params, searchParams }) {
   const k = konten.find((x) => String(x.id) === String(id));
   const t = tw.map.get(String(id));
   const teamwert = t?.teamwert ?? 0;
-  const kaderGroesse = t?.spieler ?? 0;
+  // Käufe − Verkäufe, nicht dashboard.t (das zählt alle Transfers).
+  // Ist der Kader live abrufbar, gewinnt dessen echte Länge.
+  const kaderGerechnet = k.anzKauf - k.anzVerkauf;
   const limit = Math.floor(teamwert / 3);
   const maxGebot = k.konto + limit;
   const gesamtwert = k.konto + teamwert;
@@ -87,6 +89,7 @@ export default async function ManagerSeite({ params, searchParams }) {
     kaderFehler = e.message;
   }
 
+  const kaderGroesse = kader.length > 0 ? kader.length : kaderGerechnet;
   const kaderWert = kader.reduce((s, x) => s + Number(x.marktwert ?? 0), 0);
   const kaderEinkauf = kader.reduce((s, x) => s + Number(x.preis ?? 0), 0);
 
