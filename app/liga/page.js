@@ -76,7 +76,6 @@ export default async function Liga({ searchParams }) {
 
   const konten = await berechneKonten(leagueId, spieler, settings, treffer.n);
 
-  // Teamwert, Liquidität und Max-Gebot ergänzen
   for (const k of konten) {
     const t = tw.map.get(String(k.id));
     k.teamwert = t?.teamwert ?? 0;
@@ -95,12 +94,6 @@ export default async function Liga({ searchParams }) {
   const feedStart = status.feedStart ? new Date(status.feedStart) : null;
   const lueckeStd = feedStart && feedStart > stich ? (feedStart - stich) / 3_600_000 : 0;
   const lueckeTage = Math.round((lueckeStd / 24) * 10) / 10;
-
-  const feedTage = feedStart ? Math.max(1, (Date.now() - feedStart) / 86_400_000) : 1;
-  const strafenSchaetzung = lueckeStd > 0
-    ? Math.round((status.strafenAnzahl / feedTage) * (lueckeStd / 24))
-    : 0;
-  const strafenSchnitt = status.strafenAnzahl > 0 ? status.strafenSumme / status.strafenAnzahl : 0;
 
   const twVeraltet = !tw.stand || Date.now() - new Date(tw.stand) > 6 * 3600_000;
 
@@ -158,14 +151,19 @@ export default async function Liga({ searchParams }) {
         <div style={S.datenluecke}>
           <strong>Datenlücke: {lueckeTage} Tage</strong>
           <div style={{ marginTop: 6, lineHeight: 1.6 }}>
-            Zwischen Stichtag und Feed-Beginn fehlen {lueckeTage} Tage. Transfers holt
-            &quot;Historie nachladen&quot; zurück{status.rekonFertig ? " (erledigt)" : " – noch offen"}.
-            Strafen aus diesem Zeitraum sind dauerhaft verloren.
-            {strafenSchaetzung > 0 && (
-              <> Hochgerechnet fehlen etwa {strafenSchaetzung} Strafen
-              (rund {euro(Math.abs(strafenSchaetzung * strafenSchnitt))} über alle Manager).</>
-            )}
-            {" "}Gegnerwerte sind deshalb Näherungen.
+            Zwischen Stichtag und Feed-Beginn fehlen {lueckeTage} Tage, die Kickbase nicht mehr
+            ausliefert. Transfers aus diesem Zeitraum holt &quot;Historie nachladen&quot;
+            zurück{status.rekonFertig ? " – das ist erledigt" : " – das ist noch offen"}.
+            {" "}Strafen lassen sich dagegen nicht automatisch nachladen: Sie hängen an keinem
+            Spieler und existieren nur im Feed.
+          </div>
+          <div style={{ marginTop: 8, lineHeight: 1.6 }}>
+            <strong>Was du tun kannst:</strong> Der Liga-Admin sieht die vollständige Historie
+            und kann dir sagen, wer im fehlenden Zeitraum Strafen bekommen hat. Diese Beträge
+            trägst du unter{" "}
+            <a href={`/liga/einstellungen?league=${leagueId}`} style={S.linkInline}>Einstellungen</a>
+            {" "}als Korrektur ein (negativ, z.B. <code>-1000000</code>). Danach stimmen die
+            betroffenen Kontostände wieder exakt.
           </div>
         </div>
       )}
@@ -277,6 +275,7 @@ const S = {
   ligaCard: { display: "flex", flexDirection: "column", gap: 3, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, textDecoration: "none", color: "inherit" },
   statusLeiste: { display: "flex", gap: 24, padding: "12px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 16, fontSize: 13, flexWrap: "wrap" },
   datenluecke: { padding: "12px 14px", background: "#fef3c7", border: "1px solid #fbbf24", borderRadius: 8, fontSize: 13, marginBottom: 16 },
+  linkInline: { color: "#0f172a", textDecoration: "underline" },
   hinweis: { padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 13, marginBottom: 14 },
   box: { border: "2px solid", borderRadius: 8, padding: 14, marginBottom: 22 },
   grid: { display: "flex", gap: 32, marginTop: 10, fontSize: 15, flexWrap: "wrap" },
