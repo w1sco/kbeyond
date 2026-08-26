@@ -385,6 +385,30 @@ Alle Seitenaufrufe lesen aus der Datenbank, nie live von Kickbase. Ausnahme sind
 
 ---
 
+## Zeitzone
+
+Alles wird in **deutscher Zeit** angezeigt und eingegeben (`ZONE` in `lib/format.js`),
+unabhängig davon, wo der Server steht. Ohne diese Festlegung nimmt `toLocaleString` die
+Zone der Laufzeitumgebung — auf Vercel ist das UTC, im Sommer also zwei Stunden neben der
+Uhr des Nutzers.
+
+Fest auf Berlin statt auf die Zone des Browsers, weil die Liga eine deutsche ist: Kickbase
+nennt Marktschluss und Reset in deutscher Zeit. Ein fester Wert sorgt außerdem dafür, dass
+Server und Browser dieselbe Zeichenkette erzeugen — sonst gäbe es beim Hydrieren Ärger.
+
+**Der Stichtag ist der kritische Punkt.** Er kam aus dem Formular ohne Zeitzone in eine
+`TIMESTAMPTZ`-Spalte, Postgres las ihn als UTC — der gespeicherte Zeitpunkt lag also zwei
+Stunden hinter dem, was der Nutzer eingetippt hatte. Da `berechneKonten` mit
+`dt >= stichtag` filtert, konnten dadurch Transfers rund um den Reset falsch ein- oder
+ausgeschlossen werden. `ausEingabe()` liest die Eingabe jetzt als deutsche Ortszeit,
+`fuerEingabe()` schreibt sie so zurück.
+
+Geprüft über 1460 Zeitpunkte eines Jahres: alle kommen unverändert zurück. Einzige
+Ausnahme ist die Stunde, die es in der Nacht der Rückstellung zweimal gibt — die wird als
+Winterzeit gelesen. Für einen Stichtag ohne Belang.
+
+---
+
 ## Bekannte Eigenheiten
 
 **Manager werden über Anzeigenamen identifiziert, nicht über IDs.** Der Feed liefert `byr: "Lamlo"`, keine ID. Bei Namensänderung bricht die Zuordnung. Doppelte Namen werden in der UI markiert.

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKorrekturen, sql } from "@/lib/db";
-import { euro } from "@/lib/format";
+import { euro, fuerEingabe, fuerTag, ausEingabe } from "@/lib/format";
 import { sitzung, verlangeLiga, istMitglied } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ async function speichern(formData) {
   await sql`
     UPDATE liga_settings SET
       startbudget  = ${Number(formData.get("startbudget"))},
-      stichtag     = ${formData.get("stichtag")},
+      stichtag     = ${ausEingabe(formData.get("stichtag"))},
       punkte_bonus = ${Number(formData.get("punkte_bonus"))},
       login_aktiv  = ${formData.get("login_aktiv") === "on"},
       login_start  = ${formData.get("login_start") || null},
@@ -72,8 +72,7 @@ export default async function Einstellungen({ searchParams }) {
 
   const korrekturen = await getKorrekturen(leagueId, nutzer);
 
-  const datum = (d) => (d ? new Date(d).toISOString().slice(0, 16) : "");
-  const tag = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
+
 
   return (
     <main className="kb-seite kb-seite--schmal">
@@ -104,9 +103,9 @@ export default async function Einstellungen({ searchParams }) {
 
           <label className="kb-feld">
             <span className="kb-feld-name">
-              Stichtag<small className="kb-feld-hinweis">Transfers davor werden ignoriert</small>
+              Stichtag<small className="kb-feld-hinweis">Transfers davor werden ignoriert · deutsche Zeit</small>
             </span>
-            <input name="stichtag" type="datetime-local" defaultValue={datum(settings.stichtag)} className="kb-eingabe" />
+            <input name="stichtag" type="datetime-local" defaultValue={fuerEingabe(settings.stichtag)} className="kb-eingabe" />
           </label>
 
           <label className="kb-feld">
@@ -131,7 +130,7 @@ export default async function Einstellungen({ searchParams }) {
             <span className="kb-feld-name">
               Zählung ab<small className="kb-feld-hinweis">leer = ab Stichtag</small>
             </span>
-            <input name="login_start" type="date" defaultValue={tag(settings.login_start)} className="kb-eingabe" />
+            <input name="login_start" type="date" defaultValue={fuerTag(settings.login_start)} className="kb-eingabe" />
           </label>
         </section>
 
