@@ -101,6 +101,18 @@ export default async function Liga({ searchParams }) {
   const diff = ich ? ich.konto - echt : null;
   const passt = diff === 0;
 
+  // Woher kommt eine Abweichung?
+  //
+  // Zwei Posten der Formel wachsen von allein, ohne dass jemand Code oder
+  // Einstellungen anfasst: der Login-Bonus mit jedem Kalendertag (im
+  // konstanten Bereich 100.000 €/Tag) und der Punkte-Bonus mit jedem
+  // Spieltag. Eine Differenz, die über Nacht wächst, kommt fast immer aus
+  // einem der beiden — nicht aus den Transfers.
+  const proPunkt = Number(settings.punkte_bonus);
+  const passtAufPunkte = ich && proPunkt > 0 && diff === ich.punkteBonus && diff !== 0;
+  const passtAufTage = diff !== 0 && diff % 100_000 === 0 && settings.login_aktiv;
+  const inPunkten = proPunkt > 0 ? diff / proPunkt : null;
+
   const stich = new Date(settings.stichtag);
   const feedStart = status.feedStart ? new Date(status.feedStart) : null;
   const lueckeStd = feedStart && feedStart > stich ? (feedStart - stich) / 3_600_000 : 0;
@@ -202,6 +214,37 @@ export default async function Liga({ searchParams }) {
             <strong style={{ color: passt ? "var(--kb-gut)" : "var(--kb-schlecht)" }}>{euro(diff)}</strong>
           </div>
         </div>
+        {!passt && ich && (
+          <div className="kb-verdacht">
+            {passtAufPunkte ? (
+              <>
+                <strong>Die Differenz ist exakt der gesamte Punkte-Bonus.</strong> Dann gibt es
+                diesen Bonus in dieser Liga vermutlich nicht: {ich.punkte} Punkte ×{" "}
+                {euro(proPunkt)} = {euro(ich.punkteBonus)}. Probeweise unter{" "}
+                <a href={`/liga/einstellungen?league=${leagueId}`}>Einstellungen</a> den Bonus
+                pro Punkt auf 0 setzen — steht die Differenz danach auf 0 €, war es das.
+              </>
+            ) : passtAufTage ? (
+              <>
+                <strong>Die Differenz sind genau {diff / 100_000} Tage Login-Bonus.</strong>{" "}
+                Gezählt wird ab {zeitpunkt(ich.bonusQuelle === "Stichtag" ? settings.stichtag : settings.login_start)}
+                {" "}({ich.tageGezaehlt} Tage, Quelle: {ich.bonusQuelle}). Stimmt der Starttag
+                nicht, wächst die Differenz jeden Tag um weitere 100.000 €. Eine feste
+                Korrektur hilft dagegen nur heute — der Starttag ist die dauerhafte Lösung.
+              </>
+            ) : (
+              <>
+                Die Differenz entspricht{" "}
+                {inPunkten != null && <>{inPunkten.toLocaleString("de-DE", { maximumFractionDigits: 1 })} Punkten à {euro(proPunkt)}</>}
+                {inPunkten != null && " oder "}
+                {(diff / 100_000).toLocaleString("de-DE", { maximumFractionDigits: 1 })} Tagen
+                Login-Bonus. Beide Posten wachsen von allein — der Login-Bonus täglich, der
+                Punkte-Bonus mit jedem Spieltag.
+              </>
+            )}
+          </div>
+        )}
+
         {ich && (
           <div className="kb-rechnung">
             {euro(Number(settings.startbudget))} Start

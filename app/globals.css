@@ -254,6 +254,18 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.kb-verdacht {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--kb-warn-weich);
+  border: 1px solid var(--kb-warn-rand);
+  border-radius: var(--kb-radius-klein);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.kb-verdacht a { color: #0f172a; }
+
 .kb-rechnung {
   margin-top: 14px;
   padding-top: 12px;
