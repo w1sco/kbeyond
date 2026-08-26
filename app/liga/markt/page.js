@@ -19,6 +19,8 @@ const SCHWELLEN = [
   { wert: 3_000_000, label: "ab 3 Mio" },
   { wert: 5_000_000, label: "ab 5 Mio" },
   { wert: 10_000_000, label: "ab 10 Mio" },
+  { wert: 15_000_000, label: "ab 15 Mio" },
+  { wert: 20_000_000, label: "ab 20 Mio" },
 ];
 
 export default async function Markt({ searchParams }) {
