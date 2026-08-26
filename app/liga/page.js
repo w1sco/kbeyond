@@ -124,6 +124,8 @@ export default async function Liga({ searchParams }) {
           <Aktion pfad="import" leagueId={leagueId}>Aktualisieren</Aktion>
           <Aktion pfad="teamwerte" leagueId={leagueId}>Teamwerte laden</Aktion>
           <Aktion pfad="rekonstruieren" leagueId={leagueId}>Historie nachladen</Aktion>
+          <Aktion pfad="kader" leagueId={leagueId}>Kader laden</Aktion>
+          <a href={`/liga/markt?league=${leagueId}`} className="kb-btn">Markt</a>
           <a href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Einstellungen</a>
           <Link href="/liga" className="kb-btn">Liga wechseln</Link>
         </div>

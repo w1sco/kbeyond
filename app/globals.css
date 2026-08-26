@@ -381,6 +381,33 @@ th.kb-namensspalte { z-index: 3; }
 
 .kb-detailknopf { margin-top: 10px; width: 100%; }
 
+/* Die Sortier-Chips sind sonst handyexklusiv – der Marktfilter braucht sie
+   auf jeder Breite. */
+.kb-sortleiste--immer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.kb-sortleiste--immer .kb-sortchip {
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 7px 14px;
+  border: 1px solid var(--kb-rand-stark);
+  border-radius: 999px;
+  background: var(--kb-flaeche);
+  color: var(--kb-text-leise);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.kb-sortleiste--immer .kb-sortchip--aktiv {
+  background: var(--kb-akzent);
+  border-color: var(--kb-akzent);
+  color: #fff;
+}
+
 .kb-minus     { color: var(--kb-schlecht); }
 .kb-gedaempft { color: var(--kb-text-schwach); }
 .kb-korrwert  { color: var(--kb-korrektur); }
@@ -429,6 +456,49 @@ th.kb-namensspalte { z-index: 3; }
 .kb-kurz { display: none; }
 
 .kb-voll { display: inline; }
+
+/* ------------------------------------------------------------------
+   Verkaufsrechner
+   ------------------------------------------------------------------ */
+
+.kb-rechner {
+  border: 1px solid var(--kb-rand);
+  border-left: 4px solid var(--kb-akzent);
+  border-radius: var(--kb-radius);
+  background: var(--kb-flaeche-leise);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.kb-rechner--gut { border-left-color: var(--kb-gut); background: var(--kb-gut-weich); }
+
+.kb-rechner .kb-kennzahlen { margin-top: 0; font-size: 15px; }
+
+.kb-rechner-fuss {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--kb-rand);
+  font-size: 13px;
+}
+
+.kb-rechner-fuss > span:first-child { flex: 1 1 220px; }
+.kb-rechner-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; }
+
+.kb-plus { color: var(--kb-gut); }
+
+.kb-klickzeile { cursor: pointer; }
+.kb-klickzeile:hover td { background: var(--kb-akzent-weich); }
+.kb-zeile--gewaehlt td {
+  background: #e0e7ff;
+  font-weight: 500;
+}
+
+.kb-zeile--gewaehlt td:first-child { box-shadow: inset 3px 0 0 var(--kb-akzent); }
 
 /* ------------------------------------------------------------------
    Diagnose-Seiten

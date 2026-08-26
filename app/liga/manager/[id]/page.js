@@ -2,10 +2,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getTeamwerte, sql } from "@/lib/db";
+import { initSchema, getSettings, getTeamwerte, getKader, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
+import Verkaufsrechner from "./Verkaufsrechner";
 
 export const dynamic = "force-dynamic";
 
@@ -80,20 +81,33 @@ export default async function ManagerSeite({ params, searchParams }) {
       AND raw->>'n' = ${manager.n}
     ORDER BY dt DESC`;
 
-  // Kader live von Kickbase – steht in keiner Tabelle. Schlägt der Abruf
-  // fehl, bleibt der Rest der Seite trotzdem nutzbar.
-  let kader = [];
+  // Kader bevorzugt aus der Datenbank („Kader laden“ auf der Ligaseite).
+  // Fehlt er dort, einmalig live holen – dann bleibt die Seite nutzbar,
+  // auch wenn noch nie geladen wurde.
+  const gespeichert = await getKader(leagueId);
+  let kader = gespeichert.proManager.get(String(id)) ?? [];
+  let kaderQuelle = kader.length > 0 ? "datenbank" : null;
   let kaderFehler = null;
-  try {
-    const squad = await kbFetch(`/v4/leagues/${leagueId}/managers/${id}/squad`, token);
-    kader = findeSpielerListe(squad).map(normalisiereSpieler);
-  } catch (e) {
-    kaderFehler = e.message;
+
+  if (kader.length === 0) {
+    try {
+      const squad = await kbFetch(`/v4/leagues/${leagueId}/managers/${id}/squad`, token);
+      kader = findeSpielerListe(squad).map(normalisiereSpieler).map((s) => ({
+        id: String(s.id),
+        name: s.name,
+        position: s.position,
+        marktwert: Number(s.marktwert ?? 0),
+        kaufpreis: s.preis == null ? null : Number(s.preis),
+        punkte: s.punkte ?? null,
+      }));
+      if (kader.length > 0) kaderQuelle = "live";
+    } catch (e) {
+      kaderFehler = e.message;
+    }
   }
 
   const kaderGroesse = kader.length > 0 ? kader.length : kaderGerechnet;
   const kaderWert = kader.reduce((s, x) => s + Number(x.marktwert ?? 0), 0);
-  const kaderEinkauf = kader.reduce((s, x) => s + Number(x.preis ?? 0), 0);
 
   const posten = [
     { label: "Startbudget", betrag: Number(settings.startbudget) },
@@ -187,53 +201,35 @@ export default async function ManagerSeite({ params, searchParams }) {
 
       <section className="kb-karte">
         <h2 className="kb-abschnitt-titel">
-          Kader {kader.length > 0 && <span className="kb-leise">{kader.length} Spieler · {euro(kaderWert)} Marktwert · {euro(kaderEinkauf)} eingekauft</span>}
+          Kader und Verkaufsrechner
+          {kader.length > 0 && (
+            <span className="kb-leise">
+              {" "}{kader.length} Spieler · {euro(kaderWert)} Marktwert
+              {kaderQuelle === "live" && " · live geladen"}
+            </span>
+          )}
         </h2>
 
-        {kaderFehler && (
-          <p className="kb-info">Kader nicht abrufbar: {kaderFehler}</p>
-        )}
+        {kaderFehler && <p className="kb-info">Kader nicht abrufbar: {kaderFehler}</p>}
 
         {!kaderFehler && kader.length === 0 && (
           <p className="kb-info">
-            Kickbase hat für diesen Manager keine Kaderliste geliefert, die sich auswerten
-            lässt. Der Rohaufbau der Antwort steht unter{" "}
+            Kein Kader gespeichert und Kickbase liefert gerade keine auswertbare Liste.
+            Über „Kader laden“ auf der Ligaseite lässt sich das nachholen; den Rohaufbau
+            der Antwort zeigt die{" "}
             <Link href={`/manager?league=${leagueId}&uid=${id}`}>Manager-Diagnose</Link>.
           </p>
         )}
 
         {kader.length > 0 && (
-          <div className="kb-tabellenrahmen">
-            <table className="kb-tabelle kb-tabelle--schmal">
-              <thead>
-                <tr>
-                  <th className="kb-namensspalte">Spieler</th>
-                  <th>Pos.</th>
-                  <th>Marktwert</th>
-                  <th>Kaufpreis</th>
-                  <th>Gewinn</th>
-                  <th>Punkte</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kader.map((s, i) => {
-                  const gewinn = s.preis != null ? Number(s.marktwert ?? 0) - Number(s.preis) : null;
-                  return (
-                    <tr key={s.id ?? i} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
-                      <td className="kb-namensspalte">{s.name}</td>
-                      <td>{s.position}</td>
-                      <td>{euro(s.marktwert)}</td>
-                      <td>{s.preis != null ? euro(s.preis) : "–"}</td>
-                      <td className={gewinn < 0 ? "kb-minus" : undefined}>
-                        {gewinn != null ? euro(gewinn) : "–"}
-                      </td>
-                      <td>{s.punkte ?? "–"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <p className="kb-info">
+              Spieler anklicken heißt „verkaufen“. Gerechnet wird mit dem Marktwert — beim
+              Verkauf an Kickbase ist das der Erlös, bei einem Mitspieler kann dessen Gebot
+              darüber liegen.
+            </p>
+            <Verkaufsrechner kader={kader} konto={k.konto} teamwert={teamwert} />
+          </>
         )}
       </section>
 

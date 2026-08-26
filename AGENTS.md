@@ -199,6 +199,8 @@ import_log(league_id PK, letzter_lauf, neue_events, gesamt, offset_pos, komplett
 rekon_log(league_id PK, position, fertig, letzter, gefunden)
 pool_cache(id PK, daten JSONB)                        -- 'bundesliga', 24h TTL
 teamwerte(league_id, manager_id, teamwert, spieler, stand)  -- PK (league_id, manager_id)
+kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis, punkte, stand)
+  + Index (league_id)                                 -- PK (league_id, manager_id, player_id)
 ```
 
 `initSchema()` ist idempotent und läuft bei jedem Seitenaufruf. Schemaänderungen dort ergänzen, für neue Spalten `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` verwenden.
@@ -208,6 +210,32 @@ teamwerte(league_id, manager_id, teamwert, spieler, stand)  -- PK (league_id, ma
 In `app/liga/page.js` werden `startbudget` und `stichtag` mit `COALESCE` vorbelegt — nur wenn leer. **Das muss so bleiben.** Eine frühere Version hat sie bei jedem Aufruf mit `overview.b`/`overview.dt` überschrieben und damit jede manuelle Korrektur des Nutzers stillschweigend verworfen.
 
 Übrigens: `overview.dt` ist **nicht** der Reset-Zeitpunkt. Was es genau ist, ist unklar. Der echte Reset muss manuell gesetzt werden.
+
+---
+
+## Zugriffsschutz
+
+Die Datenbank ist für **alle** Nutzer dieselbe: Events, Einstellungen und Korrekturen
+hängen an der Liga-ID, nicht am Nutzer. Ohne Prüfung könnte jeder Angemeldete mit einer
+fremden Liga-ID in der URL deren Einstellungen überschreiben oder gespeicherte Transfers
+lesen. `lib/auth.js` prüft deshalb bei jedem Zugriff gegen `/v4/leagues/selection`, ob der
+Token zu einem Mitglied dieser Liga gehört.
+
+### Regeln
+
+- **Jede Seite und jede Route, die eine `league`-ID aus der URL nimmt, prüft sie.**
+  Seiten über `verlangeLiga()` (leitet zur Ligaauswahl um), Routen über `pruefeApi()`.
+- **Server Actions prüfen selbst.** Die Liga-ID kommt aus dem Formular und ist
+  manipulierbar — die Prüfung in der Seite schützt die Action nicht.
+- **Alles, was schreibt, läuft über POST.** Ein GET, das Daten ändert, lässt sich von einer
+  fremden Seite aus auslösen — `/api/aufraeumen?alles=1` löscht rekonstruierte Einträge.
+  `pruefeApi()` verlangt zusätzlich einen Origin-Header derselben Herkunft.
+- `meineLigen()` liegt in `cache()` von React: mehrere Prüfungen in einem Seitenaufbau
+  kosten trotzdem nur einen Kickbase-Request.
+
+Was das **nicht** leistet: Mitglieder derselben Liga teilen sich Einstellungen und
+Korrekturen. Wer in der Liga ist, kann sie für alle ändern. Das ist so gewollt — eine Liga
+ist ein gemeinsamer Datensatz.
 
 ---
 
@@ -261,6 +289,11 @@ app/
   liga/page.js                     Hauptseite: Auswahl, Kalibrierung, Status, Datenlücke
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
   liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
+  liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
+  liga/markt/page.js               Markt: freie Spieler, Kaufkraft der Liga
+  liga/markt/Freieliste.jsx        "use client" — sortier- und durchsuchbar
+  _diagnose/Endpunkte.jsx          gemeinsamer Baustein der Diagnose-Seiten
+  api/kader/route.js               Kader aller Manager laden
   liga/einstellungen/page.js       Server Action, Grundwerte + Korrekturen pro Manager
   api/auth/login/route.js          Token → httpOnly-Cookie (kb_token, kb_uid, kb_name)
   api/ich/route.js                 Manuelle Selbstzuordnung → Cookie kb_name
@@ -279,6 +312,8 @@ lib/
   db.js             sql, initSchema, getSettings, logImport, getImportStatus, getTeamwerte
   importer.js       importiere() — Feed, Batch-Insert via UNNEST
   rekonstruktion.js rekonstruiere(), holeSpielerPool()
+  auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi() — Zugriffsschutz
+  kader.js          ladeKader() — Kader je Manager
   ledger.js         loginBonus(), berechneKonten() — das Herzstück
   teamwerte.js      ladeTeamwerte()
   format.js         euro, euroKurz, prozent, zeitpunkt, vorZeit, restzeit, position,
@@ -337,6 +372,21 @@ Der Managername führt zur **Managerseite** (`/liga/manager/{id}?league={liga}`)
 die vollständige Kontorechnung Posten für Posten, der aktuelle Kader und alle Transfers mit
 Quelle (Feed oder rekonstruiert).
 
+### Die Marktseite
+
+`/liga/markt` beantwortet zwei Fragen: welche Spieler gehören niemandem, und könnte die
+Liga sie überhaupt bezahlen.
+
+- **Frei** = im Bundesliga-Pool, aber in keinem gespeicherten Kader. Ohne geladene Kader
+  gilt jeder Spieler als frei — die Seite sagt das dann auch deutlich.
+- **Verhältnis** = Summe aller Kontostände ÷ Marktwert der freien Spieler im gewählten
+  Bereich. Der Marktwert-Filter ist dabei das eigentliche Werkzeug: ohne ihn zählen
+  hunderte Ergänzungsspieler mit, die nie jemand kauft, und das Verhältnis sieht
+  schlechter aus als es ist.
+
+Der Spielerpool speichert seit der Marktseite auch Marktwert und Position. Der Cache-
+Schlüssel heißt deshalb `bundesliga_v2` — alte Einträge hatten nur ID und Name.
+
 ### Der Kader-Endpoint
 
 `/v4/leagues/{id}/managers/{uid}/squad` wurde nie ausgewertet, nur roh gedumpt — welches
@@ -347,18 +397,18 @@ Diagnose-Seite statt einer leeren Tabelle.
 
 ## Nächste Schritte
 
-**Erledigt:** Mobile Responsiveness (Viewport-Meta, Stylesheet mit Breakpoints, aufklappbare
-Tabelle), Startseite statt create-next-app-Boilerplate, `package-lock.json` synchronisiert.
+**Erledigt:** Mobile Responsiveness, Startseite, Managerseite mit Verkaufsrechner,
+Marktseite, Zugriffsschutz, Diagnose-Seiten auf Klassen umgestellt.
 
-1. **Diagnose-Seiten auf die Klassen umstellen.** `feed`, `ranking`, `spieler`, `pool`,
-   `team`, `manager`, `manager-detail`, `bonus`, `rk`, `markt` haben noch Inline-Styles und
-   sind auf dem Handy unbrauchbar. Das ist auch die Voraussetzung für den Dunkelmodus.
-2. **Nach dem ersten Spieltag den Punkte-Bonus verifizieren.** 10.000 €/Punkt ist bis heute
-   unbewiesen, weil `sp` bei allen 0 war. Die Kalibrierung zeigt sofort, ob es stimmt.
-3. **Admin-Filter zur Einstellung machen.** `m.adm !== true` ist hart verdrahtet; in fremden
-   Ligen spielt der Admin oft mit.
-4. **Gegnerkader-Ansicht und Bietrechner** — wer braucht welche Position, wer kann mitbieten.
-5. **`markt/page.js` überarbeiten** — früh gebaut, seitdem nicht mehr angefasst.
+1. **Nach dem ersten Spieltag den Punkte-Bonus verifizieren.** 10.000 €/Punkt ist bis heute
+   unbewiesen. Die Kalibrierung zeigt sofort, ob es stimmt.
+2. **Dunkelmodus.** Jetzt möglich, weil alle Seiten über Tokens laufen: ein zweiter Block
+   mit den Dunkelwerten in `globals.css`.
+3. **Admin-Filter zur Einstellung machen.** `m.adm !== true` ist hart verdrahtet.
+4. **`markt/page.js` (der alte Transfermarkt) überarbeiten** — nicht zu verwechseln mit
+   `/liga/markt`. Zeigt die aktuellen Angebote, ist seit früh unangetastet.
+5. **Bietrechner:** wer kann bei welchem Spieler überhaupt mitbieten — die Zahlen dafür
+   (Max-Gebot je Manager, freie Spieler) stehen inzwischen alle bereit.
 
 ## Arbeitsweise
 
