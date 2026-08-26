@@ -131,3 +131,58 @@ export default async function Liga({ searchParams }) {
           })}
         </tbody>
       </table>
+
+      <details style={S.details}>
+        <summary style={S.summary}>Event-Typen in der Datenbank</summary>
+        <table style={{ ...S.table, marginTop: 10 }}>
+          <thead>
+            <tr>
+              <th style={S.th}>Typ</th>
+              <th style={S.thR}>Anzahl</th>
+              <th style={S.thR}>davon mit Preis</th>
+              <th style={S.thR}>Summe</th>
+            </tr>
+          </thead>
+          <tbody>
+            {typen.map((t) => (
+              <tr key={t.type}>
+                <td style={S.td}>
+                  {t.type}
+                  {t.type === 15 && <span style={S.muted}> Transfer (gezählt)</span>}
+                  {t.type === 3 && <span style={S.muted}> Marktangebot</span>}
+                  {t.type === 22 && <span style={S.muted}> Login-Bonus</span>}
+                </td>
+                <td style={S.tdR}>{t.anzahl}</td>
+                <td style={S.tdR}>{t.mit_preis}</td>
+                <td style={S.tdR}>{euro(Number(t.summe))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+    </main>
+  );
+}
+
+const S = {
+  main: { maxWidth: 1100, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
+  head: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 },
+  h1: { fontSize: 24, margin: 0 },
+  sub: { color: "#64748b", fontSize: 13, margin: "6px 0 16px" },
+  btn: { fontSize: 13, padding: "7px 12px", border: "1px solid #cbd5e1", borderRadius: 6, textDecoration: "none", color: "#334155", whiteSpace: "nowrap" },
+  hinweis: { padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 13, marginBottom: 14 },
+  box: { border: "2px solid", borderRadius: 8, padding: 14, marginBottom: 22 },
+  grid: { display: "flex", gap: 32, marginTop: 10, fontSize: 15, flexWrap: "wrap" },
+  label: { display: "block", fontSize: 11, textTransform: "uppercase", color: "#64748b", marginBottom: 2 },
+  rechnung: { marginTop: 12, paddingTop: 10, borderTop: "1px solid #e2e8f0", fontSize: 12, color: "#64748b" },
+  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 },
+  th: { textAlign: "left", padding: "8px 10px", borderBottom: "2px solid #e2e8f0", fontSize: 11, textTransform: "uppercase", color: "#64748b" },
+  thR: { textAlign: "right", padding: "8px 10px", borderBottom: "2px solid #e2e8f0", fontSize: 11, textTransform: "uppercase", color: "#64748b" },
+  td: { padding: "9px 10px", borderBottom: "1px solid #f1f5f9" },
+  tdR: { padding: "9px 10px", borderBottom: "1px solid #f1f5f9", textAlign: "right" },
+  muted: { color: "#94a3b8", fontSize: 12 },
+  warn: { color: "#ea580c", fontSize: 11, marginLeft: 6 },
+  info: { color: "#94a3b8", fontSize: 11, marginLeft: 6 },
+  details: { marginTop: 28 },
+  summary: { cursor: "pointer", fontSize: 13, color: "#64748b" },
+};
