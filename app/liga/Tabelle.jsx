@@ -3,23 +3,22 @@ import { useState, useMemo } from "react";
 import { euro } from "@/lib/format";
 
 const SPALTEN = [
-  { key: "maxGebot",  label: "Max-Gebot",  num: true },
-  { key: "konto",     label: "Liquidität", num: true },
-  { key: "teamwert",  label: "Teamwert",   num: true },
-  { key: "limit",     label: "Limit (⅓)",  num: true },
-  { key: "kaeufe",    label: "Käufe",      num: true },
-  { key: "verkaeufe", label: "Verkäufe",   num: true },
-  { key: "strafen",   label: "Strafen",    num: true },
-  { key: "korrektur", label: "Korrektur",  num: true },
-  { key: "punkte",    label: "Punkte",     num: true },
+  { key: "gesamtwert", label: "Gesamtwert" },
+  { key: "maxGebot",   label: "Max-Gebot" },
+  { key: "konto",      label: "Liquidität" },
+  { key: "teamwert",   label: "Teamwert" },
+  { key: "limit",      label: "Limit (⅓)" },
+  { key: "strafen",    label: "Strafen" },
+  { key: "korrektur",  label: "Korrektur" },
+  { key: "punkte",     label: "Punkte" },
 ];
 
 export default function Tabelle({ konten, meineId, unsicher }) {
-  const [sortKey, setSortKey] = useState("maxGebot");
+  const [sortKey, setSortKey] = useState("gesamtwert");
   const [absteigend, setAbsteigend] = useState(true);
 
   const sortiert = useMemo(() => {
-    const kopie = [...konten];
+    const kopie = konten.map((k) => ({ ...k, gesamtwert: k.konto + k.teamwert }));
     kopie.sort((a, b) => {
       if (sortKey === "name") {
         return absteigend ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name);
@@ -74,7 +73,10 @@ export default function Tabelle({ konten, meineId, unsicher }) {
                   {!binIch && unsicher && <span style={S.circa}>ca.</span>}
                 </td>
                 <td style={{ ...S.tdR, background: bg }}>
-                  <strong>{k.teamwert > 0 ? euro(k.maxGebot) : "–"}</strong>
+                  <strong>{k.teamwert > 0 ? euro(k.gesamtwert) : "–"}</strong>
+                </td>
+                <td style={{ ...S.tdR, background: bg }}>
+                  {k.teamwert > 0 ? euro(k.maxGebot) : "–"}
                 </td>
                 <td style={{ ...S.tdR, background: bg, color: k.konto < 0 ? "#dc2626" : "inherit" }}>
                   {!binIch && unsicher && <span style={S.muted}>~ </span>}
@@ -86,12 +88,6 @@ export default function Tabelle({ konten, meineId, unsicher }) {
                 </td>
                 <td style={{ ...S.tdR, background: bg, color: "#94a3b8" }}>
                   {k.limit > 0 ? euro(k.limit) : "–"}
-                </td>
-                <td style={{ ...S.tdR, background: bg }}>
-                  {euro(k.kaeufe)} <span style={S.muted}>({k.anzKauf})</span>
-                </td>
-                <td style={{ ...S.tdR, background: bg }}>
-                  {euro(k.verkaeufe)} <span style={S.muted}>({k.anzVerkauf})</span>
                 </td>
                 <td style={{ ...S.tdR, background: bg, color: k.strafen < 0 ? "#dc2626" : "#94a3b8" }}>
                   {k.anzStrafen > 0 ? `${euro(k.strafen)} (${k.anzStrafen})` : "–"}
@@ -111,7 +107,7 @@ export default function Tabelle({ konten, meineId, unsicher }) {
 
 const S = {
   wrapper: { overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: 8, WebkitOverflowScrolling: "touch" },
-  table: { borderCollapse: "separate", borderSpacing: 0, fontSize: 14, minWidth: 900 },
+  table: { borderCollapse: "separate", borderSpacing: 0, fontSize: 14, minWidth: 820 },
   th: {
     textAlign: "left", padding: "10px", borderBottom: "2px solid #e2e8f0",
     fontSize: 11, textTransform: "uppercase", color: "#475569",
