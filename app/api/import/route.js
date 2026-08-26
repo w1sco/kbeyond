@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { initSchema } from "@/lib/db";
+import { initSchema, logImport } from "@/lib/db";
 import { importiere } from "@/lib/importer";
 
 export const maxDuration = 60;
@@ -22,6 +22,8 @@ export async function GET(request) {
       vollstaendig: voll,
       maxSeiten: Number(searchParams.get("seiten") ?? 40),
     });
+
+    await logImport(leagueId, ergebnis.neu, ergebnis.gesamt);
 
     if (zurueck) {
       const url = new URL(`/liga?league=${leagueId}&neu=${ergebnis.neu}`, request.url);
