@@ -14,7 +14,7 @@ export default function Login() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password: pw }),
     });
-    if (res.ok) router.push("/markt");
+    if (res.ok) router.push("/liga");
     else setErr("Anmeldung fehlgeschlagen");
   }
 
