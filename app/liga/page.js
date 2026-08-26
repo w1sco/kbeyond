@@ -78,7 +78,7 @@ export default async function Liga({ searchParams }) {
     );
   }
 
-  const konten = await berechneKonten(leagueId, spieler, settings);
+  const konten = await berechneKonten(leagueId, spieler, settings, treffer.n);
   konten.sort((a, b) => b.konto - a.konto);
 
   const ich = konten.find((k) => k.id === treffer.i);
@@ -101,8 +101,7 @@ export default async function Liga({ searchParams }) {
           <p style={S.sub}>
             Angemeldet als <strong>{ich.name}</strong> · {spieler.length} Manager ·
             Startbudget {euro(Number(settings.startbudget))} · Stichtag{" "}
-            {new Date(settings.stichtag).toLocaleDateString("de-DE")} · Login-Tage{" "}
-            {konten[0]?.tageGezaehlt ?? "–"}
+            {new Date(settings.stichtag).toLocaleDateString("de-DE")}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -163,13 +162,21 @@ export default async function Liga({ searchParams }) {
           </div>
         )}
         {ich && (
-          <div style={S.rechnung}>
-            {euro(Number(settings.startbudget))} Start
-            {" + "}{euro(ich.loginBonus)} Login
-            {" + "}{euro(ich.punkteBonus)} Punkte
-            {" + "}{euro(ich.verkaeufe)} Verkäufe
-            {" − "}{euro(ich.kaeufe)} Käufe
-          </div>
+          <>
+            <div style={S.rechnung}>
+              {euro(Number(settings.startbudget))} Start
+              {" + "}{euro(ich.loginBonus)} Login
+              {" + "}{euro(ich.punkteBonus)} Punkte
+              {" + "}{euro(ich.verkaeufe)} Verkäufe
+              {" − "}{euro(ich.kaeufe)} Käufe
+              {ich.korrektur !== 0 && <> {" + "}{euro(ich.korrektur)} Korrektur</>}
+            </div>
+            <div style={S.rechnung}>
+              Login-Bonus: {euro(ich.bonusEcht)} aus {ich.bonusTage} echten Gutschriften
+              {ich.maxTag ? ` (höchster Streak-Tag: ${ich.maxTag})` : ""} ·
+              {" "}Formel würde {euro(ich.bonusFormel)} ergeben ({ich.tageGezaehlt} Tage)
+            </div>
+          </>
         )}
       </div>
 
@@ -193,6 +200,7 @@ export default async function Liga({ searchParams }) {
                 <td style={S.td}>{i + 1}</td>
                 <td style={S.td}>
                   <strong>{k.name}</strong>
+                  {k.bonusIstEcht && <span style={S.ok}>Bonus exakt</span>}
                   {k.mehrdeutig && <span style={S.warn}>Name doppelt</span>}
                   {k.anzKauf === 0 && k.anzVerkauf === 0 && (
                     <span style={S.info}>keine Transfers</span>
@@ -261,6 +269,7 @@ const S = {
   td: { padding: "9px 10px", borderBottom: "1px solid #f1f5f9" },
   tdR: { padding: "9px 10px", borderBottom: "1px solid #f1f5f9", textAlign: "right" },
   muted: { color: "#94a3b8", fontSize: 12 },
+  ok: { color: "#16a34a", fontSize: 11, marginLeft: 6 },
   warn: { color: "#ea580c", fontSize: 11, marginLeft: 6 },
   info: { color: "#94a3b8", fontSize: 11, marginLeft: 6 },
   details: { marginTop: 28 },
