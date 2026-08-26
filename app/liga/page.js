@@ -30,8 +30,6 @@ export default async function Liga({ searchParams }) {
     WHERE league_id = ${leagueId}`;
 
   const settings = await getSettings(leagueId);
-
-  const settings = await getSettings(leagueId);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const me = await kbFetch(`/v4/leagues/${leagueId}/me`, token);
 
