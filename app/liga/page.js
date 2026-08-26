@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getImportStatus, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
@@ -7,21 +8,42 @@ import { euro, zeitpunkt, vorZeit } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const MEIN_NAME = "W1zco";
-
 export default async function Liga({ searchParams }) {
-  const token = (await cookies()).get("kb_token")?.value;
+  const store = await cookies();
+  const token = store.get("kb_token")?.value;
   if (!token) redirect("/login");
 
+  const meinName = store.get("kb_name")?.value ?? null;
+  const meineUid = store.get("kb_uid")?.value ?? null;
+
   const p = await searchParams;
-  const leagueId = p.league ?? "6423644";
+  const leagueId = p.league;
+
+  // Ohne Liga-Parameter: Auswahl anzeigen
+  if (!leagueId) {
+    const ligen = await kbFetch("/v4/leagues/selection", token);
+    return (
+      <main style={S.main}>
+        <h1 style={S.h1}>KBeyond</h1>
+        <p style={S.sub}>Liga wählen</p>
+        <div style={{ display: "grid", gap: 10, maxWidth: 460 }}>
+          {(ligen.it ?? []).map((l) => (
+            <Link key={l.i} href={`/liga?league=${l.i}`} style={S.ligaCard}>
+              <strong>{l.n}</strong>
+              <span style={S.muted}>
+                Budget {euro(l.b)} · Teamwert {euro(l.tv)}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </main>
+    );
+  }
 
   await initSchema();
 
   const overview = await kbFetch(`/v4/leagues/${leagueId}/overview`, token);
-
   await getSettings(leagueId);
-
   await sql`
     UPDATE liga_settings
     SET startbudget = ${overview.b},
@@ -35,10 +57,40 @@ export default async function Liga({ searchParams }) {
 
   const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
 
+  // Wer bin ich? Erst über UID, dann über Cookie-Name
+  const treffer =
+    (meineUid && spieler.find((m) => String(m.i) === meineUid)) ||
+    (meinName && spieler.find((m) => m.n === meinName)) ||
+    null;
+
+  // Nicht zuzuordnen -> einmalig selbst auswählen
+  if (!treffer) {
+    return (
+      <main style={S.main}>
+        <h1 style={S.h1}>{ranking.ti}</h1>
+        <p style={S.sub}>
+          Wer bist du in dieser Liga? Die Auswahl wird gespeichert und dient zur
+          Prüfung, ob die Kontostand-Berechnung exakt stimmt.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8, maxWidth: 700 }}>
+          {spieler.map((m) => (
+            
+              key={m.i}
+              href={`/api/ich?name=${encodeURIComponent(m.n)}&league=${leagueId}`}
+              style={S.ligaCard}
+            >
+              {m.n}
+            </a>
+          ))}
+        </div>
+      </main>
+    );
+  }
+
   const konten = await berechneKonten(leagueId, spieler, settings);
   konten.sort((a, b) => b.konto - a.konto);
 
-  const ich = konten.find((k) => k.name === MEIN_NAME);
+  const ich = konten.find((k) => k.id === treffer.i);
   const echt = Number(me.b);
   const diff = ich ? ich.konto - echt : null;
   const passt = diff === 0;
@@ -56,14 +108,16 @@ export default async function Liga({ searchParams }) {
         <div>
           <h1 style={S.h1}>{ranking.ti}</h1>
           <p style={S.sub}>
-            {spieler.length} Manager · Startbudget {euro(Number(settings.startbudget))} · Stichtag{" "}
+            Angemeldet als <strong>{ich.name}</strong> · {spieler.length} Manager ·
+            Startbudget {euro(Number(settings.startbudget))} · Stichtag{" "}
             {new Date(settings.stichtag).toLocaleDateString("de-DE")} · Login-Tage{" "}
             {konten[0]?.tageGezaehlt ?? "–"}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <a href={`/api/import?league=${leagueId}&zurueck=1`} style={S.btn}>Aktualisieren</a>
           <a href={`/liga/einstellungen?league=${leagueId}`} style={S.btn}>Einstellungen</a>
+          <Link href="/liga" style={S.btn}>Liga wechseln</Link>
         </div>
       </header>
 
@@ -130,7 +184,7 @@ export default async function Liga({ searchParams }) {
           {konten.map((k, i) => {
             const saldo = k.verkaeufe - k.kaeufe;
             return (
-              <tr key={k.id} style={k.name === MEIN_NAME ? { background: "#eff6ff" } : undefined}>
+              <tr key={k.id} style={k.id === treffer.i ? { background: "#eff6ff" } : undefined}>
                 <td style={S.td}>{i + 1}</td>
                 <td style={S.td}>
                   <strong>{k.name}</strong>
@@ -184,10 +238,11 @@ export default async function Liga({ searchParams }) {
 
 const S = {
   main: { maxWidth: 1100, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
-  head: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 },
+  head: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" },
   h1: { fontSize: 24, margin: 0 },
   sub: { color: "#64748b", fontSize: 13, margin: "6px 0 16px" },
   btn: { fontSize: 13, padding: "7px 12px", border: "1px solid #cbd5e1", borderRadius: 6, textDecoration: "none", color: "#334155", whiteSpace: "nowrap" },
+  ligaCard: { display: "flex", flexDirection: "column", gap: 3, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, textDecoration: "none", color: "inherit" },
   statusLeiste: { display: "flex", gap: 28, padding: "12px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 16, fontSize: 13, flexWrap: "wrap" },
   hinweis: { padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 13, marginBottom: 14 },
   box: { border: "2px solid", borderRadius: 8, padding: 14, marginBottom: 22 },
