@@ -70,7 +70,7 @@ export default async function Liga({ searchParams }) {
           Prüfung, ob die Kontostand-Berechnung exakt stimmt.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8, maxWidth: 700 }}>
-       {spieler.map((m) => (
+          {spieler.map((m) => (
             <a key={m.i} href={`/api/ich?name=${encodeURIComponent(m.n)}&league=${leagueId}`} style={S.ligaCard}>{m.n}</a>
           ))}
         </div>
@@ -127,10 +127,19 @@ export default async function Liga({ searchParams }) {
           <span style={S.label}>Events gesamt</span>
           {status.gesamt ?? "–"}
         </div>
+        <div>
+          <span style={S.label}>Import</span>
+          {status.komplett ? "vollständig" : `unvollständig (ab ${status.offsetPos})`}
+        </div>
       </div>
 
       {p.neu !== undefined && (
         <div style={S.hinweis}>{p.neu} neue Events importiert.</div>
+      )}
+      {p.hinweis && (
+        <div style={{ ...S.hinweis, background: "#fef3c7" }}>
+          {p.hinweis} — nochmal &quot;Aktualisieren&quot; klicken.
+        </div>
       )}
       {p.fehler && (
         <div style={{ ...S.hinweis, color: "#dc2626" }}>Import-Fehler: {p.fehler}</div>
@@ -148,6 +157,11 @@ export default async function Liga({ searchParams }) {
             <strong style={{ color: passt ? "#16a34a" : "#dc2626" }}>{euro(diff)}</strong>
           </div>
         </div>
+        {!status.komplett && (
+          <div style={S.achtung}>
+            Import noch unvollständig – die Kontostände stimmen erst, wenn alle Events geladen sind.
+          </div>
+        )}
         {ich && (
           <div style={S.rechnung}>
             {euro(Number(settings.startbudget))} Start
@@ -239,6 +253,7 @@ const S = {
   box: { border: "2px solid", borderRadius: 8, padding: 14, marginBottom: 22 },
   grid: { display: "flex", gap: 32, marginTop: 10, fontSize: 15, flexWrap: "wrap" },
   label: { display: "block", fontSize: 11, textTransform: "uppercase", color: "#64748b", marginBottom: 2 },
+  achtung: { marginTop: 10, padding: "7px 10px", background: "#fef3c7", borderRadius: 6, fontSize: 12 },
   rechnung: { marginTop: 12, paddingTop: 10, borderTop: "1px solid #e2e8f0", fontSize: 12, color: "#64748b" },
   table: { width: "100%", borderCollapse: "collapse", fontSize: 14 },
   th: { textAlign: "left", padding: "8px 10px", borderBottom: "2px solid #e2e8f0", fontSize: 11, textTransform: "uppercase", color: "#64748b" },
