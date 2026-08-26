@@ -45,8 +45,8 @@ export default async function Liga({ searchParams }) {
   await getSettings(leagueId);
   await sql`
     UPDATE liga_settings
-    SET startbudget = ${overview.b},
-        stichtag    = ${overview.dt}
+    SET startbudget = COALESCE(startbudget, ${overview.b}),
+        stichtag    = COALESCE(stichtag, ${overview.dt})
     WHERE league_id = ${leagueId}`;
 
   const settings = await getSettings(leagueId);
@@ -101,7 +101,7 @@ export default async function Liga({ searchParams }) {
           <p style={S.sub}>
             Angemeldet als <strong>{ich.name}</strong> · {spieler.length} Manager ·
             Startbudget {euro(Number(settings.startbudget))} · Stichtag{" "}
-            {new Date(settings.stichtag).toLocaleDateString("de-DE")}
+            {new Date(settings.stichtag).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -180,6 +180,7 @@ export default async function Liga({ searchParams }) {
               {" + "}{euro(ich.punkteBonus)} Punkte
               {" + "}{euro(ich.verkaeufe)} Verkäufe
               {" − "}{euro(ich.kaeufe)} Käufe
+              {ich.strafen !== 0 && <> {" "}{euro(ich.strafen)} Strafen</>}
               {ich.korrektur !== 0 && <> {" + "}{euro(ich.korrektur)} Korrektur</>}
             </div>
             <div style={S.rechnung}>
@@ -199,6 +200,7 @@ export default async function Liga({ searchParams }) {
             <th style={S.thR}>Kontostand</th>
             <th style={S.thR}>Käufe</th>
             <th style={S.thR}>Verkäufe</th>
+            <th style={S.thR}>Strafen</th>
             <th style={S.thR}>Saldo</th>
             <th style={S.thR}>Punkte</th>
           </tr>
@@ -219,6 +221,9 @@ export default async function Liga({ searchParams }) {
                 <td style={S.tdR}><strong>{euro(k.konto)}</strong></td>
                 <td style={S.tdR}>{euro(k.kaeufe)} <span style={S.muted}>({k.anzKauf})</span></td>
                 <td style={S.tdR}>{euro(k.verkaeufe)} <span style={S.muted}>({k.anzVerkauf})</span></td>
+                <td style={{ ...S.tdR, color: k.strafen < 0 ? "#dc2626" : "#94a3b8" }}>
+                  {k.anzStrafen > 0 ? `${euro(k.strafen)} (${k.anzStrafen})` : "–"}
+                </td>
                 <td style={{ ...S.tdR, color: saldo >= 0 ? "#16a34a" : "#dc2626" }}>{euro(saldo)}</td>
                 <td style={S.tdR}>{k.punkte}</td>
               </tr>
@@ -246,6 +251,8 @@ export default async function Liga({ searchParams }) {
                   {t.type === 15 && <span style={S.muted}> Transfer (gezählt)</span>}
                   {t.type === 3 && <span style={S.muted}> Marktangebot</span>}
                   {t.type === 22 && <span style={S.muted}> Login-Bonus</span>}
+                  {t.type === 26 && <span style={S.muted}> Meilenstein (kein Geld)</span>}
+                  {t.type === 29 && <span style={S.muted}> Strafe (gezählt)</span>}
                 </td>
                 <td style={S.tdR}>{t.anzahl}</td>
                 <td style={S.tdR}>{t.mit_preis}</td>
@@ -260,7 +267,7 @@ export default async function Liga({ searchParams }) {
 }
 
 const S = {
-  main: { maxWidth: 1100, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
+  main: { maxWidth: 1150, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
   head: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" },
   h1: { fontSize: 24, margin: 0 },
   sub: { color: "#64748b", fontSize: 13, margin: "6px 0 16px" },
