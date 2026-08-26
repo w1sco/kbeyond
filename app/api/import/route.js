@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { initSchema, logImport } from "@/lib/db";
+import { initSchema, logImport, getImportStatus } from "@/lib/db";
 import { importiere } from "@/lib/importer";
 
 export const maxDuration = 60;
@@ -13,21 +13,35 @@ export async function GET(request) {
   const leagueId = searchParams.get("league");
   if (!leagueId) return Response.json({ error: "league fehlt" }, { status: 400 });
 
-  const voll = searchParams.get("voll") === "1";
   const zurueck = searchParams.get("zurueck") === "1";
 
   try {
     await initSchema();
+    const status = await getImportStatus(leagueId);
+
+    // Erstimport: alles laden. Danach: nur Neues.
+    const erstlauf = !status.komplett;
+
     const ergebnis = await importiere(leagueId, token, {
-      vollstaendig: voll,
-      maxSeiten: Number(searchParams.get("seiten") ?? 40),
+      vollstaendig: erstlauf,
+      startAb: erstlauf ? status.offsetPos : 0,
     });
 
-    await logImport(leagueId, ergebnis.neu, ergebnis.gesamt);
+    await logImport(
+      leagueId,
+      ergebnis.neu,
+      ergebnis.gesamt,
+      ergebnis.naechsterStart,
+      erstlauf ? ergebnis.fertig : true
+    );
 
     if (zurueck) {
-      const url = new URL(`/liga?league=${leagueId}&neu=${ergebnis.neu}`, request.url);
-      return Response.redirect(url, 303);
+      const params = new URLSearchParams({
+        league: leagueId,
+        neu: String(ergebnis.neu),
+      });
+      if (ergebnis.gestoppt) params.set("hinweis", ergebnis.gestoppt);
+      return Response.redirect(new URL(`/liga?${params}`, request.url), 303);
     }
     return Response.json(ergebnis);
   } catch (e) {
