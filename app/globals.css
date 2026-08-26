@@ -1,26 +1,594 @@
 @import "tailwindcss";
 
+/* ==================================================================
+   KBeyond – Design-Grundlage
+
+   Alle Farben, Abstände und Radien stehen als Variablen hier oben.
+   Die Seiten benutzen ausschließlich die Klassen weiter unten, keine
+   Inline-Styles mehr – nur so sind Media Queries überhaupt möglich.
+
+   Breakpoints:  <= 900px  Tablet / großes Handy quer
+                 <= 640px  Handy hochkant
+   ================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Flächen */
+  --kb-bg:            #f1f5f9;
+  --kb-flaeche:       #ffffff;
+  --kb-flaeche-leise: #f8fafc;
+
+  /* Linien */
+  --kb-rand:          #e2e8f0;
+  --kb-rand-stark:    #cbd5e1;
+
+  /* Schrift */
+  --kb-text:          #0f172a;
+  --kb-text-leise:    #64748b;
+  --kb-text-schwach:  #94a3b8;
+
+  /* Signale */
+  --kb-akzent:        #4f46e5;
+  --kb-akzent-weich:  #eef2ff;
+  --kb-gut:           #16a34a;
+  --kb-gut-weich:     #dcfce7;
+  --kb-warn:          #b45309;
+  --kb-warn-weich:    #fef3c7;
+  --kb-warn-rand:     #fbbf24;
+  --kb-schlecht:      #dc2626;
+  --kb-info-weich:    #dbeafe;
+  --kb-korrektur:     #7c3aed;
+
+  /* Form */
+  --kb-radius:        12px;
+  --kb-radius-klein:  8px;
+  --kb-schatten:      0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+
+  /* Rhythmus */
+  --kb-luft:          24px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dunkelmodus ist bewusst NICHT aktiv: die Diagnose-Seiten haben noch
+   fest verdrahtete helle Inline-Styles und würden unlesbar. Sobald die
+   auf Tokens umgestellt sind, kommt hier ein Block mit den Dunkelwerten. */
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--kb-bg);
+  color: var(--kb-text);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------
+   Seitengerüst
+   ------------------------------------------------------------------ */
+
+.kb-seite {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: var(--kb-luft);
+}
+
+.kb-seite--schmal { max-width: 760px; }
+
+.kb-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.kb-titel {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.kb-unter {
+  color: var(--kb-text-leise);
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+.kb-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--kb-text-leise);
+  margin-bottom: 2px;
+}
+
+.kb-leise   { color: var(--kb-text-schwach); font-size: 12px; }
+.kb-zurueck { font-size: 13px; color: var(--kb-akzent); text-decoration: none; }
+
+/* ------------------------------------------------------------------
+   Knöpfe
+   ------------------------------------------------------------------ */
+
+.kb-aktionen {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 13px;
+  min-height: 38px;
+  border: 1px solid var(--kb-rand-stark);
+  border-radius: var(--kb-radius-klein);
+  background: var(--kb-flaeche);
+  color: #334155;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.kb-btn:hover { border-color: var(--kb-akzent); color: var(--kb-akzent); }
+
+.kb-btn--stark {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+  padding: 11px 22px;
+}
+
+.kb-btn--stark:hover { background: #1e293b; border-color: #1e293b; color: #fff; }
+
+/* ------------------------------------------------------------------
+   Karten, Status, Hinweise
+   ------------------------------------------------------------------ */
+
+.kb-karte {
+  background: var(--kb-flaeche);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius);
+  box-shadow: var(--kb-schatten);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.kb-status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 24px;
+  padding: 14px 16px;
+  background: var(--kb-flaeche);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius);
+  box-shadow: var(--kb-schatten);
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.kb-hinweis {
+  padding: 10px 14px;
+  background: var(--kb-flaeche-leise);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius-klein);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.kb-hinweis--gut     { background: var(--kb-gut-weich);  border-color: #86efac; }
+.kb-hinweis--info    { background: var(--kb-info-weich); border-color: #93c5fd; }
+.kb-hinweis--warn    { background: var(--kb-warn-weich); border-color: var(--kb-warn-rand); }
+.kb-hinweis--fehler  { background: #fef2f2; border-color: #fca5a5; color: var(--kb-schlecht); }
+
+.kb-luecke {
+  padding: 14px 16px;
+  background: var(--kb-warn-weich);
+  border: 1px solid var(--kb-warn-rand);
+  border-radius: var(--kb-radius);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.kb-luecke p { margin: 8px 0 0; }
+.kb-luecke a { color: #0f172a; text-decoration: underline; }
+.kb-luecke code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: rgb(255 255 255 / 0.6);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------
+   Kalibrierung – der wichtigste Block der Seite
+   ------------------------------------------------------------------ */
+
+.kb-kalib {
+  border: 1px solid var(--kb-rand);
+  border-left: 4px solid var(--kb-rand-stark);
+  border-radius: var(--kb-radius);
+  background: var(--kb-flaeche);
+  box-shadow: var(--kb-schatten);
+  padding: 16px 18px;
+  margin-bottom: 22px;
+}
+
+.kb-kalib--ok     { border-left-color: var(--kb-gut); }
+.kb-kalib--fehler { border-left-color: var(--kb-schlecht); }
+
+.kb-kalib-titel { font-size: 14px; font-weight: 600; }
+
+.kb-kennzahlen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px 32px;
+  margin-top: 12px;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb-rechnung {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--kb-rand);
+  font-size: 12px;
+  color: var(--kb-text-leise);
+  line-height: 1.7;
+}
+
+.kb-legende {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--kb-text-leise);
+  line-height: 1.7;
+}
+
+/* ------------------------------------------------------------------
+   Ligaauswahl / Selbstzuordnung
+   ------------------------------------------------------------------ */
+
+.kb-kacheln {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.kb-kacheln--schmal { max-width: 460px; grid-template-columns: 1fr; }
+
+.kb-kachel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 15px;
+  background: var(--kb-flaeche);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius);
+  box-shadow: var(--kb-schatten);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .15s, transform .15s;
+}
+
+.kb-kachel:hover { border-color: var(--kb-akzent); transform: translateY(-1px); }
+
+/* ------------------------------------------------------------------
+   Tabelle
+   ------------------------------------------------------------------ */
+
+.kb-tabellenrahmen {
+  overflow-x: auto;
+  background: var(--kb-flaeche);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius);
+  box-shadow: var(--kb-schatten);
+  -webkit-overflow-scrolling: touch;
+}
+
+.kb-tabelle {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  min-width: 860px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb-tabelle th {
+  padding: 11px 10px;
+  border-bottom: 2px solid var(--kb-rand);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--kb-text-leise);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  background: var(--kb-flaeche);
+  text-align: right;
+}
+
+.kb-tabelle th:hover { color: var(--kb-akzent); }
+.kb-tabelle th.kb-aktiv { background: var(--kb-akzent-weich); color: var(--kb-akzent); }
+
+.kb-tabelle td {
+  padding: 11px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.kb-namensspalte {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  text-align: left !important;
+  border-right: 1px solid var(--kb-rand);
+  min-width: 180px;
+}
+
+th.kb-namensspalte { z-index: 3; }
+
+.kb-zeile--ich   td { background: var(--kb-akzent-weich); }
+.kb-zeile--grau  td { background: var(--kb-flaeche-leise); }
+.kb-zeile--weiss td { background: var(--kb-flaeche); }
+
+.kb-rang {
+  display: inline-block;
+  width: 22px;
+  color: var(--kb-text-schwach);
+  font-size: 12px;
+}
+
+.kb-minus     { color: var(--kb-schlecht); }
+.kb-gedaempft { color: var(--kb-text-schwach); }
+.kb-korrwert  { color: var(--kb-korrektur); }
+
+.kb-marke {
+  font-size: 10px;
+  margin-left: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kb-marke--exakt { color: var(--kb-gut); }
+.kb-marke--circa { color: #ea580c; }
+
+/* Aufklapp-Knopf und Detailzeile: nur auf schmalen Displays sichtbar */
+.kb-aufklapp,
+.kb-detailzeile,
+.kb-sortleiste,
+.kb-kurz { display: none; }
+
+.kb-voll { display: inline; }
+
+/* ------------------------------------------------------------------
+   Formulare
+   ------------------------------------------------------------------ */
+
+.kb-abschnitt-titel {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--kb-text-leise);
+  margin: 0 0 14px;
+}
+
+.kb-feld {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.kb-feld-name {
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kb-feld-hinweis { color: var(--kb-text-schwach); font-size: 11px; font-weight: 400; }
+
+.kb-eingabe {
+  width: 230px;
+  padding: 9px 11px;
+  border: 1px solid var(--kb-rand-stark);
+  border-radius: var(--kb-radius-klein);
+  background: var(--kb-flaeche);
+  color: var(--kb-text);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.kb-eingabe:focus-visible,
+.kb-btn:focus-visible,
+.kb-kachel:focus-visible,
+.kb-tabelle th:focus-visible {
+  outline: 2px solid var(--kb-akzent);
+  outline-offset: 2px;
+}
+
+.kb-eingabe--voll { width: 100%; }
+.kb-eingabe--klein { width: 130px; text-align: right; font-size: 13px; }
+
+.kb-info { font-size: 12px; color: var(--kb-text-leise); margin: 0 0 14px; line-height: 1.6; }
+
+.kb-korr-gitter {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px 20px;
+}
+
+.kb-korr-zeile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ------------------------------------------------------------------
+   <= 900px
+   ------------------------------------------------------------------ */
+
+@media (max-width: 900px) {
+  :root { --kb-luft: 16px; }
+
+  .kb-titel { font-size: 22px; }
+
+  .kb-kopf { flex-direction: column; gap: 12px; }
+
+  .kb-aktionen { width: 100%; }
+  .kb-aktionen .kb-btn { flex: 1 1 auto; }
+}
+
+/* ------------------------------------------------------------------
+   <= 640px  – Handy hochkant
+   ------------------------------------------------------------------ */
+
+@media (max-width: 640px) {
+  :root { --kb-luft: 12px; }
+
+  .kb-titel { font-size: 20px; }
+
+  .kb-karte { padding: 14px; }
+
+  .kb-status { grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 12px; }
+
+  /* Knöpfe zweispaltig statt in einer unlesbaren Reihe */
+  .kb-aktionen { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kb-aktionen .kb-btn { width: 100%; }
+
+  .kb-kennzahlen { grid-template-columns: repeat(3, auto); gap: 10px; font-size: 14px; }
+
+  /* --- Tabelle: nur die drei Vergleichszahlen, Rest aufklappbar --- */
+  .kb-tabelle { min-width: 0; font-size: 13px; }
+  .kb-tabelle th { padding: 9px 5px; font-size: 10px; }
+  .kb-tabelle td { padding: 9px 5px; }
+
+  .kb-sek { display: none; }
+
+  /* Die Namensspalte darf nicht die drei Geldspalten aus dem Bild
+     drängen – langer Name wird abgeschnitten, nicht die Zahl. */
+  .kb-namensspalte { min-width: 0; padding-left: 8px; padding-right: 4px; position: static; }
+
+  .kb-name {
+    display: inline-block;
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+  }
+
+  .kb-rang { width: 14px; font-size: 11px; }
+  .kb-marke { margin-left: 3px; font-size: 9px; }
+
+  .kb-voll { display: none; }
+  .kb-kurz { display: inline; }
+
+  .kb-sortleiste {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 0 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .kb-sortleiste::-webkit-scrollbar { display: none; }
+
+  .kb-sortchip {
+    flex: 0 0 auto;
+    font-size: 12px;
+    padding: 7px 12px;
+    min-height: 34px;
+    border: 1px solid var(--kb-rand-stark);
+    border-radius: 999px;
+    background: var(--kb-flaeche);
+    color: var(--kb-text-leise);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .kb-sortchip--aktiv {
+    background: var(--kb-akzent);
+    border-color: var(--kb-akzent);
+    color: #fff;
+  }
+
+  .kb-aufklapp {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin-right: 4px;
+    padding: 0;
+    border: 1px solid var(--kb-rand);
+    border-radius: 6px;
+    background: var(--kb-flaeche);
+    color: var(--kb-text-leise);
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+
+  .kb-detailzeile { display: table-row; }
+
+  .kb-detailzeile td {
+    padding: 0 10px 12px;
+    border-bottom: 1px solid var(--kb-rand);
+  }
+
+  .kb-detailgitter {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 14px;
+    text-align: left;
+    padding: 12px;
+    background: var(--kb-flaeche-leise);
+    border-radius: var(--kb-radius-klein);
+  }
+
+  .kb-detailgitter div { font-size: 13px; }
+
+  /* Aufgeklappt stehen die Beträge ausgeschrieben: die Kurzform in der
+     Zeile rundet, hier braucht man den genauen Wert. */
+  .kb-detailgitter .kb-voll { display: inline; }
+  .kb-detailgitter .kb-kurz { display: none; }
+
+  /* --- Formulare: Label über Feld statt daneben --- */
+  .kb-feld { flex-direction: column; gap: 6px; }
+  .kb-eingabe { width: 100%; }
+  .kb-eingabe--klein { width: 110px; }
+  .kb-korr-gitter { grid-template-columns: 1fr; }
+  .kb-btn--stark { width: 100%; }
+}
+
+/* ------------------------------------------------------------------
+   <= 360px  – kleine Handys (iPhone SE und Verwandtschaft)
+   ------------------------------------------------------------------ */
+
+@media (max-width: 360px) {
+  .kb-tabelle { font-size: 12px; }
+  .kb-tabelle th { padding: 8px 4px; font-size: 9px; }
+  .kb-tabelle td { padding: 8px 4px; }
+  .kb-name { max-width: 54px; }
+  .kb-marke { display: none; }
+  .kb-detailgitter { grid-template-columns: 1fr; }
 }

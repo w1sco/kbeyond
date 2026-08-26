@@ -45,7 +45,10 @@ export default async function Einstellungen({ searchParams }) {
   if (!token) redirect("/login");
 
   const p = await searchParams;
-  const leagueId = p.league ?? "6423644";
+  // Kein Fallback auf eine feste Liga-ID: ohne Parameter landete man sonst
+  // in den Einstellungen einer fremden Liga.
+  if (!p.league) redirect("/liga");
+  const leagueId = p.league;
 
   await initSchema();
   const settings = await getSettings(leagueId);
@@ -61,81 +64,85 @@ export default async function Einstellungen({ searchParams }) {
   const tag = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
   return (
-    <main style={S.main}>
-      <Link href={`/liga?league=${leagueId}`} style={S.back}>← zurück zur Liga</Link>
-      <h1 style={S.h1}>Einstellungen · {ranking.ti}</h1>
+    <main className="kb-seite kb-seite--schmal">
+      <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+      <h1 className="kb-titel" style={{ margin: "10px 0 20px" }}>Einstellungen · {ranking.ti}</h1>
 
       <form action={speichern}>
         <input type="hidden" name="league" value={leagueId} />
 
-        <section style={S.card}>
-          <h2 style={S.h2}>Grundwerte</h2>
+        <section className="kb-karte">
+          <h2 className="kb-abschnitt-titel">Grundwerte</h2>
 
-          <label style={S.row}>
-            <span style={S.lbl}>Startbudget (€)</span>
-            <input name="startbudget" type="number" defaultValue={Number(settings.startbudget)} style={S.input} />
+          <label className="kb-feld">
+            <span className="kb-feld-name">Startbudget (€)</span>
+            <input name="startbudget" type="number" defaultValue={Number(settings.startbudget)} className="kb-eingabe" />
           </label>
 
-          <label style={S.row}>
-            <span style={S.lbl}>Stichtag<small style={S.hint}>Transfers davor werden ignoriert</small></span>
-            <input name="stichtag" type="datetime-local" defaultValue={datum(settings.stichtag)} style={S.input} />
+          <label className="kb-feld">
+            <span className="kb-feld-name">
+              Stichtag<small className="kb-feld-hinweis">Transfers davor werden ignoriert</small>
+            </span>
+            <input name="stichtag" type="datetime-local" defaultValue={datum(settings.stichtag)} className="kb-eingabe" />
           </label>
 
-          <label style={S.row}>
-            <span style={S.lbl}>Bonus pro Punkt (€)</span>
-            <input name="punkte_bonus" type="number" defaultValue={Number(settings.punkte_bonus)} style={S.input} />
+          <label className="kb-feld">
+            <span className="kb-feld-name">Bonus pro Punkt (€)</span>
+            <input name="punkte_bonus" type="number" defaultValue={Number(settings.punkte_bonus)} className="kb-eingabe" />
           </label>
         </section>
 
-        <section style={S.card}>
-          <h2 style={S.h2}>Login-Bonus</h2>
-          <p style={S.info}>
+        <section className="kb-karte">
+          <h2 className="kb-abschnitt-titel">Login-Bonus</h2>
+          <p className="kb-info">
             Annahme: jeder loggt sich täglich ein. 10k am ersten Tag, steigend bis 90k,
             ab Tag 10 konstant 100k.
           </p>
 
-          <label style={{ ...S.row, alignItems: "center" }}>
-            <span style={S.lbl}>Aktiv</span>
+          <label className="kb-feld" style={{ alignItems: "center" }}>
+            <span className="kb-feld-name">Aktiv</span>
             <input name="login_aktiv" type="checkbox" defaultChecked={settings.login_aktiv} />
           </label>
 
-          <label style={S.row}>
-            <span style={S.lbl}>Zählung ab<small style={S.hint}>leer = ab Stichtag</small></span>
-            <input name="login_start" type="date" defaultValue={tag(settings.login_start)} style={S.input} />
+          <label className="kb-feld">
+            <span className="kb-feld-name">
+              Zählung ab<small className="kb-feld-hinweis">leer = ab Stichtag</small>
+            </span>
+            <input name="login_start" type="date" defaultValue={tag(settings.login_start)} className="kb-eingabe" />
           </label>
         </section>
 
-        <section style={S.card}>
-          <h2 style={S.h2}>Korrekturen pro Manager</h2>
-          <p style={S.info}>
+        <section className="kb-karte">
+          <h2 className="kb-abschnitt-titel">Korrekturen pro Manager</h2>
+          <p className="kb-info">
             Fester Betrag, der auf das berechnete Konto addiert wird. Negative Werte erlaubt.
             Nur nötig, wenn ein einzelner Manager nachweislich abweicht.
           </p>
 
-          <div style={S.korrGrid}>
+          <div className="kb-korr-gitter">
             {spieler.map((m) => (
-              <label key={m.i} style={S.korrRow}>
-                <span style={S.korrName}>{m.n}</span>
+              <label key={m.i} className="kb-korr-zeile">
+                <span style={{ fontSize: 13 }}>{m.n}</span>
                 <input
                   name={`korr_${m.n}`}
                   type="number"
                   defaultValue={korrekturen.get(m.n) ?? 0}
-                  style={S.korrInput}
+                  className="kb-eingabe kb-eingabe--klein"
                 />
               </label>
             ))}
           </div>
         </section>
 
-        <section style={S.card}>
-          <h2 style={S.h2}>Notiz</h2>
-          <textarea name="notiz" defaultValue={settings.notiz ?? ""} rows={3} style={S.textarea} />
+        <section className="kb-karte">
+          <h2 className="kb-abschnitt-titel">Notiz</h2>
+          <textarea name="notiz" defaultValue={settings.notiz ?? ""} rows={3} className="kb-eingabe kb-eingabe--voll" />
         </section>
 
-        <button type="submit" style={S.btn}>Speichern</button>
+        <button type="submit" className="kb-btn kb-btn--stark">Speichern</button>
       </form>
 
-      <p style={S.foot}>
+      <p className="kb-legende">
         Aktuell aktiv: {euro(Number(settings.startbudget))} Start ·{" "}
         {euro(Number(settings.punkte_bonus))} pro Punkt ·{" "}
         Login-Bonus {settings.login_aktiv ? "an" : "aus"}
@@ -143,23 +150,3 @@ export default async function Einstellungen({ searchParams }) {
     </main>
   );
 }
-
-const S = {
-  main: { maxWidth: 720, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
-  back: { fontSize: 13, color: "#2563eb", textDecoration: "none" },
-  h1: { fontSize: 22, margin: "10px 0 20px" },
-  h2: { fontSize: 14, margin: "0 0 12px", textTransform: "uppercase", letterSpacing: 0.4, color: "#475569" },
-  card: { border: "1px solid #e2e8f0", borderRadius: 10, padding: 18, marginBottom: 16 },
-  row: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 12 },
-  lbl: { fontSize: 14, display: "flex", flexDirection: "column" },
-  hint: { color: "#94a3b8", fontSize: 11, fontWeight: 400 },
-  info: { fontSize: 12, color: "#64748b", margin: "0 0 14px", lineHeight: 1.5 },
-  input: { width: 220, padding: "7px 9px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14 },
-  textarea: { width: "100%", padding: 9, border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 14, fontFamily: "inherit" },
-  korrGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 },
-  korrRow: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 },
-  korrName: { fontSize: 13 },
-  korrInput: { width: 120, padding: "5px 8px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 13, textAlign: "right" },
-  btn: { padding: "10px 20px", background: "#0f172a", color: "#fff", border: "none", borderRadius: 7, fontSize: 14, cursor: "pointer" },
-  foot: { marginTop: 18, fontSize: 12, color: "#64748b" },
-};

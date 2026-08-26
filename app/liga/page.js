@@ -23,14 +23,14 @@ export default async function Liga({ searchParams }) {
   if (!leagueId) {
     const ligen = await kbFetch("/v4/leagues/selection", token);
     return (
-      <main style={S.main}>
-        <h1 style={S.h1}>KBeyond</h1>
-        <p style={S.sub}>Liga wählen</p>
-        <div style={{ display: "grid", gap: 10, maxWidth: 460 }}>
+      <main className="kb-seite kb-seite--schmal">
+        <h1 className="kb-titel">KBeyond</h1>
+        <p className="kb-unter" style={{ marginBottom: 16 }}>Liga wählen</p>
+        <div className="kb-kacheln kb-kacheln--schmal">
           {(ligen.it ?? []).map((l) => (
-            <Link key={l.i} href={`/liga?league=${l.i}`} style={S.ligaCard}>
+            <Link key={l.i} href={`/liga?league=${l.i}`} className="kb-kachel">
               <strong>{l.n}</strong>
-              <span style={S.muted}>Budget {euro(l.b)} · Teamwert {euro(l.tv)}</span>
+              <span className="kb-leise">Budget {euro(l.b)} · Teamwert {euro(l.tv)}</span>
             </Link>
           ))}
         </div>
@@ -63,12 +63,18 @@ export default async function Liga({ searchParams }) {
 
   if (!treffer) {
     return (
-      <main style={S.main}>
-        <h1 style={S.h1}>{ranking.ti}</h1>
-        <p style={S.sub}>Wer bist du in dieser Liga?</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8, maxWidth: 700 }}>
+      <main className="kb-seite">
+        <h1 className="kb-titel">{ranking.ti}</h1>
+        <p className="kb-unter" style={{ marginBottom: 16 }}>Wer bist du in dieser Liga?</p>
+        <div className="kb-kacheln">
           {spieler.map((m) => (
-            <a key={m.i} href={`/api/ich?name=${encodeURIComponent(m.n)}&league=${leagueId}`} style={S.ligaCard}>{m.n}</a>
+            <a
+              key={m.i}
+              href={`/api/ich?name=${encodeURIComponent(m.n)}&league=${leagueId}`}
+              className="kb-kachel"
+            >
+              {m.n}
+            </a>
           ))}
         </div>
       </main>
@@ -98,94 +104,97 @@ export default async function Liga({ searchParams }) {
   const twVeraltet = !tw.stand || Date.now() - new Date(tw.stand) > 6 * 3600_000;
 
   return (
-    <main style={S.main}>
-      <header style={S.head}>
+    <main className="kb-seite">
+      <header className="kb-kopf">
         <div>
-          <h1 style={S.h1}>{ranking.ti}</h1>
-          <p style={S.sub}>
+          <h1 className="kb-titel">{ranking.ti}</h1>
+          <p className="kb-unter">
             Angemeldet als <strong>{ich.name}</strong> · {spieler.length} Manager ·
             Startbudget {euro(Number(settings.startbudget))} · Stichtag {zeitpunkt(settings.stichtag)}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <a href={`/api/import?league=${leagueId}&zurueck=1`} style={S.btn}>Aktualisieren</a>
-          <a href={`/api/teamwerte?league=${leagueId}&zurueck=1`} style={S.btn}>Teamwerte laden</a>
-          <a href={`/api/rekonstruieren?league=${leagueId}&zurueck=1`} style={S.btn}>Historie nachladen</a>
-          <a href={`/liga/einstellungen?league=${leagueId}`} style={S.btn}>Einstellungen</a>
-          <Link href="/liga" style={S.btn}>Liga wechseln</Link>
+        <div className="kb-aktionen">
+          <a href={`/api/import?league=${leagueId}&zurueck=1`} className="kb-btn">Aktualisieren</a>
+          <a href={`/api/teamwerte?league=${leagueId}&zurueck=1`} className="kb-btn">Teamwerte laden</a>
+          <a href={`/api/rekonstruieren?league=${leagueId}&zurueck=1`} className="kb-btn">Historie nachladen</a>
+          <a href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Einstellungen</a>
+          <Link href="/liga" className="kb-btn">Liga wechseln</Link>
         </div>
       </header>
 
-      <div style={S.statusLeiste}>
+      <div className="kb-status">
         <div>
-          <span style={S.label}>Letzte Aktualisierung</span>
-          {zeitpunkt(status.letzterLauf)}<span style={S.muted}> {vorZeit(status.letzterLauf)}</span>
+          <span className="kb-label">Letzte Aktualisierung</span>
+          {zeitpunkt(status.letzterLauf)}
+          <span className="kb-leise"> {vorZeit(status.letzterLauf)}</span>
         </div>
         <div>
-          <span style={S.label}>Feed zurück bis</span>
+          <span className="kb-label">Feed zurück bis</span>
           {zeitpunkt(status.feedStart)}
         </div>
         <div>
-          <span style={S.label}>Events</span>
+          <span className="kb-label">Events</span>
           {status.gesamt}
         </div>
         <div>
-          <span style={S.label}>Rekonstruiert</span>
+          <span className="kb-label">Rekonstruiert</span>
           {status.rekonGefunden}
-          <span style={S.muted}>{status.rekonFertig ? " (fertig)" : status.rekonPosition > 0 ? ` (bei ${status.rekonPosition})` : ""}</span>
+          <span className="kb-leise">
+            {status.rekonFertig ? " (fertig)" : status.rekonPosition > 0 ? ` (bei ${status.rekonPosition})` : ""}
+          </span>
         </div>
         <div>
-          <span style={S.label}>Teamwerte</span>
+          <span className="kb-label">Teamwerte</span>
           {tw.stand ? zeitpunkt(tw.stand) : "nie geladen"}
         </div>
       </div>
 
       {twVeraltet && (
-        <div style={{ ...S.hinweis, background: "#fef3c7" }}>
+        <div className="kb-hinweis kb-hinweis--warn">
           Teamwerte fehlen oder sind älter als 6 Stunden – Liquidität und Max-Gebot stimmen erst
           nach einem Klick auf &quot;Teamwerte laden&quot;.
         </div>
       )}
 
       {lueckeStd > 0 && (
-        <div style={S.datenluecke}>
+        <div className="kb-luecke">
           <strong>Datenlücke: {lueckeTage} Tage</strong>
-          <div style={{ marginTop: 6, lineHeight: 1.6 }}>
+          <p>
             Zwischen Stichtag und Feed-Beginn fehlen {lueckeTage} Tage, die Kickbase nicht mehr
             ausliefert. Transfers aus diesem Zeitraum holt &quot;Historie nachladen&quot;
             zurück{status.rekonFertig ? " – das ist erledigt" : " – das ist noch offen"}.
             {" "}Strafen lassen sich dagegen nicht automatisch nachladen: Sie hängen an keinem
             Spieler und existieren nur im Feed.
-          </div>
-          <div style={{ marginTop: 8, lineHeight: 1.6 }}>
+          </p>
+          <p>
             <strong>Was du tun kannst:</strong> Der Liga-Admin sieht die vollständige Historie
             und kann dir sagen, wer im fehlenden Zeitraum Strafen bekommen hat. Diese Beträge
             trägst du unter{" "}
-            <a href={`/liga/einstellungen?league=${leagueId}`} style={S.linkInline}>Einstellungen</a>
+            <a href={`/liga/einstellungen?league=${leagueId}`}>Einstellungen</a>
             {" "}als Korrektur ein (negativ, z.B. <code>-1000000</code>). Danach stimmen die
             betroffenen Kontostände wieder exakt.
-          </div>
+          </p>
         </div>
       )}
 
-      {p.neu !== undefined && <div style={S.hinweis}>{p.neu} neue Events importiert.</div>}
-      {p.tw && <div style={{ ...S.hinweis, background: "#dcfce7" }}>{p.tw}</div>}
-      {p.rekon && <div style={{ ...S.hinweis, background: "#dbeafe" }}>{p.rekon}</div>}
-      {p.hinweis && <div style={{ ...S.hinweis, background: "#fef3c7" }}>{p.hinweis} — nochmal klicken.</div>}
-      {p.fehler && <div style={{ ...S.hinweis, color: "#dc2626" }}>Fehler: {p.fehler}</div>}
+      {p.neu !== undefined && <div className="kb-hinweis">{p.neu} neue Events importiert.</div>}
+      {p.tw && <div className="kb-hinweis kb-hinweis--gut">{p.tw}</div>}
+      {p.rekon && <div className="kb-hinweis kb-hinweis--info">{p.rekon}</div>}
+      {p.hinweis && <div className="kb-hinweis kb-hinweis--warn">{p.hinweis} — nochmal klicken.</div>}
+      {p.fehler && <div className="kb-hinweis kb-hinweis--fehler">Fehler: {p.fehler}</div>}
 
-      <div style={{ ...S.box, borderColor: passt ? "#16a34a" : "#dc2626" }}>
-        <strong style={{ fontSize: 14 }}>Kalibrierung {passt ? "✓ exakt" : "– Abweichung"}</strong>
-        <div style={S.grid}>
-          <div><span style={S.label}>Berechnet</span>{euro(ich?.konto)}</div>
-          <div><span style={S.label}>Echt (API)</span>{euro(echt)}</div>
+      <div className={`kb-kalib ${passt ? "kb-kalib--ok" : "kb-kalib--fehler"}`}>
+        <strong className="kb-kalib-titel">Kalibrierung {passt ? "✓ exakt" : "– Abweichung"}</strong>
+        <div className="kb-kennzahlen">
+          <div><span className="kb-label">Berechnet</span>{euro(ich?.konto)}</div>
+          <div><span className="kb-label">Echt (API)</span>{euro(echt)}</div>
           <div>
-            <span style={S.label}>Differenz</span>
-            <strong style={{ color: passt ? "#16a34a" : "#dc2626" }}>{euro(diff)}</strong>
+            <span className="kb-label">Differenz</span>
+            <strong style={{ color: passt ? "var(--kb-gut)" : "var(--kb-schlecht)" }}>{euro(diff)}</strong>
           </div>
         </div>
         {ich && (
-          <div style={S.rechnung}>
+          <div className="kb-rechnung">
             {euro(Number(settings.startbudget))} Start
             {" + "}{euro(ich.loginBonus)} Login
             {" + "}{euro(ich.punkteBonus)} Punkte
@@ -203,8 +212,10 @@ export default async function Liga({ searchParams }) {
         unsicher={lueckeStd > 0}
       />
 
-            <p style={S.legende}>
-        Spaltenüberschrift antippen zum Sortieren, nochmal für die Gegenrichtung. ·
+      <p className="kb-legende">
+        Spaltenüberschrift antippen zum Sortieren, nochmal für die Gegenrichtung. Auf dem Handy
+        zeigt die Tabelle nur Gesamtwert, Max-Gebot und Liquidität – das <strong>+</strong> vor
+        dem Namen klappt den Rest auf. ·
         {" "}<strong>Gesamtwert</strong> = Liquidität + Teamwert, das Gesamtvermögen ·
         {" "}<strong>Max-Gebot</strong> = Liquidität + Limit, der höchste Betrag ohne
         vorherigen Verkauf ·
@@ -213,22 +224,3 @@ export default async function Liga({ searchParams }) {
     </main>
   );
 }
-
-const S = {
-  main: { maxWidth: 1300, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
-  head: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" },
-  h1: { fontSize: 24, margin: 0 },
-  sub: { color: "#64748b", fontSize: 13, margin: "6px 0 16px" },
-  btn: { fontSize: 13, padding: "7px 12px", border: "1px solid #cbd5e1", borderRadius: 6, textDecoration: "none", color: "#334155", whiteSpace: "nowrap" },
-  ligaCard: { display: "flex", flexDirection: "column", gap: 3, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, textDecoration: "none", color: "inherit" },
-  statusLeiste: { display: "flex", gap: 24, padding: "12px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 16, fontSize: 13, flexWrap: "wrap" },
-  datenluecke: { padding: "12px 14px", background: "#fef3c7", border: "1px solid #fbbf24", borderRadius: 8, fontSize: 13, marginBottom: 16 },
-  linkInline: { color: "#0f172a", textDecoration: "underline" },
-  hinweis: { padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 13, marginBottom: 14 },
-  box: { border: "2px solid", borderRadius: 8, padding: 14, marginBottom: 22 },
-  grid: { display: "flex", gap: 32, marginTop: 10, fontSize: 15, flexWrap: "wrap" },
-  label: { display: "block", fontSize: 11, textTransform: "uppercase", color: "#64748b", marginBottom: 2 },
-  rechnung: { marginTop: 12, paddingTop: 10, borderTop: "1px solid #e2e8f0", fontSize: 12, color: "#64748b" },
-  muted: { color: "#94a3b8", fontSize: 12 },
-  legende: { marginTop: 14, fontSize: 12, color: "#64748b", lineHeight: 1.6 },
-};

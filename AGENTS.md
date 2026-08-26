@@ -211,10 +211,52 @@ In `app/liga/page.js` werden `startbudget` und `stichtag` mit `COALESCE` vorbele
 
 ---
 
+## Aussehen und Layout
+
+Alle Farben, Abstände, Radien und Breakpoints stehen in `app/globals.css`. Die Seiten
+benutzen Klassen mit `kb-`-Präfix, keine Style-Objekte mehr.
+
+**Warum das wichtig ist:** Inline-Styles können keine Media Queries. Solange das Layout in
+`const S = {...}` steckte, war Mobile-Unterstützung technisch unmöglich — genau das war der
+Blocker, der in den nächsten Schritten stand.
+
+### Regeln
+
+- Neue Werte als Token in `:root` ergänzen, nicht als Hexcode in die Komponente schreiben.
+- Inline-`style` nur noch für echte Einzelfälle (ein Abstand an genau einer Stelle).
+  Alles, was sich auf schmalen Displays anders verhalten muss, gehört in eine Klasse.
+- Breakpoints: `900px` (Kopfzeile stapelt), `640px` (Handy hochkant), `360px` (kleine Handys).
+
+### Tabelle auf schmalen Displays
+
+Sichtbar bleiben **Gesamtwert, Max-Gebot, Liquidität** — die drei Zahlen, mit denen man
+Manager vergleicht. Teamwert, Limit, Strafen, Korrektur und Punkte wandern in eine
+Detailzeile, die das `+` vor dem Namen aufklappt. Dort stehen **alle** Werte ausgeschrieben,
+weil die Spalten selbst auf Kurzform umschalten (`euroKurz`: „53,7 Mio" statt „53.700.000 €").
+
+Die Sortierung läuft auf dem Handy über die Chipleiste über der Tabelle, weil die
+ausgeblendeten Spalten keine anklickbare Überschrift mehr haben.
+
+Geprüft mit Chromium bei 320/360/390/430/640/768/900/1280 px: kein horizontales Scrollen
+der Seite, ab 390 px passt auch die Tabelle ohne Scrollen. Bei 768–900 px scrollt die
+vollständige Tabelle innerhalb ihres Rahmens, die Namensspalte bleibt dabei stehen.
+
+### Dunkelmodus ist bewusst aus
+
+Die frühere `prefers-color-scheme`-Regel hat nur `body` umgefärbt, während Karten und
+Tabelle fest auf Weiß standen — auf einem dunkel gestellten Handy stand heller Text auf
+weißem Grund. Die Regel ist raus. Ein echter Dunkelmodus geht erst, wenn auch die
+Diagnose-Seiten über Tokens laufen; dann reicht ein zweiter Block mit den Dunkelwerten.
+
+---
+
 ## Dateien
 
 ```
 app/
+  layout.js                        Wurzel-Layout: Viewport-Meta, Metadaten, Schrift
+  page.js                          Startseite → leitet auf /liga um
+  globals.css                      Design-Tokens, Komponentenklassen, Breakpoints
   login/page.js                    Client-Komponente, Login-Formular → /liga
   liga/page.js                     Hauptseite: Auswahl, Kalibrierung, Status, Datenlücke
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
@@ -287,12 +329,18 @@ Werte von Managern in einer Liga mit Datenlücke werden mit `~` und `ca.` gekenn
 
 ## Nächste Schritte
 
-1. **Mobile Responsiveness.** Blocker: Inline-Styles können keine Media Queries. Braucht eine CSS-Datei mit Breakpoints. Erst prüfen, ob in `app/layout.js` ein Viewport-Meta gesetzt ist. Für die Tabelle war der Plan: auf schmalen Displays nur Gesamtwert, Max-Gebot und Liquidität, Rest aufklappbar — Vergleichbarkeit zwischen Managern ist wichtiger als Lesbarkeit einer Einzelzeile.
-2. Nach dem ersten Spieltag den Punkte-Bonus verifizieren.
-3. Admin-Filter zur Einstellung machen.
-4. Gegnerkader-Ansicht und Bietrechner (wer braucht welche Position, wer kann mitbieten).
+**Erledigt:** Mobile Responsiveness (Viewport-Meta, Stylesheet mit Breakpoints, aufklappbare
+Tabelle), Startseite statt create-next-app-Boilerplate, `package-lock.json` synchronisiert.
 
----
+1. **Diagnose-Seiten auf die Klassen umstellen.** `feed`, `ranking`, `spieler`, `pool`,
+   `team`, `manager`, `manager-detail`, `bonus`, `rk`, `markt` haben noch Inline-Styles und
+   sind auf dem Handy unbrauchbar. Das ist auch die Voraussetzung für den Dunkelmodus.
+2. **Nach dem ersten Spieltag den Punkte-Bonus verifizieren.** 10.000 €/Punkt ist bis heute
+   unbewiesen, weil `sp` bei allen 0 war. Die Kalibrierung zeigt sofort, ob es stimmt.
+3. **Admin-Filter zur Einstellung machen.** `m.adm !== true` ist hart verdrahtet; in fremden
+   Ligen spielt der Admin oft mit.
+4. **Gegnerkader-Ansicht und Bietrechner** — wer braucht welche Position, wer kann mitbieten.
+5. **`markt/page.js` überarbeiten** — früh gebaut, seitdem nicht mehr angefasst.
 
 ## Arbeitsweise
 
