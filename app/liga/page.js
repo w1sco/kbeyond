@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, sql } from "@/lib/db";
+import { initSchema, getSettings, getImportStatus, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
-import { euro } from "@/lib/format";
+import { euro, zeitpunkt, vorZeit } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +31,7 @@ export default async function Liga({ searchParams }) {
   const settings = await getSettings(leagueId);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const me = await kbFetch(`/v4/leagues/${leagueId}/me`, token);
+  const status = await getImportStatus(leagueId);
 
   const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
 
@@ -65,6 +66,23 @@ export default async function Liga({ searchParams }) {
           <a href={`/liga/einstellungen?league=${leagueId}`} style={S.btn}>Einstellungen</a>
         </div>
       </header>
+
+      <div style={S.statusLeiste}>
+        <div>
+          <span style={S.label}>Letzte Aktualisierung</span>
+          {zeitpunkt(status.letzterLauf)}
+          <span style={S.muted}> {vorZeit(status.letzterLauf)}</span>
+        </div>
+        <div>
+          <span style={S.label}>Neuestes Event</span>
+          {zeitpunkt(status.neuestesEvent)}
+          <span style={S.muted}> {vorZeit(status.neuestesEvent)}</span>
+        </div>
+        <div>
+          <span style={S.label}>Events gesamt</span>
+          {status.gesamt ?? "–"}
+        </div>
+      </div>
 
       {p.neu !== undefined && (
         <div style={S.hinweis}>{p.neu} neue Events importiert.</div>
@@ -170,6 +188,7 @@ const S = {
   h1: { fontSize: 24, margin: 0 },
   sub: { color: "#64748b", fontSize: 13, margin: "6px 0 16px" },
   btn: { fontSize: 13, padding: "7px 12px", border: "1px solid #cbd5e1", borderRadius: 6, textDecoration: "none", color: "#334155", whiteSpace: "nowrap" },
+  statusLeiste: { display: "flex", gap: 28, padding: "12px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 16, fontSize: 13, flexWrap: "wrap" },
   hinweis: { padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 13, marginBottom: 14 },
   box: { border: "2px solid", borderRadius: 8, padding: 14, marginBottom: 22 },
   grid: { display: "flex", gap: 32, marginTop: 10, fontSize: 15, flexWrap: "wrap" },
