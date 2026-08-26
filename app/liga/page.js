@@ -106,6 +106,7 @@ export default async function Liga({ searchParams }) {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <a href={`/api/import?league=${leagueId}&zurueck=1`} style={S.btn}>Aktualisieren</a>
+          <a href={`/api/rekonstruieren?league=${leagueId}&zurueck=1`} style={S.btn}>Historie nachladen</a>
           <a href={`/liga/einstellungen?league=${leagueId}`} style={S.btn}>Einstellungen</a>
           <Link href="/liga" style={S.btn}>Liga wechseln</Link>
         </div>
@@ -127,13 +128,23 @@ export default async function Liga({ searchParams }) {
           {status.gesamt ?? "–"}
         </div>
         <div>
-          <span style={S.label}>Import</span>
+          <span style={S.label}>Feed-Import</span>
           {status.komplett ? "vollständig" : `unvollständig (ab ${status.offsetPos})`}
+        </div>
+        <div>
+          <span style={S.label}>Rekonstruiert</span>
+          {status.rekonGefunden} Transfers
+          <span style={S.muted}>
+            {status.rekonFertig ? " (fertig)" : status.rekonPosition > 0 ? ` (bei ${status.rekonPosition})` : ""}
+          </span>
         </div>
       </div>
 
       {p.neu !== undefined && (
         <div style={S.hinweis}>{p.neu} neue Events importiert.</div>
+      )}
+      {p.rekon && (
+        <div style={{ ...S.hinweis, background: "#dbeafe" }}>{p.rekon}</div>
       )}
       {p.hinweis && (
         <div style={{ ...S.hinweis, background: "#fef3c7" }}>
@@ -141,7 +152,7 @@ export default async function Liga({ searchParams }) {
         </div>
       )}
       {p.fehler && (
-        <div style={{ ...S.hinweis, color: "#dc2626" }}>Import-Fehler: {p.fehler}</div>
+        <div style={{ ...S.hinweis, color: "#dc2626" }}>Fehler: {p.fehler}</div>
       )}
 
       <div style={{ ...S.box, borderColor: passt ? "#16a34a" : "#dc2626" }}>
@@ -158,7 +169,7 @@ export default async function Liga({ searchParams }) {
         </div>
         {!status.komplett && (
           <div style={S.achtung}>
-            Import noch unvollständig – die Kontostände stimmen erst, wenn alle Events geladen sind.
+            Feed-Import noch unvollständig – die Kontostände stimmen erst, wenn alle Events geladen sind.
           </div>
         )}
         {ich && (
@@ -172,9 +183,9 @@ export default async function Liga({ searchParams }) {
               {ich.korrektur !== 0 && <> {" + "}{euro(ich.korrektur)} Korrektur</>}
             </div>
             <div style={S.rechnung}>
-              Login-Bonus: {euro(ich.bonusEcht)} aus {ich.bonusTage} echten Gutschriften
-              {ich.maxTag ? ` (höchster Streak-Tag: ${ich.maxTag})` : ""} ·
-              {" "}Formel würde {euro(ich.bonusFormel)} ergeben ({ich.tageGezaehlt} Tage)
+              Login-Bonus über {ich.tageGezaehlt} Tage ({ich.bonusQuelle}) ·
+              {" "}{ich.bonusTage} echte Gutschriften in der DB ({euro(ich.bonusEcht)})
+              {ich.maxTag ? ` · höchster Streak-Tag ${ich.maxTag}` : ""}
             </div>
           </>
         )}
@@ -200,7 +211,6 @@ export default async function Liga({ searchParams }) {
                 <td style={S.td}>{i + 1}</td>
                 <td style={S.td}>
                   <strong>{k.name}</strong>
-                  {k.bonusIstEcht && <span style={S.ok}>Bonus exakt</span>}
                   {k.mehrdeutig && <span style={S.warn}>Name doppelt</span>}
                   {k.anzKauf === 0 && k.anzVerkauf === 0 && (
                     <span style={S.info}>keine Transfers</span>
@@ -256,7 +266,7 @@ const S = {
   sub: { color: "#64748b", fontSize: 13, margin: "6px 0 16px" },
   btn: { fontSize: 13, padding: "7px 12px", border: "1px solid #cbd5e1", borderRadius: 6, textDecoration: "none", color: "#334155", whiteSpace: "nowrap" },
   ligaCard: { display: "flex", flexDirection: "column", gap: 3, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, textDecoration: "none", color: "inherit" },
-  statusLeiste: { display: "flex", gap: 28, padding: "12px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 16, fontSize: 13, flexWrap: "wrap" },
+  statusLeiste: { display: "flex", gap: 24, padding: "12px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 16, fontSize: 13, flexWrap: "wrap" },
   hinweis: { padding: "8px 12px", background: "#f1f5f9", borderRadius: 6, fontSize: 13, marginBottom: 14 },
   box: { border: "2px solid", borderRadius: 8, padding: 14, marginBottom: 22 },
   grid: { display: "flex", gap: 32, marginTop: 10, fontSize: 15, flexWrap: "wrap" },
@@ -269,7 +279,6 @@ const S = {
   td: { padding: "9px 10px", borderBottom: "1px solid #f1f5f9" },
   tdR: { padding: "9px 10px", borderBottom: "1px solid #f1f5f9", textAlign: "right" },
   muted: { color: "#94a3b8", fontSize: 12 },
-  ok: { color: "#16a34a", fontSize: 11, marginLeft: 6 },
   warn: { color: "#ea580c", fontSize: 11, marginLeft: 6 },
   info: { color: "#94a3b8", fontSize: 11, marginLeft: 6 },
   details: { marginTop: 28 },
