@@ -35,7 +35,7 @@ export async function GET(request) {
     if (zurueck) {
       const params = new URLSearchParams({
         league: leagueId,
-        rekon: `${e.index}/${e.gesamt} Spieler geprüft · ${gefunden} Transfers${e.fertig ? " · fertig" : " · nochmal klicken"}`,
+        rekon: `${e.index}/${e.gesamt} geprüft (${e.ausKader} aus Kadern, ${e.nurEvents} nur aus Events) · ${gefunden} Transfers${e.fertig ? " · fertig" : " · nochmal klicken"}`,
       });
       return Response.redirect(new URL(`/liga?${params}`, request.url), 303);
     }
