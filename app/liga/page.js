@@ -5,6 +5,7 @@ import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getImportStatus, getTeamwerte, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit } from "@/lib/format";
+import Tabelle from "./Tabelle";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,6 @@ export default async function Liga({ searchParams }) {
     k.limit = Math.floor(k.teamwert / 3);
     k.maxGebot = k.konto + k.limit;
   }
-  konten.sort((a, b) => b.maxGebot - a.maxGebot);
 
   const ich = konten.find((k) => k.id === treffer.i);
   const echt = Number(me.b);
@@ -197,67 +197,15 @@ export default async function Liga({ searchParams }) {
         )}
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={S.table}>
-          <thead>
-            <tr>
-              <th style={S.th}>#</th>
-              <th style={S.th}>Manager</th>
-              <th style={S.thR}>Liquidität</th>
-              <th style={S.thR}>Teamwert</th>
-              <th style={S.thR}>Limit (⅓)</th>
-              <th style={S.thR}>Max-Gebot</th>
-              <th style={S.thR}>Käufe</th>
-              <th style={S.thR}>Verkäufe</th>
-              <th style={S.thR}>Strafen</th>
-              <th style={S.thR}>Korrektur</th>
-            </tr>
-          </thead>
-          <tbody>
-            {konten.map((k, i) => {
-              const binIch = k.id === treffer.i;
-              return (
-                <tr key={k.id} style={binIch ? { background: "#eff6ff" } : undefined}>
-                  <td style={S.td}>{i + 1}</td>
-                  <td style={S.td}>
-                    <strong>{k.name}</strong>
-                    {binIch && <span style={S.ok2}>exakt</span>}
-                    {!binIch && lueckeStd > 0 && <span style={S.circa}>ca.</span>}
-                    {k.mehrdeutig && <span style={S.warn}>Name doppelt</span>}
-                  </td>
-                  <td style={{ ...S.tdR, color: k.konto < 0 ? "#dc2626" : "inherit" }}>
-                    {!binIch && lueckeStd > 0 && <span style={S.muted}>~ </span>}
-                    {euro(k.konto)}
-                  </td>
-                  <td style={S.tdR}>
-                    {k.teamwert > 0 ? euro(k.teamwert) : "–"}
-                    {k.kaderGroesse > 0 && <span style={S.muted}> ({k.kaderGroesse})</span>}
-                  </td>
-                  <td style={{ ...S.tdR, color: "#94a3b8" }}>
-                    {k.limit > 0 ? euro(k.limit) : "–"}
-                  </td>
-                  <td style={S.tdR}>
-                    <strong style={{ color: "#0f172a" }}>
-                      {k.teamwert > 0 ? euro(k.maxGebot) : "–"}
-                    </strong>
-                  </td>
-                  <td style={S.tdR}>{euro(k.kaeufe)} <span style={S.muted}>({k.anzKauf})</span></td>
-                  <td style={S.tdR}>{euro(k.verkaeufe)} <span style={S.muted}>({k.anzVerkauf})</span></td>
-                  <td style={{ ...S.tdR, color: k.strafen < 0 ? "#dc2626" : "#94a3b8" }}>
-                    {k.anzStrafen > 0 ? `${euro(k.strafen)} (${k.anzStrafen})` : "–"}
-                  </td>
-                  <td style={{ ...S.tdR, color: k.korrektur !== 0 ? "#7c3aed" : "#94a3b8" }}>
-                    {k.korrektur !== 0 ? euro(k.korrektur) : "–"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <Tabelle
+        konten={JSON.parse(JSON.stringify(konten))}
+        meineId={treffer.i}
+        unsicher={lueckeStd > 0}
+      />
 
       <p style={S.legende}>
-        <strong>Liquidität</strong> = freies Guthaben ·
+        Spaltenüberschrift antippen zum Sortieren, nochmal für die Gegenrichtung. ·
+        {" "}<strong>Liquidität</strong> = freies Guthaben ·
         {" "}<strong>Limit</strong> = erlaubtes Minus (ein Drittel des Teamwerts) ·
         {" "}<strong>Max-Gebot</strong> = Liquidität + Limit, also der höchste Betrag, den
         ein Manager ohne vorherigen Verkauf bieten kann.
@@ -281,14 +229,6 @@ const S = {
   grid: { display: "flex", gap: 32, marginTop: 10, fontSize: 15, flexWrap: "wrap" },
   label: { display: "block", fontSize: 11, textTransform: "uppercase", color: "#64748b", marginBottom: 2 },
   rechnung: { marginTop: 12, paddingTop: 10, borderTop: "1px solid #e2e8f0", fontSize: 12, color: "#64748b" },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 },
-  th: { textAlign: "left", padding: "8px 10px", borderBottom: "2px solid #e2e8f0", fontSize: 11, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" },
-  thR: { textAlign: "right", padding: "8px 10px", borderBottom: "2px solid #e2e8f0", fontSize: 11, textTransform: "uppercase", color: "#64748b", whiteSpace: "nowrap" },
-  td: { padding: "9px 10px", borderBottom: "1px solid #f1f5f9" },
-  tdR: { padding: "9px 10px", borderBottom: "1px solid #f1f5f9", textAlign: "right", whiteSpace: "nowrap" },
   muted: { color: "#94a3b8", fontSize: 12 },
-  ok2: { color: "#16a34a", fontSize: 10, marginLeft: 6, textTransform: "uppercase" },
-  circa: { color: "#ea580c", fontSize: 10, marginLeft: 6, textTransform: "uppercase" },
-  warn: { color: "#ea580c", fontSize: 11, marginLeft: 6 },
   legende: { marginTop: 14, fontSize: 12, color: "#64748b", lineHeight: 1.6 },
 };
