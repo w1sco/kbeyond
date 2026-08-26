@@ -1,17 +1,18 @@
 import { cookies } from "next/headers";
+import { pruefeApi } from "@/lib/auth";
 import { initSchema, getSettings, sql } from "@/lib/db";
 import { rekonstruiere } from "@/lib/rekonstruktion";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-export async function GET(request) {
+export async function POST(request) {
   const token = (await cookies()).get("kb_token")?.value;
-  if (!token) return Response.json({ error: "nicht angemeldet" }, { status: 401 });
-
   const { searchParams } = new URL(request.url);
   const leagueId = searchParams.get("league");
-  if (!leagueId) return Response.json({ error: "league fehlt" }, { status: 400 });
+
+  const abgelehnt = await pruefeApi(request, leagueId, token);
+  if (abgelehnt) return abgelehnt;
 
   const neustart = searchParams.get("neustart") === "1";
   const zurueck = searchParams.get("zurueck") === "1";

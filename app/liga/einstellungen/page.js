@@ -5,12 +5,21 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, sql } from "@/lib/db";
 import { euro } from "@/lib/format";
+import { sitzung, verlangeLiga, istMitglied } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 async function speichern(formData) {
   "use server";
   const leagueId = formData.get("league");
+
+  // Die Liga-ID kommt aus dem Formular und ist damit manipulierbar. Ohne
+  // diese Prüfung könnte jeder Angemeldete die Einstellungen und
+  // Korrekturen einer fremden Liga überschreiben.
+  const { token } = await sitzung();
+  if (!(await istMitglied(leagueId, token))) {
+    throw new Error("Kein Zugriff auf diese Liga");
+  }
 
   await sql`
     UPDATE liga_settings SET
@@ -41,14 +50,14 @@ async function speichern(formData) {
 }
 
 export default async function Einstellungen({ searchParams }) {
-  const token = (await cookies()).get("kb_token")?.value;
-  if (!token) redirect("/login");
+  const { token } = await sitzung();
 
   const p = await searchParams;
   // Kein Fallback auf eine feste Liga-ID: ohne Parameter landete man sonst
   // in den Einstellungen einer fremden Liga.
   if (!p.league) redirect("/liga");
   const leagueId = p.league;
+  await verlangeLiga(leagueId, token);
 
   await initSchema();
   const settings = await getSettings(leagueId);

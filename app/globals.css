@@ -143,6 +143,20 @@ body {
 
 .kb-btn:hover { border-color: var(--kb-akzent); color: var(--kb-akzent); }
 
+/* Schreibende Aktionen stecken in kleinen POST-Formularen. Die sollen sich
+   im Knopfraster verhalten wie die Knöpfe selbst. */
+.kb-aktionen form { display: flex; }
+.kb-aktionen form .kb-btn { width: 100%; }
+
+/* Kachel als Knopf (Selbstzuordnung läuft über POST) */
+.kb-kachel--knopf {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
 .kb-btn--stark {
   background: #0f172a;
   border-color: #0f172a;
@@ -529,7 +543,8 @@ th.kb-namensspalte { z-index: 3; }
   .kb-kopf { flex-direction: column; gap: 12px; }
 
   .kb-aktionen { width: 100%; }
-  .kb-aktionen .kb-btn { flex: 1 1 auto; }
+  .kb-aktionen .kb-btn,
+  .kb-aktionen form { flex: 1 1 auto; }
 }
 
 /* ------------------------------------------------------------------

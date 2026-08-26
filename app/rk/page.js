@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { sql, initSchema } from "@/lib/db";
 import { euro, zeitpunkt } from "@/lib/format";
 import { DiagnoseKopf, LigaFehlt } from "../_diagnose/Endpunkte";
+import { verlangeLiga } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export default async function RK({ searchParams }) {
   const p = await searchParams;
   if (!p.league) return <LigaFehlt titel="Rekonstruierte Transfers" />;
 
+  await verlangeLiga(p.league, token);
   await initSchema();
 
   const rk = await sql`

@@ -32,7 +32,9 @@ export default function Login() {
     <main className="kb-seite" style={{ maxWidth: 380, paddingTop: 72 }}>
       <h1 className="kb-titel">KBeyond</h1>
       <p className="kb-unter" style={{ marginBottom: 20 }}>
-        Anmeldung mit den Kickbase-Zugangsdaten.
+        Anmeldung mit den Kickbase-Zugangsdaten. Sie werden an Kickbase
+        weitergereicht und hier nicht gespeichert — abgelegt wird nur das
+        Sitzungs-Token in einem httpOnly-Cookie.
       </p>
 
       <form className="kb-karte" onSubmit={submit}>

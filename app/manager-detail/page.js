@@ -4,6 +4,7 @@ import Link from "next/link";
 import { sql, initSchema } from "@/lib/db";
 import { euro, zeitpunkt } from "@/lib/format";
 import { DiagnoseKopf, LigaFehlt } from "../_diagnose/Endpunkte";
+import { verlangeLiga } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function Detail({ searchParams }) {
   const p = await searchParams;
   if (!p.league) return <LigaFehlt titel="Transfers nach Name" />;
 
+  await verlangeLiga(p.league, token);
   await initSchema();
 
   if (!p.name) {

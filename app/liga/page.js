@@ -6,6 +6,7 @@ import { initSchema, getSettings, getImportStatus, getTeamwerte, sql } from "@/l
 import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
+import { verlangeLiga } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function Liga({ searchParams }) {
       <main className="kb-seite kb-seite--schmal">
         <h1 className="kb-titel">KBeyond</h1>
         <p className="kb-unter" style={{ marginBottom: 16 }}>Liga wählen</p>
+        {p.fehler && <div className="kb-hinweis kb-hinweis--fehler">{p.fehler}</div>}
         <div className="kb-kacheln kb-kacheln--schmal">
           {(ligen.it ?? []).map((l) => (
             <Link key={l.i} href={`/liga?league=${l.i}`} className="kb-kachel">
@@ -38,6 +40,7 @@ export default async function Liga({ searchParams }) {
     );
   }
 
+  await verlangeLiga(leagueId, token);
   await initSchema();
 
   const overview = await kbFetch(`/v4/leagues/${leagueId}/overview`, token);
@@ -68,13 +71,13 @@ export default async function Liga({ searchParams }) {
         <p className="kb-unter" style={{ marginBottom: 16 }}>Wer bist du in dieser Liga?</p>
         <div className="kb-kacheln">
           {spieler.map((m) => (
-            <a
+            <form
               key={m.i}
-              href={`/api/ich?name=${encodeURIComponent(m.n)}&league=${leagueId}`}
-              className="kb-kachel"
+              action={`/api/ich?name=${encodeURIComponent(m.n)}&league=${leagueId}`}
+              method="post"
             >
-              {m.n}
-            </a>
+              <button type="submit" className="kb-kachel kb-kachel--knopf">{m.n}</button>
+            </form>
           ))}
         </div>
       </main>
@@ -116,9 +119,11 @@ export default async function Liga({ searchParams }) {
           </p>
         </div>
         <div className="kb-aktionen">
-          <a href={`/api/import?league=${leagueId}&zurueck=1`} className="kb-btn">Aktualisieren</a>
-          <a href={`/api/teamwerte?league=${leagueId}&zurueck=1`} className="kb-btn">Teamwerte laden</a>
-          <a href={`/api/rekonstruieren?league=${leagueId}&zurueck=1`} className="kb-btn">Historie nachladen</a>
+          {/* Formulare statt Links: ein GET, das Daten verändert, lässt sich
+              von einer fremden Seite aus auslösen. */}
+          <Aktion pfad="import" leagueId={leagueId}>Aktualisieren</Aktion>
+          <Aktion pfad="teamwerte" leagueId={leagueId}>Teamwerte laden</Aktion>
+          <Aktion pfad="rekonstruieren" leagueId={leagueId}>Historie nachladen</Aktion>
           <a href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Einstellungen</a>
           <Link href="/liga" className="kb-btn">Liga wechseln</Link>
         </div>
@@ -228,5 +233,14 @@ export default async function Liga({ searchParams }) {
         {" "}<strong>Anpassungen</strong> = Strafen und manuelle Korrektur zusammen
       </p>
     </main>
+  );
+}
+
+// Ein Knopf, der eine schreibende API-Route per POST auslöst.
+function Aktion({ pfad, leagueId, children }) {
+  return (
+    <form action={`/api/${pfad}?league=${leagueId}&zurueck=1`} method="post">
+      <button type="submit" className="kb-btn">{children}</button>
+    </form>
   );
 }

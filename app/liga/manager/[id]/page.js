@@ -4,6 +4,7 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getTeamwerte, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
+import { verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function ManagerSeite({ params, searchParams }) {
   const p = await searchParams;
   if (!p.league) redirect("/liga");
   const leagueId = p.league;
+  await verlangeLiga(leagueId, token);
 
   await initSchema();
 
