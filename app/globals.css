@@ -668,7 +668,10 @@ th.kb-namensspalte { z-index: 3; }
 }
 
 .kb-rechner-fuss > span:first-child { flex: 1 1 220px; }
-.kb-rechner-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; }
+
+/* flex:0 0 auto hat die Knopfgruppe am Schrumpfen gehindert – auf dem Handy
+   lief der zweite Knopf damit aus dem Bild. */
+.kb-rechner-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
 
 .kb-plus { color: var(--kb-gut); }
 
@@ -815,7 +818,16 @@ th.kb-namensspalte { z-index: 3; }
   .kb-aktionen { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .kb-aktionen .kb-btn { width: 100%; }
 
-  .kb-kennzahlen { grid-template-columns: repeat(3, auto); gap: 10px; font-size: 14px; }
+  /* repeat(3, auto) durfte nicht schrumpfen – bei langen Beschriftungen wie
+     "Kontostand danach" lief der Block damit aus dem Bild. */
+  .kb-kennzahlen {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px 12px;
+    font-size: 14px;
+  }
+
+  .kb-kennzahlen > div { min-width: 0; }
+  .kb-kennzahlen .kb-label { white-space: normal; }
 
   /* --- Tabelle: nur die drei Vergleichszahlen, Rest aufklappbar --- */
   .kb-tabelle { min-width: 0; font-size: 13px; }
@@ -829,6 +841,18 @@ th.kb-namensspalte { z-index: 3; }
   .kb-namensspalte { min-width: 0; padding-left: 8px; padding-right: 4px; }
   .kb-tabelle:not(.kb-tabelle--schmal) .kb-namensspalte { position: static; }
   .kb-tabelle--schmal { font-size: 12px; }
+  .kb-tabelle--schmal th,
+  .kb-tabelle--schmal td { padding: 8px 6px; }
+
+  /* Lange Spielernamen dürfen die Zahlen daneben nicht verdrängen */
+  .kb-spielername {
+    display: inline-block;
+    max-width: 108px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
 
   .kb-name {
     display: inline-block;
@@ -918,6 +942,9 @@ th.kb-namensspalte { z-index: 3; }
 
   .kb-roh { max-height: 300px; font-size: 10px; }
 
+  .kb-rechner-knoepfe { width: 100%; }
+  .kb-rechner-knoepfe .kb-btn { flex: 1 1 100%; }
+
   .kb-fragzeile { flex-direction: column; }
   .kb-fragzeile .kb-btn--stark { width: 100%; }
 
@@ -935,6 +962,7 @@ th.kb-namensspalte { z-index: 3; }
 
 @media (max-width: 360px) {
   .kb-tabelle { font-size: 12px; }
+  .kb-spielername { max-width: 84px; }
   .kb-tabelle th { padding: 8px 4px; font-size: 9px; }
   .kb-tabelle td { padding: 8px 4px; }
   .kb-name { max-width: 54px; }

@@ -508,6 +508,15 @@ Liga sie überhaupt bezahlen.
 Der Spielerpool speichert seit der Marktseite auch Marktwert und Position. Der Cache-
 Schlüssel heißt deshalb `bundesliga_v2` — alte Einträge hatten nur ID und Name.
 
+### Spielernamen kommen nicht aus dem Kader
+
+`/squad` liefert Position, Marktwert und Kaufpreis, aber unter keinem der bekannten Felder
+(`fn`, `ln`, `n`, `name`, …) einen Namen — im Kader stand deshalb überall „Unbekannt".
+Statt weitere Feldnamen zu raten, holt `lib/spielernamen.js` die Namen über die Spieler-ID
+aus zwei vorhandenen Quellen: dem Bundesliga-Pool und den `events` dieser Liga, wo jeder
+Transfer den Namen mitführt. Events gewinnen, weil sie den Namen so schreiben, wie die Liga
+ihn sieht. Bleibt einer übrig, steht dort `Spieler #4711` statt dreizehnmal „Unbekannt".
+
 ### Der Kader-Endpoint
 
 `/v4/leagues/{id}/managers/{uid}/squad` wurde nie ausgewertet, nur roh gedumpt — welches

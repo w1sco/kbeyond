@@ -77,12 +77,15 @@ export default function Verkaufsrechner({ kader, konto, teamwert }) {
 
   const pfeil = (key) => (key === sortKey ? (absteigend ? " ▼" : " ▲") : "");
 
+  // sek = weicht auf schmalen Displays. Der Kaufpreis lässt sich aus
+  // Marktwert und Gewinn herleiten, die Punkte sind für die Verkaufsfrage
+  // ohnehin nebensächlich — sonst müsste man die Tabelle seitlich schieben.
   const SPALTEN = [
     { key: "position", label: "Pos." },
     { key: "marktwert", label: "Marktwert" },
-    { key: "kaufpreis", label: "Kaufpreis" },
+    { key: "kaufpreis", label: "Kaufpreis", sek: true },
     { key: "gewinn", label: "Gewinn" },
-    { key: "punkte", label: "Punkte" },
+    { key: "punkte", label: "Punkte", sek: true },
   ];
 
   return (
@@ -150,7 +153,7 @@ export default function Verkaufsrechner({ kader, konto, teamwert }) {
                   key={s.key}
                   scope="col"
                   tabIndex={0}
-                  className={s.key === sortKey ? "kb-aktiv" : undefined}
+                  className={`${s.sek ? "kb-sek" : ""}${s.key === sortKey ? " kb-aktiv" : ""}`}
                   onClick={() => klick(s.key)}
                   onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && klick(s.key)}
                 >
@@ -177,14 +180,14 @@ export default function Verkaufsrechner({ kader, konto, teamwert }) {
                       onClick={(e) => e.stopPropagation()}
                       aria-label={`${s.name} verkaufen`}
                     />
-                    {" "}{s.name}
+                    {" "}<span className="kb-spielername">{s.name}</span>
                   </td>
                   <td>{s.position ?? "–"}</td>
                   <td>
                     <span className="kb-voll">{euro(s.marktwert)}</span>
                     <span className="kb-kurz">{euroKurz(s.marktwert)}</span>
                   </td>
-                  <td>{s.kaufpreis == null ? <span className="kb-gedaempft">–</span> : (
+                  <td className="kb-sek">{s.kaufpreis == null ? <span className="kb-gedaempft">–</span> : (
                     <>
                       <span className="kb-voll">{euro(s.kaufpreis)}</span>
                       <span className="kb-kurz">{euroKurz(s.kaufpreis)}</span>
@@ -198,7 +201,7 @@ export default function Verkaufsrechner({ kader, konto, teamwert }) {
                       </>
                     )}
                   </td>
-                  <td>{s.punkte ?? "–"}</td>
+                  <td className="kb-sek">{s.punkte ?? "–"}</td>
                 </tr>
               );
             })}

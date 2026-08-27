@@ -68,6 +68,7 @@ export default async function ManagerSeite({ params, searchParams }) {
     SELECT dt, buyer, seller, price, player_name, id
     FROM events
     WHERE league_id = ${leagueId} AND type = 15
+      AND dt >= ${settings.stichtag}
       AND (buyer = ${manager.n} OR seller = ${manager.n})
     ORDER BY dt DESC`;
 
@@ -89,9 +90,10 @@ export default async function ManagerSeite({ params, searchParams }) {
   if (kader.length === 0) {
     try {
       const squad = await kbFetch(`/v4/leagues/${leagueId}/managers/${id}/squad`, token);
+      const namen = await holeNamen(leagueId);
       kader = findeSpielerListe(squad).map(normalisiereSpieler).map((s) => ({
         id: String(s.id),
-        name: s.name,
+        name: benenne(s, namen),
         position: s.position,
         marktwert: Number(s.marktwert ?? 0),
         kaufpreis: s.preis == null ? null : Number(s.preis),
@@ -257,7 +259,7 @@ export default async function ManagerSeite({ params, searchParams }) {
                   <th>Richtung</th>
                   <th>Preis</th>
                   <th>Datum</th>
-                  <th>Quelle</th>
+                  <th className="kb-sek">Quelle</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,13 +267,15 @@ export default async function ManagerSeite({ params, searchParams }) {
                   const kauf = z.buyer === manager.n;
                   return (
                     <tr key={z.id} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
-                      <td className="kb-namensspalte">{z.player_name ?? "–"}</td>
+                      <td className="kb-namensspalte">
+                        <span className="kb-spielername">{z.player_name ?? "–"}</span>
+                      </td>
                       <td>{kauf ? "Kauf" : "Verkauf"}</td>
                       <td className={kauf ? "kb-minus" : undefined}>
                         {kauf ? "−" : "+"}{euro(Number(z.price))}
                       </td>
                       <td>{zeitpunkt(z.dt)}</td>
-                      <td className="kb-gedaempft">
+                      <td className="kb-sek kb-gedaempft">
                         {String(z.id).startsWith("rk") ? "rekonstruiert" : "Feed"}
                       </td>
                     </tr>
