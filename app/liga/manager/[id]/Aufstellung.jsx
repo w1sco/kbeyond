@@ -9,6 +9,8 @@ const REIHEN = [
   { kurz: "TW", titel: "Tor" },
 ];
 
+// Elf ist die Obergrenze, nicht die Pflicht: Eine Aufstellung kann auch
+// unvollständig sein, und dann soll sie so gezeigt werden, wie sie ist.
 const ELF = 11;
 
 // Was ein Vorschlag mindestens abdecken muss, damit die Elf spielbar
@@ -115,7 +117,10 @@ export default function Aufstellung({ kader }) {
               : "wie in Kickbase aufgestellt"}
           {" · "}
           {gewaehlt.size} von {ELF} gewählt
-          {gewaehlt.size === ELF ? ` · ${system} · ${euroKurz(wert)}` : ""}
+          {gewaehlt.size > 0 ? ` · ${system} · ${euroKurz(wert)}` : ""}
+          {gewaehlt.size > 0 && gewaehlt.size < ELF
+            ? ` · ${ELF - gewaehlt.size} ${ELF - gewaehlt.size === 1 ? "Platz" : "Plätze"} frei`
+            : ""}
           {punkte > 0 ? ` · ${punkte} Punkte` : ""}
         </span>
       </div>

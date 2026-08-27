@@ -1062,11 +1062,27 @@ Vorbelegt ist die **echte Aufstellung aus Kickbase**.
 Felderkennung. Gefunden über die Diagnoseseite `/aufstellung`; die drei Varianten
 `/managers/{uid}/lineup`, `/lineup/{uid}` und `/teamcenter` antworteten nicht.
 
-Die Startelf wird auf drei Wegen gesucht, der erste mit genau elf Treffern gewinnt:
+**Elf ist die Obergrenze, nicht die Regel.** Wer seine Aufstellung nicht fertig gemacht
+hat, steht mit zehn oder weniger da. Eine Erkennung, die auf „genau elf" besteht, liefert
+dann gar nichts.
+
+Beim **Endpunkt** ist das unkritisch — er liefert die Aufstellung, dort wird gelesen und
+nicht bewiesen. Bei der **Felderkennung** ist die Zahl dagegen der ganze Beweis: Je weiter
+man sie öffnet, desto eher passt ein beliebiges Feld zufällig. Dort gilt deshalb eine
+Untergrenze von **sieben** — weniger ist unrealistisch, und ein Fehlalarm wäre schlimmer
+als eine fehlende Anzeige.
+
+Fällt **mehr als eine Gruppe** in den erlaubten Bereich (bei 18 Spielern sind elf
+Aufgestellte und sieben auf der Bank beide „höchstens elf"), entscheidet die Position: Wer
+aufgestellt ist, hat die kleinste. Gibt es kein Positionsfeld, gewinnt die größere Gruppe.
+
+Die Startelf wird auf drei Wegen gesucht, der erste passende gewinnt:
 ein **Statusfeld** (`lst`, `st`, …), bei dem ein Wert genau elfmal vorkommt; die **Position
 `lo`**; oder eine Liste, die schon genau elf Einträge hat.
 
-**Der Zahlenbereich von `lo` wird abgelesen, nicht geraten.** Fest auf 1–11 zu filtern hat
+**Der Zahlenbereich von `lo` wird abgelesen, nicht geraten.** Gezählt wird die lückenlose
+Folge ab dem kleinsten Wert, höchstens elf lang — bricht sie vorher ab, sind eben nur so
+viele aufgestellt. Fest auf 1–11 zu filtern hat
 einen Ersatzspieler hereingelassen und den mit `lo: 0` verworfen — bei einer Aufstellung
 ist das typischerweise der Torwart. Gezählt werden jetzt elf aufeinanderfolgende Positionen
 **ab dem kleinsten vorkommenden Wert**, also 0–10 oder 1–11.

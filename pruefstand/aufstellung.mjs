@@ -32,8 +32,10 @@ pruefe("Reihenfolge mit Lücke wird verworfen",
 console.log("\nMuster 2 — Wahrheitswert:");
 pruefe("elf mal true",
   wieViele(findeAufstellung(kader("inLineup", [...Array(11).fill(true), ...Array(7).fill(false)]))), 11);
-pruefe("zehn mal true wird verworfen",
-  findeAufstellung(kader("inLineup", [...Array(10).fill(true), ...Array(8).fill(false)])), null);
+pruefe("zehn mal true zaehlt (unvollstaendige Aufstellung)",
+  wieViele(findeAufstellung(kader("inLineup", [...Array(10).fill(true), ...Array(8).fill(false)]))), 10);
+pruefe("drei mal true wird verworfen",
+  findeAufstellung(kader("inLineup", [...Array(3).fill(true), ...Array(15).fill(false)])), null);
 
 console.log("\nMuster 3 — Status-Code (1 = Startelf, 2 = Bank):");
 const status = [...Array(11).fill(1), ...Array(7).fill(2)];
@@ -96,12 +98,32 @@ pruefe("Statusfeld: elf Spieler", elfAus(mitStatus).ids.size, 11);
 // Genau elf Einträge
 const nurElf = { it: Array.from({ length: 11 }, (_, i) => eintrag(400 + i)) };
 pruefe("genau elf ohne Kennzeichen", elfAus(nurElf).ids.size, 11);
-pruefe("Art benannt", elfAus(nurElf).art, "Liste enthält genau elf");
+pruefe("Art benannt", elfAus(nurElf).art, "Liste enthält 11");
 
 pruefe("leere Antwort", elfAus({ it: [] }), null);
 pruefe("kein Array", elfAus({}), null);
 pruefe("zwölf ohne Kennzeichen → nichts",
   elfAus({ it: Array.from({ length: 12 }, (_, i) => eintrag(500 + i)) }), null);
+
+// Weniger als elf aufgestellt – der eigentliche Punkt.
+console.log("\nWeniger als elf aufgestellt:");
+const zehn = { it: Array.from({ length: 15 }, (_, i) =>
+  eintrag(600 + i, i < 10 ? { lo: i } : {})) };
+pruefe("zehn über lo 0–9", elfAus(zehn).ids.size, 10);
+pruefe("Art nennt die Spanne", elfAus(zehn).art, "lo 0–9");
+
+const acht = { it: Array.from({ length: 15 }, (_, i) =>
+  eintrag(700 + i, i < 8 ? { lo: i + 1 } : {})) };
+pruefe("acht über lo 1–8", elfAus(acht).ids.size, 8);
+
+// Volle Reihenfolge über den ganzen Kader, Aufstellung über den Status
+const zehnMitStatus = { it: Array.from({ length: 15 }, (_, i) =>
+  eintrag(800 + i, { lo: i, lst: i < 10 ? 1 : 0 })) };
+pruefe("Status entscheidet bei voller Nummerierung", elfAus(zehnMitStatus).ids.size, 10);
+pruefe("und benennt das Feld", elfAus(zehnMitStatus).art, "lst = 1");
+
+pruefe("nur einer aufgestellt",
+  elfAus({ it: Array.from({ length: 15 }, (_, i) => eintrag(900 + i, i < 1 ? { lo: 0 } : {})) }).ids.size, 1);
 
 console.log(fehler ? `\n${fehler} Fall/Fälle falsch` : "\nAlle Fälle richtig.");
 process.exit(fehler ? 1 : 0);

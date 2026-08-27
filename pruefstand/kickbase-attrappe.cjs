@@ -122,9 +122,14 @@ function fuerPfad(pfad) {
     const voll = vollerKader(wer);
     if (voll.length === 0) return null;
     // lo ab 0, wie live vermutet: der Torwart trägt die 0.
+    // Mit KB_ZEHN=1 sind nur zehn aufgestellt – der Rest hat keine
+    // Position. So laesst sich pruefen, dass elf keine Pflicht ist.
+    const wieViele = process.env.KB_ZEHN === "1" ? 10 : 11;
     return {
       it: voll.map((s, i) => ({
-        i: String(s.i), n: s.n, ap: 24, lo: i, st: 0, pos: s.pos,
+        i: String(s.i), n: s.n, ap: 24,
+        ...(i < wieViele ? { lo: i } : {}),
+        st: 0, pos: s.pos,
       })),
     };
   }

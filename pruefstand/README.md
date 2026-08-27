@@ -88,6 +88,12 @@ Cookie-Laufzeit wirklich aus dem Token gelesen und nicht geraten wird.
 Startelf, danach die Bank). Erst ab zwölf Spielern greift die Felderkennung
 überhaupt; mit weniger gilt der Kader ohnehin komplett als aufgestellt.
 
+## KB_ZEHN
+
+`KB_ZEHN=1` stellt nur zehn Spieler auf. Elf darf keine Bedingung sein —
+eine unvollständige Aufstellung muss als solche erkannt und angezeigt
+werden, nicht verworfen.
+
 ## KB_LEER
 
 `KB_LEER=1` lässt einen Manager eine unauswertbare Kaderantwort liefern.
