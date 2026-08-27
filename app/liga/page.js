@@ -7,6 +7,7 @@ import { berechneKonten } from "@/lib/ledger";
 import { euro, prozent, zeitpunkt, vorZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
 import Frag from "./Frag";
+import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 
@@ -127,6 +128,13 @@ export default async function Liga({ searchParams }) {
   const feedStart = status.feedStart ? new Date(status.feedStart) : null;
   const lueckeStd = feedStart && feedStart > stich ? (feedStart - stich) / 3_600_000 : 0;
   const lueckeTage = Math.round((lueckeStd / 24) * 10) / 10;
+
+  // ── Verlauf des Teamwerts, Tagesraster 0 Uhr deutscher Zeit ────────
+  const verlaufZeilen = await getTeamwertVerlauf(leagueId, settings.stichtag);
+  const verlaufTage = verlaufZeilen.length
+    ? tagesraster(new Date(verlaufZeilen[0].stand), new Date())
+    : [];
+  const verlaufReihen = Object.fromEntries(tagesreihen(verlaufZeilen, verlaufTage));
 
   // ── Aufschläge: was wurde über Marktwert gezahlt? ──────────────────
   const zeitraum = ZEITRAEUME.some((z) => z.schluessel === p.auf) ? p.auf : "reset";
@@ -304,6 +312,45 @@ export default async function Liga({ searchParams }) {
           </div>
         )}
       </div>
+
+      <section className="kb-karte">
+        <h2 className="kb-abschnitt-titel">
+          Teamwert-Verlauf
+          <span className="kb-leise"> Stand jeweils 0 Uhr</span>
+        </h2>
+        <Verlauf
+          tage={verlaufTage.map((t) => t.toISOString())}
+          reihen={verlaufReihen}
+          manager={konten.map((k) => ({ id: k.id, name: k.name }))}
+          meineId={treffer.i}
+        />
+        <Hinweis kurz="Wie der Verlauf entsteht" titel="Teamwert-Verlauf">
+          <p>
+            Jeder Punkt ist der <strong>letzte bekannte Teamwert vor 0 Uhr</strong> des
+            jeweiligen Tages, deutscher Zeit. Nur so sind die Manager vergleichbar —
+            gespeichert wird nämlich dann, wenn jemand aktualisiert, und das ist bei jedem
+            zu einer anderen Uhrzeit.
+          </p>
+          <p>
+            Eine Linie beginnt erst, wenn für den Manager ein Stand vorliegt. Vorher bleibt
+            sie leer statt bei null zu liegen — null wäre eine Aussage, „unbekannt" ist die
+            Wahrheit.
+          </p>
+          <p>
+            Alle Manager liegen grau im Hintergrund; angeklickte bekommen ihre Farbe. Die
+            Farbe hängt fest am Manager, nicht an seinem Rang — eine Auswahl färbt die
+            übrigen also nicht um.
+          </p>
+          <p>
+            Die Achse beginnt <strong>nicht bei null</strong>. Sonst lägen alle Linien
+            zusammengedrängt am oberen Rand und die täglichen Bewegungen wären unsichtbar.
+          </p>
+          <p>
+            <strong>Käufe und Verkäufe zählen mit hinein:</strong> Ein Zukauf hebt den
+            Teamwert, ohne dass ein Marktwert gestiegen wäre.
+          </p>
+        </Hinweis>
+      </section>
 
       <section className="kb-karte">
         <h2 className="kb-abschnitt-titel">

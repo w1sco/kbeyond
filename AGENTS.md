@@ -328,6 +328,40 @@ Unter vier Abständen wird **nicht geschätzt**, sondern „Rhythmus noch unbeka
 
 ---
 
+## Diagramme
+
+`app/liga/Verlauf.jsx` zeigt den Teamwert aller Manager über die Zeit. Was dabei zu
+beachten war:
+
+**Tagesraster statt Rohdaten.** Gespeichert wird, wenn jemand aktualisiert — bei jedem zu
+einer anderen Uhrzeit. Für ein Diagramm taugt das nicht. `tagesreihen()` legt deshalb ein
+festes Raster auf **0 Uhr deutscher Zeit**; der Wert eines Tages ist der letzte bekannte
+Stand davor. Ohne Stand bleibt die Linie **leer statt null** — null wäre eine Aussage.
+
+**Zwölf Linien in zwölf Farben sind unlesbar.** Alle Manager liegen zurückhaltend grau im
+Hintergrund, angeklickte bekommen ihre Farbe. Die Farbe hängt fest am Manager (Reihenfolge
+nach ID), **nicht an seinem Rang** — eine Auswahl darf die übrigen nicht umfärben. Mehr als
+acht farbige Linien lässt die Oberfläche nicht zu, weil die geprüfte Palette acht Stufen hat.
+
+**Zwei Geometrien.** Ein Seitenverhältnis für Desktop und Handy gibt es nicht: derselbe
+`viewBox` wird auf 360 px zu einem Streifen mit unlesbarer Schrift. `useSchmal()` schaltet
+per `matchMedia` um; auf dem Handy entfallen die direkten Namen am Linienende (kein Platz)
+und der Tooltip steht **unter** dem Diagramm statt darüber.
+
+**Beschriftungen entzerren.** Zwei Linien, die fast gleich enden, hätten überlappende Namen
+— `entzerre()` schiebt sie auseinander. Datumsangaben am unteren Rand werden ausgedünnt und
+die letzte weggelassen, wenn sie in die vorherige läuft.
+
+Die Farben stammen aus einer geprüften kategorialen Palette (Kontrast, Farbfehlsichtigkeit,
+Nachbarpaare). Drei der acht Stufen liegen unter 3:1 Kontrast — deshalb tragen die Linien
+zusätzlich Namen und der Tooltip nennt sie im Klartext, die Farbe allein trägt die
+Identität nicht.
+
+**Die Achse beginnt nicht bei null.** Sonst lägen alle Linien am oberen Rand und die
+täglichen Bewegungen wären unsichtbar. Das steht auch im Hinweis auf der Seite.
+
+---
+
 ## Zugriffsschutz
 
 Die Datenbank ist für **alle** Nutzer dieselbe: Events, Einstellungen und Korrekturen
@@ -427,6 +461,7 @@ app/
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
   liga/markt/page.js               Markt: freie Spieler, Kaufkraft der Liga
   liga/markt/Freieliste.jsx        "use client" — sortier- und durchsuchbar
+  liga/Verlauf.jsx                 "use client" — Teamwert-Verlauf als Liniendiagramm
   liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
   _ui/Hinweis.jsx                  "use client" — Hinweis als anklickbares Popup
   api/frag/route.js                Frage → Antwortstrom
@@ -453,6 +488,8 @@ lib/
   marktbeobachtung.js speichereMarkt(), sammleBeobachtungen(), aktuellAmMarkt()
   rekonstruktion.js rekonstruiere(), holeSpielerPool()
   rhythmus.js       bildeAuftritte(), schaetzeZyklus(), prognostiziere()
+  aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
+  verlauf.js        tagesraster(), tagesreihen() — Tagesstützstellen 0 Uhr
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi() — Zugriffsschutz
   kader.js          ladeKader() — Kader je Manager

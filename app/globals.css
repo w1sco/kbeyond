@@ -639,6 +639,96 @@ th.kb-namensspalte { z-index: 3; }
 @keyframes kb-blinken { 50% { opacity: 0; } }
 
 /* ------------------------------------------------------------------
+   Diagramm
+   ------------------------------------------------------------------ */
+
+.kb-diagramm { position: relative; }
+.kb-diagramm svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+
+/* Gitter und Achsen bleiben im Hintergrund – die Daten sind der Inhalt */
+.kb-gitter { stroke: var(--kb-rand); stroke-width: 1; }
+.kb-achse { fill: var(--kb-text-schwach); font-size: inherit; }
+
+.kb-linie { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.kb-linie--leise { stroke: var(--kb-rand-stark); stroke-width: 1.5; opacity: 0.55; }
+
+.kb-linienname { fill: var(--kb-text-leise); font-size: inherit; font-weight: 500; }
+.kb-fadenkreuz { stroke: var(--kb-text-schwach); stroke-width: 1; stroke-dasharray: 3 3; }
+.kb-punkt { stroke: var(--kb-flaeche); stroke-width: 2; }
+
+.kb-tooltip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 190px;
+  padding: 10px 12px;
+  background: var(--kb-flaeche);
+  border: 1px solid var(--kb-rand-stark);
+  border-radius: var(--kb-radius-klein);
+  box-shadow: var(--kb-schatten);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* Links darf der Tooltip die Achsenbeschriftung nicht verdecken */
+.kb-tooltip--links { right: auto; left: 74px; }
+
+.kb-tooltip-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--kb-text-leise);
+  margin-bottom: 6px;
+}
+
+.kb-tooltip-zeile {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb-tooltip-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kb-tooltip-wert { flex: 0 0 auto; font-weight: 600; }
+
+.kb-punktfarbe {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.kb-legende-band {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.kb-legendenchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px solid var(--kb-rand);
+  border-radius: 999px;
+  background: var(--kb-flaeche);
+  color: var(--kb-text-leise);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.kb-legendenchip--an {
+  border-color: var(--kb-text);
+  color: var(--kb-text);
+  font-weight: 600;
+}
+
+.kb-legendenchip:disabled { opacity: 0.45; cursor: default; }
+
+/* ------------------------------------------------------------------
    Kaderprofil
    ------------------------------------------------------------------ */
 
@@ -1006,6 +1096,14 @@ th.kb-namensspalte { z-index: 3; }
   .kb-roh { max-height: 300px; font-size: 10px; }
 
   .kb-profil { grid-template-columns: repeat(2, 1fr); }
+
+  /* Auf dem Handy steht der Tooltip unter dem Diagramm statt darüber –
+     überlagert wäre vom Diagramm nichts mehr zu sehen. */
+  .kb-tooltip {
+    position: static;
+    min-width: 0;
+    margin-top: 10px;
+  }
 
   .kb-rechner-knoepfe { width: 100%; }
   .kb-rechner-knoepfe .kb-btn { flex: 1 1 100%; }
