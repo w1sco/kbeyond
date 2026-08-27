@@ -1125,7 +1125,11 @@ Felder, deren Bedeutung wir kennen (Position, ID, Marktwert, Preis, Punkte, Name
 
 Der Aktualisieren-Lauf meldet, **woher** die Aufstellung kommt („Aufstellung 3 Manager"
 oder „… aus dem Kader über `lineup_order`") oder dass nichts erkennbar war.
-`/aufstellung?league=…&uid=…` zeigt die Rohdaten und je Feld, was auffällt.
+`/aufstellung?league=…` beantwortet die eigentliche Frage: **Kommen fremde Aufstellungen
+durch?** Ein Endpunkt, der *antwortet*, beweist nämlich nichts — `/lineup?uid=…` antwortet
+für jeden Manager und liefert trotzdem immer die eigene Elf. Die Seite ruft deshalb jeden
+Kandidaten für **zwei verschiedene Gegner** auf und vergleicht; entscheidend ist die Spalte
+„verschieden". Dazu die Rohdaten und je Feld, was auffällt.
 
 Ein Knopf **„Echte Aufstellung"** holt sie zurück, und die Leiste sagt, woran man ist:
 „wie in Kickbase aufgestellt" oder „geändert".
