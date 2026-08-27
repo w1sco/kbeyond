@@ -4,7 +4,7 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getImportStatus, getTeamwerte, getTeamwertTrend, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
-import { euro, zeitpunkt, vorZeit } from "@/lib/format";
+import { euro, prozent, zeitpunkt, vorZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
 import Frag from "./Frag";
 import Hinweis from "../_ui/Hinweis";
@@ -127,6 +127,16 @@ export default async function Liga({ searchParams }) {
   const feedStart = status.feedStart ? new Date(status.feedStart) : null;
   const lueckeStd = feedStart && feedStart > stich ? (feedStart - stich) / 3_600_000 : 0;
   const lueckeTage = Math.round((lueckeStd / 24) * 10) / 10;
+
+  // ── Aufschläge: was wurde über Marktwert gezahlt? ──────────────────
+  const zeitraum = ZEITRAEUME.some((z) => z.schluessel === p.auf) ? p.auf : "reset";
+  const aufschlagZeilen = await holeAufschlaege(
+    leagueId,
+    settings.stichtag,
+    zeitraumAb(zeitraum, settings.stichtag)
+  );
+  const aufLiga = werteAus(aufschlagZeilen);
+  const aufManager = proManager(aufschlagZeilen);
 
   const kaderStand = (await sql`
     SELECT MAX(stand) AS stand FROM kader WHERE league_id = ${leagueId}`)[0]?.stand ?? null;
@@ -294,6 +304,105 @@ export default async function Liga({ searchParams }) {
           </div>
         )}
       </div>
+
+      <section className="kb-karte">
+        <h2 className="kb-abschnitt-titel">
+          Aufschläge
+          <span className="kb-leise"> was über dem Marktwert gezahlt wurde</span>
+        </h2>
+
+        <div className="kb-sortleiste kb-sortleiste--immer">
+          {ZEITRAEUME.map((z) => (
+            <a
+              key={z.schluessel}
+              href={`/liga?league=${leagueId}&auf=${z.schluessel}`}
+              className={`kb-sortchip${zeitraum === z.schluessel ? " kb-sortchip--aktiv" : ""}`}
+            >
+              {z.label}
+            </a>
+          ))}
+        </div>
+
+        {aufLiga.anzahl === 0 ? (
+          <p className="kb-info">
+            In diesem Zeitraum kein Kauf, dem sich ein Marktwert zuordnen lässt.
+            {aufLiga.ohneWert > 0 && ` (${aufLiga.ohneWert} Käufe ohne bekanntes Angebot)`}
+          </p>
+        ) : (
+          <>
+            <div className="kb-kennzahlen">
+              <div>
+                <span className="kb-label">Ø Aufschlag der Liga</span>
+                <strong className={aufLiga.schnitt > 0 ? "kb-minus" : "kb-plus"}>
+                  {aufLiga.schnitt > 0 ? "+" : ""}{euro(Math.round(aufLiga.schnitt))}
+                </strong>
+              </div>
+              <div>
+                <span className="kb-label">Ø relativ</span>
+                <strong className={aufLiga.relativ > 0 ? "kb-minus" : "kb-plus"}>
+                  {aufLiga.relativ > 0 ? "+" : ""}{prozent(aufLiga.relativ)}
+                </strong>
+              </div>
+              <div>
+                <span className="kb-label">Gewertete Käufe</span>
+                {aufLiga.anzahl}
+                {aufLiga.ohneWert > 0 && <span className="kb-leise"> · {aufLiga.ohneWert} ohne Marktwert</span>}
+              </div>
+              <div>
+                <span className="kb-label">Summe über Marktwert</span>
+                {euro(Math.round(aufLiga.gesamt))}
+              </div>
+            </div>
+
+            <div className="kb-tabellenrahmen" style={{ marginTop: 14 }}>
+              <table className="kb-tabelle kb-tabelle--schmal">
+                <thead>
+                  <tr>
+                    <th className="kb-namensspalte">Manager</th>
+                    <th>Käufe</th>
+                    <th>Ø Aufschlag</th>
+                    <th>Ø relativ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aufManager.map((m, i) => (
+                    <tr key={m.name} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
+                      <td className="kb-namensspalte">
+                        <span className="kb-spielername">{m.name}</span>
+                      </td>
+                      <td>{m.anzahl}</td>
+                      <td className={m.schnitt > 0 ? "kb-minus" : "kb-plus"}>
+                        {m.schnitt > 0 ? "+" : ""}{euro(Math.round(m.schnitt))}
+                      </td>
+                      <td className={m.relativ > 0 ? "kb-minus" : "kb-plus"}>
+                        {m.relativ > 0 ? "+" : ""}{prozent(m.relativ)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        <Hinweis kurz="Wie der Aufschlag gerechnet wird" titel="Aufschlag über Marktwert">
+          <p>
+            Der Aufschlag eines Kaufs ist <strong>Kaufpreis minus Marktwert zum Zeitpunkt
+            des Angebots</strong> — nicht der Marktwert von heute. Sonst würde jede spätere
+            Marktwertänderung den Aufschlag verfälschen.
+          </p>
+          <p>
+            Der Marktwert kommt aus dem Feed-Event „Spieler neu am Markt“ oder aus der
+            eigenen Mitschrift des Transfermarkts. Käufe, zu denen sich kein Angebot finden
+            lässt, bleiben außen vor und werden separat gezählt — ein Durchschnitt aus der
+            Hälfte der Käufe soll nicht aussehen, als käme er aus allen.
+          </p>
+          <p>
+            <strong>Ø relativ</strong> gewichtet jeden Kauf gleich. Sonst bestimmte ein
+            einziger teurer Spieler die Quote der ganzen Liga.
+          </p>
+        </Hinweis>
+      </section>
 
       <Tabelle
         konten={JSON.parse(JSON.stringify(konten))}

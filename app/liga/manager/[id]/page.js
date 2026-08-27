@@ -77,8 +77,12 @@ export default async function ManagerSeite({ params, searchParams }) {
   const stich = new Date(settings.stichtag);
   const unsicher = !binIch && feedStart && new Date(feedStart) > stich;
 
+  const aufschlagJe = new Map(
+    aufschlag.posten.map((x) => [`${x.player_id}|${new Date(x.dt).getTime()}`, x])
+  );
+
   const transfers = await sql`
-    SELECT dt, buyer, seller, price, player_name, id
+    SELECT dt, buyer, seller, price, player_name, player_id, id
     FROM events
     WHERE league_id = ${leagueId} AND type = 15
       AND dt >= ${settings.stichtag}
@@ -120,6 +124,11 @@ export default async function ManagerSeite({ params, searchParams }) {
 
   const kaderGroesse = kader.length > 0 ? kader.length : kaderGerechnet;
   const kaderWert = kader.reduce((s, x) => s + Number(x.marktwert ?? 0), 0);
+
+  // Was hat dieser Manager über Marktwert gezahlt?
+  const aufschlag = werteAus(
+    (await holeAufschlaege(leagueId, settings.stichtag)).filter((z) => z.buyer === manager.n)
+  );
 
   // ── Kaderprofil: Topspieler und Bedarf je Position ──────────────────
   const topspieler = kader
@@ -221,6 +230,19 @@ export default async function ManagerSeite({ params, searchParams }) {
         <div>
           <span className="kb-label">Limit (⅓)</span>
           {limit > 0 ? euro(limit) : "–"}
+        </div>
+        <div>
+          <span className="kb-label">Ø Aufschlag</span>
+          {aufschlag.anzahl === 0 ? (
+            <span className="kb-gedaempft">–</span>
+          ) : (
+            <>
+              <span className={aufschlag.schnitt > 0 ? "kb-minus" : "kb-plus"}>
+                {aufschlag.schnitt > 0 ? "+" : ""}{euroKurz(Math.round(aufschlag.schnitt))}
+              </span>
+              <span className="kb-leise"> {prozent(aufschlag.relativ)} · {aufschlag.anzahl} Käufe</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -352,6 +374,7 @@ export default async function ManagerSeite({ params, searchParams }) {
                   <th className="kb-namensspalte">Spieler</th>
                   <th>Richtung</th>
                   <th>Preis</th>
+                  <th className="kb-sek">Aufschlag</th>
                   <th>Datum</th>
                   <th className="kb-sek">Quelle</th>
                 </tr>
@@ -367,6 +390,17 @@ export default async function ManagerSeite({ params, searchParams }) {
                       <td>{kauf ? "Kauf" : "Verkauf"}</td>
                       <td className={kauf ? "kb-minus" : undefined}>
                         {kauf ? "−" : "+"}{euro(Number(z.price))}
+                      </td>
+                      <td className="kb-sek">
+                        {(() => {
+                          const a = aufschlagJe.get(`${z.player_id}|${new Date(z.dt).getTime()}`);
+                          if (!a) return <span className="kb-gedaempft">–</span>;
+                          return (
+                            <span className={a.aufschlag > 0 ? "kb-minus" : "kb-plus"}>
+                              {a.aufschlag > 0 ? "+" : ""}{euroKurz(a.aufschlag)}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td>{zeitpunkt(z.dt)}</td>
                       <td className="kb-sek kb-gedaempft">
