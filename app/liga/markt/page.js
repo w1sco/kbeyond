@@ -66,6 +66,7 @@ export default async function Markt({ searchParams }) {
     (k) => (meineUid && String(k.id) === meineUid) || (meinName && k.name === meinName)
   ) ?? null;
   const meinTeamwert = ich ? tw.map.get(String(ich.id))?.teamwert ?? 0 : 0;
+  const meinKader = ich ? kader.proManager.get(String(ich.id)) ?? [] : [];
 
   // Der gemessene Liga-Aufschlag als Vorschlag für den Regler
   const aufLiga = werteAus(await holeAufschlaege(leagueId, settings.stichtag));
@@ -290,6 +291,7 @@ export default async function Markt({ searchParams }) {
         konto={ich ? ich.konto : null}
         teamwert={meinTeamwert}
         ligaAufschlag={aufLiga.relativ}
+        eigenerKader={meinKader}
       />
     </main>
   );

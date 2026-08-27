@@ -125,6 +125,7 @@ export default async function Transfermarkt({ searchParams }) {
             konto={ich ? ich.konto : null}
             teamwert={meinTeamwert}
             ligaAufschlag={aufLiga.relativ}
+            eigenerKader={ich ? kader.proManager.get(String(ich.id)) ?? [] : []}
           />
 
           <Hinweis kurz="Was die Spalten bedeuten" titel="Transfermarkt">

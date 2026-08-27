@@ -726,9 +726,15 @@ Auf `/liga/markt` und `/liga/transfermarkt` lassen sich Spieler anklicken; oben 
 sofort, was der Kauf mit dem eigenen Konto macht. `app/_ui/Kaufrechner.jsx` ist derselbe
 Baustein für beide Seiten.
 
+Beide Richtungen stehen dort zusammen, weil ein Kauf meist daran hängt, dass vorher etwas
+raus muss: Unter dem Rechner lässt sich der **eigene Kader** aufklappen und Spieler zum
+Verkauf antippen. Zwei Regler, weil beide Richtungen ihre eigene Unsicherheit haben — beim
+Kauf bietet man über den Marktwert, beim Verkauf an Kickbase bekommt man genau ihn und bei
+einem Mitspieler womöglich mehr.
+
 Zwei Dinge, die man leicht falsch rechnet:
 
-- **Der Kauf hebt auch das erlaubte Minus.** Ein gekaufter Spieler zählt zum Teamwert, und
+- **Käufe und Verkäufe verschieben das erlaubte Minus.** Ein gekaufter Spieler zählt zum Teamwert, und
   das Limit ist Teamwert ÷ 3. Wer für 20 Mio kauft, darf danach rund 6,7 Mio tiefer ins
   Minus als vorher. Ohne diesen Schritt fiele die Rechnung zu pessimistisch aus.
 - **Zum Marktwert bekommt man selten jemanden.** Deshalb ein Regler von 0 bis 50 %

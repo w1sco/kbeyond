@@ -862,6 +862,47 @@ th.kb-namensspalte { z-index: 3; }
 
 .kb-rechner--eng { border-left-color: var(--kb-schlecht); background: #fef2f2; }
 
+.kb-regler {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--kb-rand);
+}
+
+.kb-eigenerkader {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--kb-rand);
+}
+
+.kb-kaderband {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.kb-kaderchip {
+  padding: 6px 12px;
+  border: 1px solid var(--kb-rand-stark);
+  border-radius: 999px;
+  background: var(--kb-flaeche);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.kb-kaderchip--aktiv {
+  background: var(--kb-akzent);
+  border-color: var(--kb-akzent);
+  color: #fff;
+}
+
+.kb-kaderchip--aktiv .kb-leise { color: rgb(255 255 255 / 0.75); }
+
 .kb-aufschlagzeile {
   display: flex;
   align-items: flex-end;
@@ -1157,6 +1198,7 @@ th.kb-namensspalte { z-index: 3; }
     margin-top: 10px;
   }
 
+  .kb-regler { grid-template-columns: 1fr; }
   .kb-rechner-knoepfe { width: 100%; }
   .kb-rechner-knoepfe .kb-btn { flex: 1 1 100%; }
 

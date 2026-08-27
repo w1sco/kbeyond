@@ -58,7 +58,7 @@ function Prognose({ p }) {
   }
 }
 
-export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAufschlag = null }) {
+export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAufschlag = null, eigenerKader = [] }) {
   const [gewaehlt, setGewaehlt] = useState(() => new Set());
   const [sortKey, setSortKey] = useState("marktwert");
   const [absteigend, setAbsteigend] = useState(true);
@@ -121,6 +121,7 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
           konto={konto}
           teamwert={teamwert}
           ligaAufschlag={ligaAufschlag}
+          eigenerKader={eigenerKader}
           aufLeeren={() => setGewaehlt(new Set())}
         />
       )}
