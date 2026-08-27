@@ -897,7 +897,10 @@ Winterzeit gelesen. Für einen Stichtag ohne Belang.
 
 **Manager werden über Anzeigenamen identifiziert, nicht über IDs.** Der Feed liefert `byr: "Lamlo"`, keine ID. Bei Namensänderung bricht die Zuordnung. Doppelte Namen werden in der UI markiert.
 
-**Der Liga-Admin wird gefiltert** (`m.adm !== true`), weil er in der Beispielliga nicht mitspielt. Sobald das Tool an fremde Ligen geht, sollte das eine Einstellung werden — in anderen Ligen kann der Admin durchaus Manager sein.
+**Der Liga-Admin wird gefiltert** (`m.adm !== true`), weil er in der Beispielliga nicht
+mitspielt. **Und zwar aus jeder Liste** — er stand zunächst nur nicht in `ids`, wurde aber
+weiter an `werBrauchtNeueDaten` gereicht. Dadurch fragte der Lauf seinen Kader ab, den es
+nicht gibt, und meldete ihn als „ohne auswertbare Liste". Sobald das Tool an fremde Ligen geht, sollte das eine Einstellung werden — in anderen Ligen kann der Admin durchaus Manager sein.
 
 **Selbstzuordnung:** Erst über `kb_uid` (aus dem Login, Feldname unsicher), dann über `kb_name`. Schlägt beides fehl, wählt der Nutzer sich einmalig aus einer Liste — das ist der zuverlässige Fallback.
 
@@ -1059,8 +1062,19 @@ Vorbelegt ist die **echte Aufstellung aus Kickbase**.
 Felderkennung. Gefunden über die Diagnoseseite `/aufstellung`; die drei Varianten
 `/managers/{uid}/lineup`, `/lineup/{uid}` und `/teamcenter` antworteten nicht.
 
-Zwei Antwortformen werden bedient: Stehen genau elf Einträge da, ist die Liste selbst die
-Aufstellung; sonst zählt `lo` von 1 bis 11.
+Die Startelf wird auf drei Wegen gesucht, der erste mit genau elf Treffern gewinnt:
+ein **Statusfeld** (`lst`, `st`, …), bei dem ein Wert genau elfmal vorkommt; die **Position
+`lo`**; oder eine Liste, die schon genau elf Einträge hat.
+
+**Der Zahlenbereich von `lo` wird abgelesen, nicht geraten.** Fest auf 1–11 zu filtern hat
+einen Ersatzspieler hereingelassen und den mit `lo: 0` verworfen — bei einer Aufstellung
+ist das typischerweise der Torwart. Gezählt werden jetzt elf aufeinanderfolgende Positionen
+**ab dem kleinsten vorkommenden Wert**, also 0–10 oder 1–11.
+
+**Ein Endpunkt, der die `uid` ignoriert, wird erkannt.** Kommt bei jedem Manager dieselbe
+Elf zurück, sähe das sonst nach 17 Erfolgen aus, obwohl nur ein einziger Manager Daten
+bekommt. Der Lauf vergleicht die Elfen und schreibt dann ausdrücklich „Kickbase gibt fremde
+Aufstellungen nicht heraus".
 
 **Die Aufstellung ist ein eigener Schritt im Aktualisieren-Lauf**, nicht an den Kader
 gehängt. Sie ändert sich, wenn der Manager sie ändert — unabhängig von Transfers und

@@ -116,12 +116,15 @@ function fuerPfad(pfad) {
   const lineup = pfad.match(new RegExp(`/leagues/${LIGA}/(?:managers/(\\d+)/)?lineup(?:\\?uid=(\\d+))?$`));
   if (lineup && process.env.KB_ELF === "1") {
     // Für wen? Aus dem Pfad, sonst der eigene Manager.
-    const wer = lineup[1] ?? lineup[2] ?? "1";
+    // Mit KB_NUR_EIGENE=1 ignoriert der Endpunkt die uid und gibt immer
+    // dieselbe Aufstellung zurück – der Lauf muss das erkennen.
+    const wer = process.env.KB_NUR_EIGENE === "1" ? "1" : (lineup[1] ?? lineup[2] ?? "1");
     const voll = vollerKader(wer);
     if (voll.length === 0) return null;
+    // lo ab 0, wie live vermutet: der Torwart trägt die 0.
     return {
       it: voll.map((s, i) => ({
-        i: String(s.i), n: s.n, ap: 24, lo: i + 1, st: 0, lst: 1, pos: s.pos,
+        i: String(s.i), n: s.n, ap: 24, lo: i, st: 0, pos: s.pos,
       })),
     };
   }

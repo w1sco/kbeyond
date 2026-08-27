@@ -56,7 +56,11 @@ export async function POST(request) {
     await initSchema();
     const settings = await getSettings(leagueId, nutzer);
     const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
-    const ids = (ranking.us ?? []).filter((m) => m.adm !== true).map((m) => m.i);
+    // Der Liga-Admin spielt nicht mit und hat keinen Kader. Er muss aus
+    // ALLEN Listen raus – sonst fragt der Lauf seinen Kader ab und meldet
+    // ihn als „ohne auswertbare Liste".
+    const mitspieler = (ranking.us ?? []).filter((m) => m.adm !== true);
+    const ids = mitspieler.map((m) => m.i);
 
     // 1. Feed – die Geldbewegungen. Alles andere ist Beiwerk.
     const status = await getImportStatus(leagueId);
@@ -125,7 +129,7 @@ export async function POST(request) {
     // Marktwertanpassung. Nichts wird doppelt geholt, und es fehlt nie etwas.
     const noetig = voll
       ? { teamwerte: ids, kader: ids }
-      : await werBrauchtNeueDaten(leagueId, ranking.us ?? []);
+      : await werBrauchtNeueDaten(leagueId, mitspieler);
 
     if (noetig.teamwerte.length === 0) {
       erledigt.push("Teamwerte aktuell");
@@ -205,7 +209,8 @@ export async function POST(request) {
       if (auf.manager > 0) {
         erledigt.push(
           `Aufstellung ${auf.manager} Manager` +
-            (auf.pfad === "ligaweit" ? " (nur die eigene — Kickbase gibt fremde nicht heraus)" : "")
+            (auf.art ? ` über ${auf.art}` : "") +
+            (auf.eigenstaendig ? "" : " — Kickbase gibt fremde Aufstellungen nicht heraus")
         );
       } else {
         erledigt.push("Aufstellung nicht abrufbar — siehe /aufstellung");
@@ -218,7 +223,7 @@ export async function POST(request) {
     // Daraus entstehen die Platzierungspfeile auf der Ligaseite. Kostet
     // keinen einzigen Kickbase-Aufruf – alles steht schon in der Datenbank.
     try {
-      const konten = await berechneKonten(leagueId, ranking.us ?? [], settings);
+      const konten = await berechneKonten(leagueId, mitspieler, settings);
       const tw2 = await getTeamwerte(leagueId);
       const heute = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date());
       await merkeTagesstand(

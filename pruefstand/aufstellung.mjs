@@ -67,5 +67,41 @@ pruefe("kein Array", findeAufstellung(null), null);
 pruefe("bekanntes Feld hat Vorrang vor zufälligem",
   findeAufstellung(kader("lo", reihenfolge, (i) => ({ zufall: i < 11 }))).feld, "lo");
 
+
+// ── elfAus: die Antwort des /lineup-Endpunkts ──────────────────────
+const { elfAus } = await import("../lib/aufstellung.js");
+
+const eintrag = (i, extra = {}) => ({ i: String(i), n: `S${i}`, ap: 24, ...extra });
+
+console.log("\nelfAus — Startelf aus der Endpunkt-Antwort:");
+
+// Der Fall, der den Torwart verschluckt hat: lo beginnt bei 0.
+const nullBasiert = { it: Array.from({ length: 15 }, (_, i) => eintrag(100 + i, { lo: i })) };
+pruefe("lo ab 0: elf Spieler", elfAus(nullBasiert).ids.size, 11);
+pruefe("lo ab 0: der mit lo=0 ist dabei", elfAus(nullBasiert).ids.has("100"), true);
+pruefe("lo ab 0: der mit lo=11 ist NICHT dabei", elfAus(nullBasiert).ids.has("111"), false);
+pruefe("lo ab 0: Art benannt", elfAus(nullBasiert).art, "lo 0–10");
+
+const einsBasiert = { it: Array.from({ length: 15 }, (_, i) => eintrag(200 + i, { lo: i + 1 })) };
+pruefe("lo ab 1: elf Spieler", elfAus(einsBasiert).ids.size, 11);
+pruefe("lo ab 1: der mit lo=1 ist dabei", elfAus(einsBasiert).ids.has("200"), true);
+pruefe("lo ab 1: Art benannt", elfAus(einsBasiert).art, "lo 1–11");
+
+// Statusfeld gewinnt gegen lo
+const mitStatus = { it: Array.from({ length: 15 }, (_, i) =>
+  eintrag(300 + i, { lo: i, lst: i < 11 ? 1 : 0 })) };
+pruefe("Statusfeld erkannt", elfAus(mitStatus).art, "lst = 1");
+pruefe("Statusfeld: elf Spieler", elfAus(mitStatus).ids.size, 11);
+
+// Genau elf Einträge
+const nurElf = { it: Array.from({ length: 11 }, (_, i) => eintrag(400 + i)) };
+pruefe("genau elf ohne Kennzeichen", elfAus(nurElf).ids.size, 11);
+pruefe("Art benannt", elfAus(nurElf).art, "Liste enthält genau elf");
+
+pruefe("leere Antwort", elfAus({ it: [] }), null);
+pruefe("kein Array", elfAus({}), null);
+pruefe("zwölf ohne Kennzeichen → nichts",
+  elfAus({ it: Array.from({ length: 12 }, (_, i) => eintrag(500 + i)) }), null);
+
 console.log(fehler ? `\n${fehler} Fall/Fälle falsch` : "\nAlle Fälle richtig.");
 process.exit(fehler ? 1 : 0);
