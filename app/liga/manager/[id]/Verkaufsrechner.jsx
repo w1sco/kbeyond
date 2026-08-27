@@ -22,9 +22,10 @@ export default function Verkaufsrechner({ kader, konto, teamwert, boni = null })
     const kopie = [...kader];
     kopie.sort((a, b) => {
       if (sortKey === "position") {
-        // Nach Platzreihenfolge, bei Gleichstand der teurere zuerst.
+        // Immer Tor → Abwehr → Mittelfeld → Sturm, bei Gleichstand der
+        // teurere zuerst.
         const d = posRang(a.position) - posRang(b.position);
-        if (d !== 0) return absteigend ? -d : d;
+        if (d !== 0) return d;
         return Number(b.marktwert ?? 0) - Number(a.marktwert ?? 0);
       }
       if (sortKey === "name") {
@@ -82,14 +83,23 @@ export default function Verkaufsrechner({ kader, konto, teamwert, boni = null })
   }
 
   function klick(key) {
+    // Die Position kennt nur eine sinnvolle Richtung: Tor, Abwehr,
+    // Mittelfeld, Sturm. Umgedreht fängt die Liste beim Sturm an — das
+    // liest niemand so. Deshalb kippt diese Spalte nicht.
+    if (key === "position") {
+      setSortKey("position");
+      setAbsteigend(false);
+      return;
+    }
     if (key === sortKey) setAbsteigend(!absteigend);
     else {
       setSortKey(key);
-      setAbsteigend(key !== "name" && key !== "position");
+      setAbsteigend(key !== "name");
     }
   }
 
-  const pfeil = (key) => (key === sortKey ? (absteigend ? " ▼" : " ▲") : "");
+  const pfeil = (key) =>
+    key !== sortKey ? "" : key === "position" ? "" : absteigend ? " ▼" : " ▲";
 
   // sek = weicht auf schmalen Displays. Der Kaufpreis lässt sich aus
   // Marktwert und Gewinn herleiten, die Punkte sind für die Verkaufsfrage

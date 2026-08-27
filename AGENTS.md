@@ -975,6 +975,11 @@ Der Kader ist deshalb **nach Position vorsortiert** (`posRang` in `lib/format.js
 Abwehr, Mittelfeld, Sturm. Alphabetisch käme ABW, ANG, MF, TW heraus — für einen Kader
 unbrauchbar.
 
+**Die Positionsspalte kippt nicht.** Jede andere Spalte dreht beim zweiten Klick die
+Richtung um; die Position kennt nur eine sinnvolle Reihenfolge. Umgedreht finge die Liste
+beim Sturm an — so liest niemand einen Kader. Deshalb trägt diese Spalte auch keinen
+Richtungspfeil.
+
 Der Platz ist **kein Bild**, sondern vier Reihen mit Verlauf und Linien. Eine echte
 Spielfeldgrafik bräuchte Assets und trüge zur Aussage nichts bei.
 
