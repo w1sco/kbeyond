@@ -209,9 +209,15 @@ import_log(league_id PK, letzter_lauf, neue_events, gesamt, offset_pos, komplett
 rekon_log(league_id PK, position, fertig, letzter, gefunden)
 pool_cache(id PK, daten JSONB)                        -- 'bundesliga', 24h TTL
 teamwerte(league_id, manager_id, teamwert, spieler, stand)  -- PK (league_id, manager_id)
+teamwert_verlauf(league_id, manager_id, teamwert, stand)   -- PK (league_id, manager_id, stand)
+  + Index (league_id, manager_id, stand DESC)
 kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis, punkte, stand)
   + Index (league_id)                                 -- PK (league_id, manager_id, player_id)
 ```
+
+Der Verlauf wird **nur bei echter Änderung** fortgeschrieben. Zweimal hintereinander
+aktualisieren soll den Trend nicht auf 0 setzen — deshalb der bedingte Insert in
+`ladeTeamwerte()`.
 
 `initSchema()` ist idempotent und läuft bei jedem Seitenaufruf. Schemaänderungen dort ergänzen, für neue Spalten `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` verwenden.
 
@@ -469,6 +475,12 @@ Laufzeit der Liga passt; sonst stehen dort nur die beiden wahrscheinlichen Ursac
 - **Gesamtwert** = Kontostand + Teamwert = Gesamtvermögen
 - **Liquidität** = Kontostand ÷ Gesamtwert, also der flüssige Anteil des Vermögens.
   Ohne geladenen Teamwert nicht aussagekräftig, steht dann auf „–".
+- **Trend** = Veränderung des Teamwerts gegenüber dem vorherigen gespeicherten Stand.
+  Kickbase passt die Marktwerte täglich an, der Trend zeigt also im Normalfall die Bewegung
+  des letzten Tages. **Käufe und Verkäufe zählen mit hinein** — wer für 20 Mio kauft, steht
+  mit +20 Mio da, ohne dass ein Marktwert gestiegen wäre. Eine Bereinigung um die Transfers
+  des Zeitraums wäre möglich, hätte aber einen eigenen Fehler: gehandelt wird zum
+  Angebotspreis, nicht zum Marktwert.
 - **Anpassungen** = Strafen + manuelle Korrektur gebündelt. Die Aufschlüsselung steht in
   der aufgeklappten Detailzeile und auf der Managerseite.
 

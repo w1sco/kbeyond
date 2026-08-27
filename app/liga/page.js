@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getImportStatus, getTeamwerte, sql } from "@/lib/db";
+import { initSchema, getSettings, getImportStatus, getTeamwerte, getTeamwertTrend, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
@@ -55,6 +55,7 @@ export default async function Liga({ searchParams }) {
   const me = await kbFetch(`/v4/leagues/${leagueId}/me`, token);
   const status = await getImportStatus(leagueId);
   const tw = await getTeamwerte(leagueId);
+  const trend = await getTeamwertTrend(leagueId);
 
   const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
 
@@ -91,6 +92,9 @@ export default async function Liga({ searchParams }) {
     // Kadergröße = Käufe − Verkäufe. dashboard.t ist NICHT die Kadergröße,
     // sondern die Zahl aller Transfers – daher die unplausiblen 48.
     k.kaderGroesse = k.anzKauf - k.anzVerkauf;
+    const t2 = trend.get(String(k.id));
+    k.trend = t2?.trend ?? null;
+    k.trendSeit = t2?.standVorher ?? null;
     k.limit = Math.floor(k.teamwert / 3);
     k.maxGebot = k.konto + k.limit;
   }
@@ -291,8 +295,6 @@ export default async function Liga({ searchParams }) {
         )}
       </div>
 
-      <Frag leagueId={leagueId} />
-
       <Tabelle
         konten={JSON.parse(JSON.stringify(konten))}
         meineId={treffer.i}
@@ -316,12 +318,27 @@ export default async function Liga({ searchParams }) {
             <strong>Anpassungen</strong> — Strafen und manuelle Korrektur zusammen.
           </p>
           <p>
+            <strong>Trend</strong> — um wie viel sich der Teamwert seit dem vorherigen
+            gespeicherten Stand verändert hat. Kickbase passt die Marktwerte täglich an;
+            der Trend zeigt also im Normalfall die Bewegung des letzten Tages. Steht er auf
+            „–“, gibt es erst einen Stand — nach der nächsten Aktualisierung ist er da.
+          </p>
+          <p>
+            Achtung beim Trend: <strong>Käufe und Verkäufe zählen mit hinein.</strong> Wer
+            im Zeitraum einen Spieler für 20 Mio gekauft hat, steht dort mit +20 Mio, ohne
+            dass ein Marktwert gestiegen wäre.
+          </p>
+          <p>
             Spaltenüberschrift antippen sortiert, nochmal für die Gegenrichtung. Auf dem
             Handy zeigt die Tabelle nur Gesamtwert, Max-Gebot und Kontostand — das{" "}
             <strong>+</strong> vor dem Namen klappt den Rest mit den genauen Beträgen auf.
             Der Managername führt zur Managerseite.
           </p>
         </Hinweis>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <Frag leagueId={leagueId} />
       </div>
     </main>
   );

@@ -12,6 +12,7 @@ const SPALTEN = [
   { key: "konto",        label: "Kontostand",  kurz: "Konto" },
   { key: "quote",        label: "Liquidität",  sek: true },
   { key: "teamwert",     label: "Teamwert",    sek: true },
+  { key: "trend",        label: "Trend",       sek: true },
   { key: "kaderGroesse", label: "Spieler",     sek: true },
   { key: "limit",        label: "Limit (⅓)",   sek: true },
   { key: "anpassungen",  label: "Anpassungen", sek: true },
@@ -108,6 +109,14 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
           : <span className={k.quote < 0 ? "kb-minus" : undefined}>{prozent(k.quote)}</span>;
       case "teamwert":
         return k.teamwert > 0 ? <Geld wert={k.teamwert} /> : "–";
+      case "trend":
+        if (k.trend == null) return <span className="kb-gedaempft">–</span>;
+        if (k.trend === 0) return <span className="kb-gedaempft">±0</span>;
+        return (
+          <span className={k.trend < 0 ? "kb-minus" : "kb-plus"}>
+            {k.trend > 0 ? "+" : ""}<Geld wert={k.trend} />
+          </span>
+        );
       case "kaderGroesse":
         return k.kaderGroesse > 0 ? k.kaderGroesse : <span className="kb-gedaempft">–</span>;
       case "limit":

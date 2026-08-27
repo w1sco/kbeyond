@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getTeamwerte, getKader, sql } from "@/lib/db";
+import { initSchema, getSettings, getTeamwerte, getTeamwertTrend, getKader, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
@@ -44,6 +44,7 @@ export default async function ManagerSeite({ params, searchParams }) {
 
   const konten = await berechneKonten(leagueId, alle, settings, manager.n);
   const tw = await getTeamwerte(leagueId);
+  const trend = (await getTeamwertTrend(leagueId)).get(String(id)) ?? null;
 
   const k = konten.find((x) => String(x.id) === String(id));
   const t = tw.map.get(String(id));
@@ -162,6 +163,17 @@ export default async function ManagerSeite({ params, searchParams }) {
         <div>
           <span className="kb-label">Teamwert</span>
           {teamwert > 0 ? euro(teamwert) : "–"}
+        </div>
+        <div>
+          <span className="kb-label">Trend</span>
+          {trend == null ? (
+            <span className="kb-gedaempft">–</span>
+          ) : (
+            <span className={trend.trend < 0 ? "kb-minus" : trend.trend > 0 ? "kb-plus" : "kb-gedaempft"}>
+              {trend.trend > 0 ? "+" : ""}{euro(trend.trend)}
+            </span>
+          )}
+          {trend && <span className="kb-leise"> seit {zeitpunkt(trend.standVorher)}</span>}
         </div>
         <div>
           <span className="kb-label">Spieler</span>
