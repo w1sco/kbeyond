@@ -79,6 +79,13 @@ export default async function ManagerSeite({ params, searchParams }) {
   const stich = new Date(settings.stichtag);
   const unsicher = !binIch && feedStart && new Date(feedStart) > stich;
 
+  // Was hat dieser Manager über Marktwert gezahlt? Muss vor aufschlagJe
+  // stehen — das las die Posten, bevor sie berechnet waren, und die Seite
+  // starb mit einem ReferenceError.
+  const aufschlag = werteAus(
+    (await holeAufschlaege(leagueId, settings.stichtag)).filter((z) => z.buyer === manager.n)
+  );
+
   const aufschlagJe = new Map(
     aufschlag.posten.map((x) => [`${x.player_id}|${new Date(x.dt).getTime()}`, x])
   );
@@ -126,11 +133,6 @@ export default async function ManagerSeite({ params, searchParams }) {
 
   const kaderGroesse = kader.length > 0 ? kader.length : kaderGerechnet;
   const kaderWert = kader.reduce((s, x) => s + Number(x.marktwert ?? 0), 0);
-
-  // Was hat dieser Manager über Marktwert gezahlt?
-  const aufschlag = werteAus(
-    (await holeAufschlaege(leagueId, settings.stichtag)).filter((z) => z.buyer === manager.n)
-  );
 
   // ── Kaderprofil: Topspieler und Bedarf je Position ──────────────────
   const topspieler = kader

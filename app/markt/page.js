@@ -4,6 +4,21 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { euro, restzeit, normalisiereSpieler } from "@/lib/format";
 
+
+const S = {
+  main: { maxWidth: 1000, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 },
+  h1: { fontSize: 26, margin: 0 },
+  sub: { color: "#64748b", margin: "4px 0 0", fontSize: 14 },
+  muted: { color: "#64748b", fontSize: 13 },
+  link: { color: "#2563eb", fontSize: 13, textDecoration: "none" },
+  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 },
+  th: { textAlign: "left", padding: "8px 10px", borderBottom: "2px solid #e2e8f0", fontSize: 12, textTransform: "uppercase", color: "#64748b" },
+  td: { padding: "10px", borderBottom: "1px solid #f1f5f9" },
+  ligaCard: { display: "flex", flexDirection: "column", gap: 2, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, textDecoration: "none", color: "inherit" },
+  pre: { background: "#f8fafc", padding: 14, borderRadius: 8, fontSize: 12, overflowX: "auto" },
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function Markt({ searchParams }) {
@@ -113,17 +128,3 @@ export default async function Markt({ searchParams }) {
     </main>
   );
 }
-
-const S = {
-  main: { maxWidth: 1000, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 },
-  h1: { fontSize: 26, margin: 0 },
-  sub: { color: "#64748b", margin: "4px 0 0", fontSize: 14 },
-  muted: { color: "#64748b", fontSize: 13 },
-  link: { color: "#2563eb", fontSize: 13, textDecoration: "none" },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 },
-  th: { textAlign: "left", padding: "8px 10px", borderBottom: "2px solid #e2e8f0", fontSize: 12, textTransform: "uppercase", color: "#64748b" },
-  td: { padding: "10px", borderBottom: "1px solid #f1f5f9" },
-  ligaCard: { display: "flex", flexDirection: "column", gap: 2, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, textDecoration: "none", color: "inherit" },
-  pre: { background: "#f8fafc", padding: 14, borderRadius: 8, fontSize: 12, overflowX: "auto" },
-};

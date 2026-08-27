@@ -29,6 +29,13 @@ const eslintConfig = defineConfig([
     },
     rules: {
       "no-undef": "error",
+
+      // Verwendung vor der Definition. no-undef sieht das nicht — die
+      // Variable existiert ja, nur später. In einer async-Serverkomponente
+      // heißt das: Build grün, Seite tot. Genau so ist die Managerseite
+      // ausgefallen, weil eine Zeile die Posten las, bevor sie berechnet
+      // waren.
+      "no-use-before-define": ["error", { functions: false, classes: false, variables: true }],
     },
   },
 
