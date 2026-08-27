@@ -375,7 +375,6 @@ app/
   api/modelle/route.js             Modellliste beim Anbieter erfragen
   api/aktualisieren/route.js       Feed, Teamwerte, Kader, Historie in einem Lauf
   _diagnose/Endpunkte.jsx          gemeinsamer Baustein der Diagnose-Seiten
-  api/kader/route.js               Kader aller Manager laden
   liga/einstellungen/page.js       Server Action, Grundwerte + Korrekturen pro Manager
   api/auth/login/route.js          Token → httpOnly-Cookie (kb_token, kb_uid, kb_name)
   api/ich/route.js                 Manuelle Selbstzuordnung → Cookie kb_name
@@ -419,6 +418,13 @@ Kickbase drosselt. Alle Importer folgen demselben Muster:
 Alle Seitenaufrufe lesen aus der Datenbank, nie live von Kickbase. Ausnahme sind die wenigen Stammdaten-Abrufe pro Seitenaufruf (`overview`, `ranking`, `me`).
 
 **Der Nutzer will die Aktualisierung ausdrücklich manuell.** Kein Cron-Job.
+
+Es gibt genau **einen** Knopf dafür: `/api/aktualisieren` macht Feed, Teamwerte, Kader und
+Historie nacheinander mit gemeinsamem Zeitbudget. Einzelrouten für die Schritte gab es
+früher, sie sind bis auf `import`, `teamwerte` und `rekonstruieren` entfallen. Über `ziel`
+kommt der Lauf dorthin zurück, wo geklickt wurde — aus einer festen `Map`, damit sich die
+Weiterleitung nicht auf eine fremde Seite umbiegen lässt. (Ein Objektliteral wäre hier
+falsch: `__proto__` und `constructor` liefern dort geerbte Werte statt `undefined`.)
 
 ---
 

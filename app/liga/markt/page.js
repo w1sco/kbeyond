@@ -84,11 +84,17 @@ export default async function Markt({ searchParams }) {
           </p>
         </div>
         <div className="kb-aktionen">
-          <form action={`/api/kader?league=${leagueId}&zurueck=1`} method="post">
-            <button type="submit" className="kb-btn">Kader laden</button>
+          {/* Dieselbe gebündelte Aktion wie auf der Ligaseite – sie kommt
+              nur hierher zurück statt dorthin. Ein eigener "Kader laden"
+              lag hier noch aus der Zeit vor der Bündelung. */}
+          <form action={`/api/aktualisieren?league=${leagueId}&zurueck=1&ziel=markt`} method="post">
+            <button type="submit" className="kb-btn">Alles aktualisieren</button>
           </form>
         </div>
       </header>
+
+      {p.tw && <div className="kb-hinweis">{p.tw}</div>}
+      {p.fehler && <div className="kb-hinweis kb-hinweis--fehler">Fehler: {p.fehler}</div>}
 
       {quellenLeer && (
         <Hinweis art="warn" kurz="Noch keine Zuordnung — jeder gilt als frei" titel="Keine Daten zur Zuordnung">
@@ -108,8 +114,8 @@ export default async function Markt({ searchParams }) {
           </p>
           <p>
             Der Haken: Spieler, die seit dem Liga-Reset nie gehandelt wurden, gelten dadurch
-            fälschlich als frei. „Alles aktualisieren“ auf der Ligaseite lädt die Kader nach;
-            klappt das nicht, zeigt die{" "}
+            fälschlich als frei. „Alles aktualisieren“ oben lädt die Kader nach; klappt
+            das nicht, zeigt die{" "}
             <Link href={`/manager?league=${leagueId}&uid=${manager[0]?.i ?? ""}`}>
               Manager-Diagnose
             </Link>{" "}

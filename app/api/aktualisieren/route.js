@@ -18,6 +18,17 @@ const GESAMTBUDGET_MS = 50_000;
 // Unter dieser Restzeit lohnt ein weiterer Schritt nicht mehr.
 const MINDESTZEIT_MS = 8_000;
 
+// Wohin es nach dem Lauf zurückgeht. Feste Liste statt Pfad aus der URL —
+// sonst ließe sich die Weiterleitung auf eine fremde Seite umbiegen.
+//
+// Map und nicht ein Objektliteral: bei einem Literal liefern die Schlüssel
+// "__proto__" und "constructor" geerbte Werte vom Object-Prototyp statt
+// undefined, der Rückfall auf /liga greift dann nicht.
+const ZIELE = new Map([
+  ["liga", "/liga"],
+  ["markt", "/liga/markt"],
+]);
+
 export async function POST(request) {
   const { token, nutzer } = await sitzung();
   const { searchParams } = new URL(request.url);
@@ -27,6 +38,7 @@ export async function POST(request) {
   if (abgelehnt) return abgelehnt;
 
   const zurueck = searchParams.get("zurueck") === "1";
+  const ziel = ZIELE.get(searchParams.get("ziel")) ?? "/liga";
   const ende = Date.now() + GESAMTBUDGET_MS;
   const rest = () => ende - Date.now();
 
@@ -94,13 +106,13 @@ export async function POST(request) {
 
     if (zurueck) {
       return Response.redirect(
-        new URL(`/liga?${new URLSearchParams({ league: leagueId, tw: text })}`, request.url), 303);
+        new URL(`${ziel}?${new URLSearchParams({ league: leagueId, tw: text })}`, request.url), 303);
     }
     return Response.json({ erledigt, offen });
   } catch (e) {
     if (zurueck) {
       return Response.redirect(
-        new URL(`/liga?league=${leagueId}&fehler=${encodeURIComponent(e.message)}`, request.url), 303);
+        new URL(`${ziel}?league=${leagueId}&fehler=${encodeURIComponent(e.message)}`, request.url), 303);
     }
     return Response.json({ error: e.message }, { status: 500 });
   }
