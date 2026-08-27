@@ -3,20 +3,22 @@ import { Fragment, useState, useMemo } from "react";
 import Link from "next/link";
 import { euro, euroKurz, prozent } from "@/lib/format";
 
-// sek = Sekundärspalte: verschwindet auf schmalen Displays in die
-// Detailzeile. Sichtbar bleiben Gesamtwert, Max-Gebot und Kontostand –
-// die drei Zahlen, mit denen man Manager vergleicht.
+// Auf schmalen Displays ist nur Platz für den Namen und drei Zahlen.
+// Welche drei, entscheidet die Sortierung: Gesamtwert und Kontostand
+// stehen fest, der dritte Platz gehört der Spalte, nach der gerade
+// sortiert wird. Sonst ordnet ein Tippen auf "Trend" die Zeilen zwar
+// richtig, zeigt aber nirgends einen Trend.
 const SPALTEN = [
   { key: "gesamtwert",   label: "Gesamtwert",  kurz: "Gesamt" },
   { key: "maxGebot",     label: "Max-Gebot",   kurz: "Gebot" },
   { key: "konto",        label: "Kontostand",  kurz: "Konto" },
-  { key: "quote",        label: "Liquidität",  sek: true },
-  { key: "teamwert",     label: "Teamwert",    sek: true },
-  { key: "trend",        label: "Trend",       sek: true },
-  { key: "kaderGroesse", label: "Spieler",     sek: true },
-  { key: "limit",        label: "Limit (⅓)",   sek: true },
-  { key: "anpassungen",  label: "Anpassungen", sek: true },
-  { key: "punkte",       label: "Punkte",      sek: true },
+  { key: "quote",        label: "Liquidität",  kurz: "Liquid.", sek: true },
+  { key: "teamwert",     label: "Teamwert",    kurz: "Team",    sek: true },
+  { key: "trend",        label: "Trend",       kurz: "Trend",   sek: true },
+  { key: "kaderGroesse", label: "Spieler",     kurz: "Spieler", sek: true },
+  { key: "limit",        label: "Limit (⅓)",   kurz: "Limit",   sek: true },
+  { key: "anpassungen",  label: "Anpassungen", kurz: "Anpass.", sek: true },
+  { key: "punkte",       label: "Punkte",      kurz: "Punkte",  sek: true },
 ];
 
 // Nur in der aufgeklappten Detailzeile: die Aufschlüsselung der
@@ -27,6 +29,17 @@ const EXTRA = [
 ];
 
 const DETAIL = [...SPALTEN, ...EXTRA];
+
+// Diese beiden bleiben auf dem Handy immer stehen. Max-Gebot ist der
+// dritte Platz — es lässt sich aus Kontostand und Limit herleiten und ist
+// damit am ehesten entbehrlich.
+const MOBIL_FEST = ["gesamtwert", "konto"];
+
+function mobilSichtbare(sortKey) {
+  const dritte =
+    sortKey === "name" || MOBIL_FEST.includes(sortKey) ? "maxGebot" : sortKey;
+  return new Set([...MOBIL_FEST, dritte]);
+}
 
 // Geldbetrag in zwei Fassungen: lang für den Desktop, kurz fürs Handy.
 // Welche sichtbar ist, entscheidet allein CSS – kein zweiter Renderpfad.
@@ -87,6 +100,11 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
   }
 
   const pfeil = (key) => (key === sortKey ? (absteigend ? " ▼" : " ▲") : "");
+
+  // kb-sek blendet auf schmalen Displays aus – welche Spalten das trifft,
+  // hängt jetzt von der Sortierung ab.
+  const sichtbar = useMemo(() => mobilSichtbare(sortKey), [sortKey]);
+  const spaltenKlasse = (key) => (sichtbar.has(key) ? "" : "kb-sek");
 
   // Ein Wert, eine Darstellung – egal ob in der Tabellenzelle oder
   // aufgeklappt in der Detailzeile.
@@ -185,7 +203,7 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
                   key={s.key}
                   scope="col"
                   tabIndex={0}
-                  className={`${s.sek ? "kb-sek" : ""}${s.key === sortKey ? " kb-aktiv" : ""}`}
+                  className={`${spaltenKlasse(s.key)}${s.key === sortKey ? " kb-aktiv" : ""}`}
                   onClick={() => klick(s.key)}
                   onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && klick(s.key)}
                 >
@@ -229,7 +247,7 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
                       {!binIch && unsicher && <span className="kb-marke kb-marke--circa">ca.</span>}
                     </td>
                     {SPALTEN.map((s) => (
-                      <td key={s.key} className={s.sek ? "kb-sek" : undefined}>
+                      <td key={s.key} className={spaltenKlasse(s.key) || undefined}>
                         {wert(k, s.key)}
                       </td>
                     ))}

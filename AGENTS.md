@@ -332,9 +332,11 @@ einzeilig im Fluss — sie sind die Antwort auf einen Klick und verschwinden von
 
 ### Tabelle auf schmalen Displays
 
-Sichtbar bleiben **Gesamtwert, Max-Gebot, Liquidität** — die drei Zahlen, mit denen man
-Manager vergleicht. Teamwert, Limit, Strafen, Korrektur und Punkte wandern in eine
-Detailzeile, die das `+` vor dem Namen aufklappt. Dort stehen **alle** Werte ausgeschrieben,
+Platz ist für den Namen und **drei Zahlen**. Welche drei, entscheidet die Sortierung:
+**Gesamtwert** und **Kontostand** stehen fest, der dritte Platz gehört der Spalte, nach der
+gerade sortiert wird — sonst ordnet ein Tippen auf „Trend" die Zeilen zwar richtig, zeigt
+aber nirgends einen Trend. Ohne Sortierung nach einer Nebenspalte steht dort Max-Gebot; das
+lässt sich aus Kontostand und Limit herleiten und ist damit am ehesten entbehrlich. Alle übrigen Spalten wandern in eine Detailzeile, die das `+` vor dem Namen aufklappt. Dort stehen **alle** Werte ausgeschrieben,
 weil die Spalten selbst auf Kurzform umschalten (`euroKurz`: „53,7 Mio" statt „53.700.000 €").
 
 Die Sortierung läuft auf dem Handy über die Chipleiste über der Tabelle, weil die
