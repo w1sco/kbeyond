@@ -502,7 +502,8 @@ app/
   _ui/Hinweis.jsx                  "use client" — Hinweis als anklickbares Popup
   api/frag/route.js                Frage → Antwortstrom
   api/modelle/route.js             Modellliste beim Anbieter erfragen
-  api/aktualisieren/route.js       Feed, Teamwerte, Kader, Historie in einem Lauf
+  api/aktualisieren/route.js       Feed, Markt, Marktwerte, Teamwerte, Kader, Historie
+  marktwert/page.js                Diagnose: welcher Endpunkt liefert die Marktwert-Historie
   _diagnose/Endpunkte.jsx          gemeinsamer Baustein der Diagnose-Seiten
   liga/einstellungen/page.js       Server Action, Grundwerte + Korrekturen pro Manager
   api/auth/login/route.js          Token → httpOnly-Cookie (kb_token, kb_uid, kb_name)
@@ -665,6 +666,16 @@ Datum und Wert, statt Feldnamen zu raten — geprüft gegen `dt/mv`, `d/m`, `dat
 
 `marktwert_geprueft` merkt sich, wen wir schon gefragt haben — sonst würde jeder Lauf
 dieselben Spieler ohne Historie erneut abfragen.
+
+**Gesperrt wird aber erst, wenn ein funktionierender Endpunkt bekannt ist** (er steht in
+`pool_cache` unter `mw_pfad`). Liefert kein Kandidat etwas, liegt es nicht am Spieler,
+sondern daran, dass wir nicht wissen, wie man fragt — dann wären die Sperren falsch und
+würden die Spieler tagelang blockieren. Solange kein Pfad bekannt ist, werden alte Sperren
+beim nächsten Lauf gelöscht. Genau das ist einmal passiert: „Marktwerte 0/25", und danach
+tat jeder weitere Klick nichts mehr.
+
+`/marktwert?league=…` probiert alle Kandidaten durch und sagt für jeden, ob sich eine Reihe
+aus Datum und Wert darin findet — erst danach wird implementiert.
 
 ### Die Marktseite
 

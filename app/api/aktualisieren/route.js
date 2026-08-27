@@ -63,7 +63,9 @@ export async function POST(request) {
     });
     await logImport(leagueId, imp.neu, imp.gesamt, imp.naechsterStart, erstlauf ? imp.fertig : true);
     erledigt.push(`${imp.neu} neue Events`);
-    if (imp.gestoppt) offen.push("Feed");
+    // gestoppt setzt der Importer auch, wenn er normal fertig ist ("bekannte
+    // Events erreicht"). Offen ist der Feed nur, wenn er NICHT fertig wurde.
+    if (imp.gestoppt && !imp.fertig) offen.push("Feed");
 
     // 2. Transfermarkt mitschreiben – ein Angebot ist nach einem Tag weg,
     //    und daraus ergibt sich der Rhythmus, nach dem Spieler wiederkommen.

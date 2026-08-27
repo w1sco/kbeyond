@@ -452,7 +452,8 @@ export default async function Liga({ searchParams }) {
             Käufe, denen die Bezugsgröße noch fehlt. Bleibt die Zahl hinter „ohne
             Marktwert“ hoch, hat Kickbase für diese Spieler keine Historie geliefert; was
             der Abruf zurückgibt, zeigt die{" "}
-            <a href={`/spieler?league=${leagueId}`}>Spieler-Diagnose</a>.
+            <a href={`/marktwert?league=${leagueId}`}>Marktwert-Diagnose</a> — sie probiert
+            alle Kandidaten durch und sagt, welcher eine Reihe aus Datum und Wert liefert.
           </p>
           <p>
             Käufe ohne jede Bezugsgröße bleiben außen vor und werden separat gezählt — ein
