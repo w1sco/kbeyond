@@ -392,10 +392,31 @@ scheitern die ersten drei Versuche ohne einen einzigen Erfolg, bricht der Lauf a
 Fehlermeldungen der API werden **übersetzt, nicht durchgereicht**: „Der API-Schlüssel wird
 abgelehnt" statt eines JSON-Klumpens.
 
-**Auch Spieler ohne Fund bekommen einen Eintrag.** Sonst würden sie bei jedem Lauf erneut
-abgefragt, obwohl die Antwort feststeht. „Nichts Neues in den letzten 30 Tagen" und „Noch
-nicht recherchiert" sind deshalb zwei verschiedene Zustände, und die Seite zeigt sie
-verschieden.
+**Ein Ergebnis wird gespeichert, eine ausbleibende Antwort nicht.** „Nichts gefunden" ist
+ein Ergebnis und wird abgelegt, sonst kostet derselbe Spieler bei jedem Lauf erneut Geld.
+Ein Spieler, zu dem das Modell **gar nichts gesagt hat**, ist aber kein Ergebnis. Genau
+daran scheiterte ein Lauf über 70 Spieler: Alle wurden als „nichts gefunden" abgelegt,
+galten damit als erledigt und wurden nie wieder abgefragt — obwohl in Wahrheit nie eine
+Antwort kam. Ein Knopf **„N leere verwerfen"** räumt solche Einträge weg.
+
+„Nichts Neues in den letzten 30 Tagen" und „Noch nicht recherchiert" sind deshalb zwei
+verschiedene Zustände, und die Seite zeigt sie verschieden.
+
+### Ein stiller Ausfall sieht aus wie ein Ergebnis
+
+Null Meldungen können drei sehr verschiedene Dinge heißen: Das Modell hat gesucht und
+nichts gefunden; es hat geantwortet, aber mit IDs, die sich nicht zuordnen lassen; oder die
+Websuche lief gar nicht. Von außen sieht alles drei gleich aus.
+
+Jeder Aufruf gibt deshalb zurück, **wie viele Suchen liefen, wie viele Einträge kamen und
+wie viele davon verworfen wurden**. Bleibt ein ganzer Lauf ohne Meldung, nennt die Seite
+diese Zahlen statt achselzuckend „keine News" anzuzeigen.
+
+**Die Anweisung darf das Ergebnis nicht vorwegnehmen.** In der ersten Fassung stand darin,
+zu den allermeisten Spielern sei nichts zu finden — bei niedrigem Effort ist „nichts" damit
+die bequemste Antwort. Der Satz ist raus, dafür steht dort jetzt ausdrücklich, dass
+mindestens zwei bis drei Suchen zu laufen haben und für **jeden** Spieler ein Eintrag mit
+**exakt** der mitgegebenen ID zurückkommen muss.
 
 Frisches wird nicht neu geholt: Was jünger als 12 Stunden ist, bleibt stehen. Ein zweiter
 Knopf holt trotzdem alles neu.

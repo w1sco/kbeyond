@@ -1,4 +1,4 @@
-import { initSchema, merkeNews } from "@/lib/db";
+import { initSchema, merkeNews, verwerfeLeereNews } from "@/lib/db";
 import { pruefeApi, sitzung } from "@/lib/auth";
 import { holeNews, MODUS } from "@/lib/news";
 
@@ -31,7 +31,15 @@ export async function POST(request) {
     return Response.json({ fehler: "Ungültige Anfrage" }, { status: 400 });
   }
 
-  const { schluessel, modell, spieler, modus: gewuenscht } = koerper ?? {};
+  const { schluessel, modell, spieler, modus: gewuenscht, aktion } = koerper ?? {};
+
+  // Leere Einträge verwerfen – braucht keinen API-Schlüssel und kostet nichts.
+  if (aktion === "leeren") {
+    await initSchema();
+    const weg = await verwerfeLeereNews(leagueId);
+    return Response.json({ geleert: weg });
+  }
+
   // Nur bekannte Modi – sonst bestimmte der Browser, wie teuer ein Lauf wird.
   const modus = gewuenscht === "einzeln" ? "einzeln" : "sammeln";
   if (!schluessel) {
@@ -55,23 +63,33 @@ export async function POST(request) {
 
   try {
     await initSchema();
-    const meldungen = await holeNews({ schluessel, modell, spieler: buendel, modus });
+    const { meldungen, diagnose } = await holeNews({ schluessel, modell, spieler: buendel, modus });
 
-    // Auch Spieler ohne Fund bekommen einen Eintrag. Sonst würden sie bei
-    // jedem Lauf erneut abgefragt, obwohl die Antwort feststeht.
+    // Gespeichert wird nur, wozu das Modell wirklich etwas gesagt hat.
+    //
+    // "Nichts gefunden" ist ein Ergebnis und wird abgelegt, damit derselbe
+    // Spieler nicht bei jedem Lauf erneut Geld kostet. Ein Spieler, zu dem
+    // gar keine Antwort kam, ist aber KEIN Ergebnis — würde er als "nichts
+    // gefunden" abgelegt, vergiftete ein einziger kaputter Lauf den
+    // Bestand: Die Spieler gälten als erledigt und würden nie wieder
+    // abgefragt. Genau so blieben 70 Spieler dauerhaft ohne News.
     const nachId = new Map(meldungen.map((m) => [m.id, m]));
-    const alle = buendel.map((s) => ({
-      id: s.id,
-      name: s.name,
-      text: nachId.get(s.id)?.text ?? "",
-      stimmung: nachId.get(s.id)?.stimmung ?? "neutral",
-      quellen: nachId.get(s.id)?.quellen ?? [],
-    }));
+    const alle = buendel
+      .filter((s) => nachId.has(s.id))
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        text: nachId.get(s.id).text,
+        stimmung: nachId.get(s.id).stimmung,
+        quellen: nachId.get(s.id).quellen,
+      }));
 
     await merkeNews(leagueId, alle);
     return Response.json({
       gespeichert: alle.length,
+      angefragt: buendel.length,
       mitMeldung: alle.filter((m) => m.text).length,
+      diagnose,
     });
   } catch (e) {
     // Der Schlüssel gehört dem Nutzer – er muss verstehen, was zu tun ist.

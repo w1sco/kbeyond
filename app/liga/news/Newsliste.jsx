@@ -40,6 +40,8 @@ export default function Newsliste({ leagueId, gruppen }) {
   const [nurNeues, setNurNeues] = useState(false);
 
   const alle = useMemo(() => gruppen.flatMap((g) => g.spieler), [gruppen]);
+  // Einträge, die als "recherchiert" gelten, aber nichts enthalten.
+  const leere = useMemo(() => alle.filter((s) => s.meldung && !s.meldung.text).length, [alle]);
 
   // Wer braucht überhaupt eine Recherche? Frisch Geholtes nicht noch einmal.
   const offen = useMemo(
@@ -68,6 +70,9 @@ export default function Newsliste({ leagueId, gruppen }) {
     setFehler("");
     setLaeuft(true);
     let fertig = 0;
+    let mitMeldung = 0;
+    let ohneAntwort = 0;
+    let letzteDiagnose = null;
     const gescheitert = [];
     let letzterGrund = "";
 
@@ -79,6 +84,7 @@ export default function Newsliste({ leagueId, gruppen }) {
         gesamt: liste.length,
         namen: teil.length > 3 ? [`${teil.length} Spieler`] : teil.map((s) => s.name),
         gescheitert: gescheitert.length,
+        treffer: mitMeldung,
       });
 
       // Ein einzelner Ausfall beendet den Lauf nicht mehr. Vorher riss eine
@@ -115,7 +121,11 @@ export default function Newsliste({ leagueId, gruppen }) {
                 : `Fehler ${res.status}`)
           );
         }
-        fertig += teil.length;
+        // Was das Modell wirklich geliefert hat, statt es zu erraten.
+        fertig += daten?.gespeichert ?? teil.length;
+        mitMeldung += daten?.mitMeldung ?? 0;
+        ohneAntwort += Math.max(0, teil.length - (daten?.gespeichert ?? teil.length));
+        if (daten?.diagnose) letzteDiagnose = daten.diagnose;
       } catch (e) {
         gescheitert.push(teil[0]?.name ?? "?");
         letzterGrund = e?.name === "AbortError" ? "Zeitüberschreitung" : e?.message ?? "Fehler";
@@ -136,6 +146,19 @@ export default function Newsliste({ leagueId, gruppen }) {
         `${fertig} von ${liste.length} geholt. Nicht geklappt hat es bei: ` +
           `${gescheitert.slice(0, 8).join(", ")}${gescheitert.length > 8 ? " …" : ""} (${letzterGrund}). ` +
           "Nochmal klicken holt nur die fehlenden."
+      );
+    } else if (mitMeldung === 0 && fertig > 0) {
+      // Null Meldungen bei einem ganzen Kader ist meist kein Ergebnis,
+      // sondern ein Ausfall. Die Zahlen sagen, welcher.
+      const d = letzteDiagnose;
+      setFehler(
+        `Durchgelaufen, aber keine einzige Meldung gefunden. ` +
+          (d
+            ? `Zuletzt: ${d.suchen} Websuchen${d.suchfehler ? ` (davon ${d.suchfehler} fehlgeschlagen)` : ""}, ` +
+              `${d.eintraege} Antworten des Modells, ${d.verworfen} davon nicht zuordenbar.` +
+              (d.suchen === 0 ? " Die Websuche lief offenbar gar nicht." : "")
+            : "") +
+          (ohneAntwort > 0 ? ` ${ohneAntwort} Spieler blieben ohne Antwort und wurden nicht gespeichert.` : "")
       );
     }
 
@@ -167,6 +190,24 @@ export default function Newsliste({ leagueId, gruppen }) {
           Alle {alle.length} neu holen
         </button>
 
+        {leere > 0 && (
+          <button
+            className="kb-btn"
+            disabled={laeuft}
+            onClick={async () => {
+              await fetch(`/api/news?league=${leagueId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ aktion: "leeren" }),
+              });
+              window.location.reload();
+            }}
+            title="Einträge ohne Meldung löschen, damit sie wieder abgefragt werden"
+          >
+            {leere} leere verwerfen
+          </button>
+        )}
+
         <span className="kb-leise">
           {(() => {
             const n = Math.ceil(offen.length / BUENDEL);
@@ -184,7 +225,7 @@ export default function Newsliste({ leagueId, gruppen }) {
 
       {fortschritt && (
         <div className="kb-hinweis kb-hinweis--info">
-          {fortschritt.fertig} von {fortschritt.gesamt} recherchiert
+          {fortschritt.fertig} von {fortschritt.gesamt} recherchiert{fortschritt.treffer > 0 ? ` · ${fortschritt.treffer} mit Meldung` : ""}
           {fortschritt.namen.length > 0 && ` · gerade: ${fortschritt.namen.join(", ")}`}
         </div>
       )}
