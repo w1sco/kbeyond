@@ -123,7 +123,14 @@ export async function POST(request) {
       erledigt.push("Kader aktuell");
     } else if (rest() > MINDESTZEIT_MS) {
       const kd = await ladeKader(leagueId, noetig.kader, token, { frist: ende - 4_000 });
-      erledigt.push(`Kader ${kd.geladen}/${kd.gesamt}`);
+      // Sagen, WARUM etwas fehlt – "1/2" allein lässt einen raten
+      const gruende = [];
+      if (kd.leer > 0) gruende.push(`${kd.leer} ohne auswertbare Liste`);
+      if (kd.fehler > 0) gruende.push(`${kd.fehler} mit Abruffehler`);
+      if (kd.ohneNamen > 0) gruende.push(`${kd.ohneNamen} Spieler ohne Namen`);
+      erledigt.push(
+        `Kader ${kd.geladen}/${kd.gesamt}` + (gruende.length ? ` (${gruende.join(", ")})` : "")
+      );
       if (kd.gestoppt) offen.push("Kader");
     } else {
       offen.push("Kader");
