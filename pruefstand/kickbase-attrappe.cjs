@@ -97,7 +97,23 @@ function fuerPfad(pfad) {
   }
 
   const squad = pfad.match(/\/managers\/(\d+)\/squad/);
-  if (squad) return { it: KADER[squad[1]] ?? [] };
+  if (squad) {
+    // Mit KB_ELF=1 trägt der Kader eine Aufstellung, kodiert wie bei
+    // Kickbase vermutet: 1..11 Startelf, danach die Bank.
+    const eigene = KADER[squad[1]] ?? [];
+    if (process.env.KB_ELF === "1" && eigene.length > 0) {
+      // Auf 18 Spieler auffüllen – erst bei mehr als elf greift die
+      // Felderkennung überhaupt. Kodiert wie vermutet: 1..11 Startelf,
+      // 12..18 Bank.
+      const voll = [...eigene];
+      while (voll.length < 18) {
+        const i = voll.length;
+        voll.push({ i: `9${squad[1]}${i}`, n: `Ersatz ${i}`, mv: 3_000_000 + i * 1000, pos: (i % 4) + 1 });
+      }
+      return { it: voll.map((s, i) => ({ ...s, lineup_order: i + 1 })) };
+    }
+    return { it: eigene };
+  }
 
   if (pfad.includes("/competitions/1/table")) {
     // Mit Vereinsnamen: Der Pool soll den Namen tragen, nicht die Team-ID.

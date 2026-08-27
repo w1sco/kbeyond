@@ -730,6 +730,8 @@ app/
   liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
   liga/manager/[id]/Aufstellung.jsx      "use client" — elf Spieler auf dem Platz
+  aufstellung/page.js              Diagnose: woran erkennt man die Startelf
+  ligamonitor/page.js              Diagnose: Endpunkte aus dem Vergleich
   liga/markt/page.js               Markt: freie Spieler, Kaufkraft der Liga
   liga/markt/Freieliste.jsx        "use client" — sortier- und durchsuchbar
   liga/transfermarkt/page.js       Live-Sicht: was gerade angeboten wird
@@ -778,6 +780,7 @@ lib/
   kader.js          ladeKader() — Kader je Manager
   ledger.js         berechneKonten() — das Herzstück
   gebot.js          erlaubtesMinus(), maxGebot() — die Kickbase-Regel, ohne DB
+  aufstellung.js    findeAufstellung(), felderAnalyse() — Startelf erkennen, ohne DB
   loginbonus.js     loginBonus(), tagesBonus(), kommendeLoginBoni() — ohne DB
   schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
@@ -1043,12 +1046,32 @@ Solange die Schublade offen ist, wird das Scrollen der Seite darunter gesperrt.
 ### Wahrscheinliche Aufstellung
 
 Vorbelegt ist die **echte Aufstellung aus Kickbase**. Unter welchem Feld sie im Kader
-gekennzeichnet ist, ist nicht belegt — `findeAufstellung()` sucht deshalb das Feld, bei dem
-**genau elf** Spieler markiert sind, und prüft gegen, dass die übrigen auch erkennbar nicht
-dabei sind (leer, `false` oder `0`). Ohne diese Gegenprobe ging ein Spieler-ID-Feld als
-Aufstellung durch: Bei 18 Spielern liegen zufällig genau elf IDs zwischen 1 und 11. Trifft
-kein Feld zu, bleibt die Auswahl leer und die Seite sagt das. Zwölf Fälle durchgerechnet
-(`pruefstand/aufstellung.mjs`).
+gekennzeichnet ist, ist nicht belegt — `findeAufstellung()` sucht deshalb ein Feld, das
+**genau elf** Spieler auszeichnet, und kennt dafür **drei Muster**:
+
+| Muster | Form | Beispiel |
+|---|---|---|
+| **Reihenfolge** | 1–11 für die Startelf, danach die Bank | `lineup_order: 1…18` |
+| **Wahrheitswert** | genau elf `true` | `inLineup: true/false` |
+| **Status-Code** | wenige Werte, einer kommt genau elfmal vor | `lineup_status: 1/2/0` |
+
+**Die erste Fassung kannte nur eine Mischform** und verlangte, dass alle übrigen Spieler
+„leer, false oder 0" sind. Damit scheiterte sie an genau den beiden wahrscheinlichsten
+Formen: Eine durchnummerierte Bank (12–18) ist nicht „aus", und ein Status 2 für die Bank
+zählte fälschlich als markiert — 18 Treffer statt 11, also verworfen.
+
+Felder, deren Bedeutung wir kennen (Position, ID, Marktwert, Preis, Punkte, Name), sind
+**gesperrt**: Sie können die Aufstellung nicht sein und würden sonst zufällig passen.
+23 Fälle durchgerechnet (`pruefstand/aufstellung.mjs`).
+
+Der Aktualisieren-Lauf meldet, **woran** erkannt wurde („Aufstellung 3/3 über lineup_order
+(Reihenfolge 1–11)") oder dass nichts erkennbar war. Ohne diese Angabe bliebe ein Fehlgriff
+stumm.
+
+**`/aufstellung?league=…&uid=…`** zeigt die Rohdaten und je Feld, was auffällt — welche
+Endpunkte für eine Aufstellung antworten, welche Felder wie viele verschiedene Werte haben
+und welches Muster passen würde. Damit ist ein Fehlgriff in einer Runde behoben statt in
+fünf.
 
 Ein Knopf **„Echte Aufstellung"** holt sie zurück, und die Leiste sagt, woran man ist:
 „wie in Kickbase aufgestellt" oder „geändert".

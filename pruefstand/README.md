@@ -81,6 +81,13 @@ vorher mit **HTTP 500** antwortete.
 Attrappe beim Login ausgibt. So lässt sich prüfen, dass die
 Cookie-Laufzeit wirklich aus dem Token gelesen und nicht geraten wird.
 
+## KB_ELF
+
+`KB_ELF=1` füllt die Kader der Attrappe auf 18 Spieler auf und trägt ein Feld
+`lineup_order` mit 1..18 ein — die vermutete Kodierung von Kickbase (1–11
+Startelf, danach die Bank). Erst ab zwölf Spielern greift die Felderkennung
+überhaupt; mit weniger gilt der Kader ohnehin komplett als aufgestellt.
+
 ## Was er nicht leistet
 
 Er prüft, ob Seiten **rendern** — nicht, ob die Zahlen stimmen. Dafür sind

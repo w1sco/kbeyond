@@ -172,6 +172,17 @@ export async function POST(request) {
       erledigt.push(
         `Kader ${kd.geladen}/${kd.gesamt}` + (gruende.length ? ` (${gruende.join(", ")})` : "")
       );
+
+      // Die Aufstellung ist die Stelle, an der ein Fehlschlag sonst stumm
+      // bliebe: Ohne Erkennung stünde einfach überall "keine Aufstellung".
+      if (kd.geladen > 0) {
+        erledigt.push(
+          kd.mitAufstellung > 0
+            ? `Aufstellung ${kd.mitAufstellung}/${kd.geladen}` +
+              (kd.erkanntAn ? ` über ${kd.erkanntAn}` : "")
+            : "Aufstellung nicht erkennbar — siehe /aufstellung"
+        );
+      }
       if (kd.gestoppt) offen.push("Kader");
     } else {
       offen.push("Kader");
