@@ -7,6 +7,7 @@ import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
 import Frag from "./Frag";
+import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -101,15 +102,22 @@ export default async function Liga({ searchParams }) {
 
   // Woher kommt eine Abweichung?
   //
-  // Zwei Posten der Formel wachsen von allein, ohne dass jemand Code oder
-  // Einstellungen anfasst: der Login-Bonus mit jedem Kalendertag (im
-  // konstanten Bereich 100.000 €/Tag) und der Punkte-Bonus mit jedem
-  // Spieltag. Eine Differenz, die über Nacht wächst, kommt fast immer aus
-  // einem der beiden — nicht aus den Transfers.
+  // Hier stand mal eine Heuristik, die "Differenz glatt durch 100.000
+  // teilbar" als "so viele Tage Login-Bonus" gedeutet hat. Das war Unsinn:
+  // Transferpreise sind fast immer glatte Beträge, und so kamen Aussagen
+  // wie "227 Tage Login-Bonus" bei einer Liga heraus, die 20 Tage alt ist.
+  //
+  // Übrig bleiben zwei Prüfungen, die wirklich etwas aussagen, und sonst
+  // die ehrliche Aufzählung der beiden wahrscheinlichen Ursachen.
   const proPunkt = Number(settings.punkte_bonus);
-  const passtAufPunkte = ich && proPunkt > 0 && diff === ich.punkteBonus && diff !== 0;
-  const passtAufTage = diff !== 0 && diff % 100_000 === 0 && settings.login_aktiv;
-  const inPunkten = proPunkt > 0 ? diff / proPunkt : null;
+  const passtAufPunkte = Boolean(ich) && proPunkt > 0 && diff !== 0 && diff === ich.punkteBonus;
+
+  // Ein Tagesäquivalent nur nennen, wenn es überhaupt in die Laufzeit der
+  // Liga passt – mehr Tage als gezählt kann der Bonus nicht erklären.
+  const tageAequivalent =
+    diff !== 0 && diff % 100_000 === 0 ? diff / 100_000 : null;
+  const tagePlausibel =
+    tageAequivalent != null && Math.abs(tageAequivalent) <= (ich?.tageGezaehlt ?? 0);
 
   const stich = new Date(settings.stichtag);
   const feedStart = status.feedStart ? new Date(status.feedStart) : null;
@@ -173,31 +181,40 @@ export default async function Liga({ searchParams }) {
       </div>
 
       {twVeraltet && (
-        <div className="kb-hinweis kb-hinweis--warn">
-          Teamwerte fehlen oder sind älter als 6 Stunden – Liquidität und Max-Gebot stimmen erst
-          nach einem Klick auf &quot;Alles aktualisieren&quot;.
-        </div>
+        <Hinweis art="warn" kurz="Teamwerte sind alt oder fehlen" titel="Teamwerte veraltet">
+          <p>
+            Ohne frische Teamwerte stimmen <strong>Max-Gebot</strong>, <strong>Limit</strong>{" "}
+            und <strong>Gesamtwert</strong> nicht — sie hängen alle am Teamwert.
+          </p>
+          <p>Ein Klick auf „Alles aktualisieren“ holt sie nach.</p>
+        </Hinweis>
       )}
 
       {lueckeStd > 0 && (
-        <div className="kb-luecke">
-          <strong>Datenlücke: {lueckeTage} Tage</strong>
+        <Hinweis
+          art="warn"
+          kurz={`Datenlücke: ${lueckeTage} Tage fehlen`}
+          titel={`Datenlücke: ${lueckeTage} Tage`}
+        >
           <p>
-            Zwischen Stichtag und Feed-Beginn fehlen {lueckeTage} Tage, die Kickbase nicht mehr
-            ausliefert. Transfers aus diesem Zeitraum holt &quot;Historie nachladen&quot;
-            zurück{status.rekonFertig ? " – das ist erledigt" : " – das läuft bei „Alles aktualisieren“ mit, solange es nicht fertig ist"}.
-            {" "}Strafen lassen sich dagegen nicht automatisch nachladen: Sie hängen an keinem
-            Spieler und existieren nur im Feed.
+            Zwischen Stichtag und Feed-Beginn fehlen {lueckeTage} Tage, die Kickbase nicht
+            mehr ausliefert. Transfers aus diesem Zeitraum holt „Alles aktualisieren“
+            zurück{status.rekonFertig ? " – das ist erledigt" : " – das läuft dort mit, solange es nicht fertig ist"}.
           </p>
           <p>
-            <strong>Was du tun kannst:</strong> Der Liga-Admin sieht die vollständige Historie
-            und kann dir sagen, wer im fehlenden Zeitraum Strafen bekommen hat. Diese Beträge
-            trägst du unter{" "}
-            <a href={`/liga/einstellungen?league=${leagueId}`}>Einstellungen</a>
-            {" "}als Korrektur ein (negativ, z.B. <code>-1000000</code>). Danach stimmen die
+            <strong>Strafen lassen sich dagegen nicht nachladen.</strong> Sie hängen an
+            keinem Spieler und existieren nur im Feed. Deshalb sind die Kontostände aller
+            Manager außer deinem eigenen Näherungen.
+          </p>
+          <p>
+            <strong>Was du tun kannst:</strong> Der Liga-Admin sieht die vollständige
+            Historie und kann sagen, wer im fehlenden Zeitraum Strafen bekommen hat. Diese
+            Beträge trägst du unter{" "}
+            <a href={`/liga/einstellungen?league=${leagueId}`}>Einstellungen</a> als
+            Korrektur ein (negativ, z.B. <code>-1000000</code>). Danach stimmen die
             betroffenen Kontostände wieder exakt.
           </p>
-        </div>
+        </Hinweis>
       )}
 
       {p.neu !== undefined && <div className="kb-hinweis">{p.neu} neue Events importiert.</div>}
@@ -217,34 +234,48 @@ export default async function Liga({ searchParams }) {
           </div>
         </div>
         {!passt && ich && (
-          <div className="kb-verdacht">
+          <Hinweis
+            art="warn"
+            kurz="Woran kann die Differenz liegen?"
+            titel="Differenz trotz Aktualisierung"
+          >
             {passtAufPunkte ? (
-              <>
-                <strong>Die Differenz ist exakt der gesamte Punkte-Bonus.</strong> Dann gibt es
-                diesen Bonus in dieser Liga vermutlich nicht: {ich.punkte} Punkte ×{" "}
-                {euro(proPunkt)} = {euro(ich.punkteBonus)}. Probeweise unter{" "}
-                <a href={`/liga/einstellungen?league=${leagueId}`}>Einstellungen</a> den Bonus
-                pro Punkt auf 0 setzen — steht die Differenz danach auf 0 €, war es das.
-              </>
-            ) : passtAufTage ? (
-              <>
-                <strong>Die Differenz sind genau {diff / 100_000} Tage Login-Bonus.</strong>{" "}
-                Gezählt wird ab {zeitpunkt(ich.bonusQuelle === "Stichtag" ? settings.stichtag : settings.login_start)}
-                {" "}({ich.tageGezaehlt} Tage, Quelle: {ich.bonusQuelle}). Stimmt der Starttag
-                nicht, wächst die Differenz jeden Tag um weitere 100.000 €. Eine feste
-                Korrektur hilft dagegen nur heute — der Starttag ist die dauerhafte Lösung.
-              </>
+              <p>
+                Die Differenz entspricht exakt dem gesamten Punkte-Bonus
+                ({ich.punkte} Punkte × {euro(proPunkt)}). Dann gibt es diesen Bonus in
+                dieser Liga vermutlich nicht — probeweise unter{" "}
+                <a href={`/liga/einstellungen?league=${leagueId}`}>Einstellungen</a> den
+                Bonus pro Punkt auf 0 setzen.
+              </p>
             ) : (
               <>
-                Die Differenz entspricht{" "}
-                {inPunkten != null && <>{inPunkten.toLocaleString("de-DE", { maximumFractionDigits: 1 })} Punkten à {euro(proPunkt)}</>}
-                {inPunkten != null && " oder "}
-                {(diff / 100_000).toLocaleString("de-DE", { maximumFractionDigits: 1 })} Tagen
-                Login-Bonus. Beide Posten wachsen von allein — der Login-Bonus täglich, der
-                Punkte-Bonus mit jedem Spieltag.
+                <p>
+                  Wenn die Zahlen aktuell sind und trotzdem eine Differenz bleibt, kommen
+                  vor allem zwei Ursachen infrage:
+                </p>
+                <p>
+                  <strong>Der Login-Bonus.</strong> Die Rechnung unterstellt, dass täglich
+                  eingeloggt wird. Ein ausgelassener Tag fehlt dauerhaft — im konstanten
+                  Bereich der Staffelung sind das 100.000 € pro Tag. Gezählt wird ab{" "}
+                  {zeitpunkt(ich.bonusQuelle === "Stichtag" ? settings.stichtag : settings.login_start)}
+                  {" "}({ich.tageGezaehlt} Tage, Quelle: {ich.bonusQuelle}); stimmt der
+                  Starttag nicht, lässt er sich unter Einstellungen setzen.
+                </p>
+                <p>
+                  <strong>Eine alte Strafe.</strong> Strafen aus der Zeit vor dem
+                  Feed-Fenster liefert Kickbase nicht mehr aus und lassen sich auch nicht
+                  rekonstruieren. Der Liga-Admin sieht sie noch; der Betrag kommt dann als
+                  Korrektur in die Einstellungen.
+                </p>
+                {tagePlausibel && (
+                  <p>
+                    Zur Einordnung: die Differenz entspricht {Math.abs(tageAequivalent)}{" "}
+                    {Math.abs(tageAequivalent) === 1 ? "Tag" : "Tagen"} Login-Bonus.
+                  </p>
+                )}
               </>
             )}
-          </div>
+          </Hinweis>
         )}
 
         {ich && (
@@ -269,18 +300,29 @@ export default async function Liga({ searchParams }) {
         leagueId={leagueId}
       />
 
-      <p className="kb-legende">
-        Managernamen führen zur Managerseite mit Finanzen, Transfers und Kader.
-        Spaltenüberschrift antippen zum Sortieren, nochmal für die Gegenrichtung. Auf dem
-        Handy zeigt die Tabelle nur Gesamtwert, Max-Gebot und Kontostand – das{" "}
-        <strong>+</strong> vor dem Namen klappt den Rest auf. ·
-        {" "}<strong>Gesamtwert</strong> = Kontostand + Teamwert, das Gesamtvermögen ·
-        {" "}<strong>Max-Gebot</strong> = Kontostand + Limit, der höchste Betrag ohne
-        vorherigen Verkauf ·
-        {" "}<strong>Limit</strong> = erlaubtes Minus (ein Drittel des Teamwerts) ·
-        {" "}<strong>Liquidität</strong> = Anteil des Vermögens, der flüssig ist ·
-        {" "}<strong>Anpassungen</strong> = Strafen und manuelle Korrektur zusammen
-      </p>
+      <div style={{ marginTop: 12 }}>
+        <Hinweis kurz="Was bedeuten die Spalten?" titel="Die Kennzahlen">
+          <p>
+            <strong>Kontostand</strong> — das berechnete Guthaben.{" "}
+            <strong>Teamwert</strong> — der Wert aller Spieler im Kader.
+          </p>
+          <p>
+            <strong>Limit</strong> = Teamwert ÷ 3, das erlaubte Minus.{" "}
+            <strong>Max-Gebot</strong> = Kontostand + Limit, also der höchste Betrag ohne
+            vorherigen Verkauf. <strong>Gesamtwert</strong> = Kontostand + Teamwert.
+          </p>
+          <p>
+            <strong>Liquidität</strong> — welcher Anteil des Vermögens flüssig ist.{" "}
+            <strong>Anpassungen</strong> — Strafen und manuelle Korrektur zusammen.
+          </p>
+          <p>
+            Spaltenüberschrift antippen sortiert, nochmal für die Gegenrichtung. Auf dem
+            Handy zeigt die Tabelle nur Gesamtwert, Max-Gebot und Kontostand — das{" "}
+            <strong>+</strong> vor dem Namen klappt den Rest mit den genauen Beträgen auf.
+            Der Managername führt zur Managerseite.
+          </p>
+        </Hinweis>
+      </div>
     </main>
   );
 }

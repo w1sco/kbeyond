@@ -7,6 +7,7 @@ import { holePoolGecached } from "@/lib/rekonstruktion";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt } from "@/lib/format";
 import Freieliste from "./Freieliste";
+import Hinweis from "../../_ui/Hinweis";
 
 export const dynamic = "force-dynamic";
 
@@ -90,31 +91,44 @@ export default async function Markt({ searchParams }) {
       </header>
 
       {quellenLeer && (
-        <div className="kb-hinweis kb-hinweis--warn">
-          Weder Kader noch Transfers sind gespeichert — deshalb gilt hier gerade{" "}
-          <strong>jeder</strong> Spieler als frei. Auf der Ligaseite „Alles aktualisieren“
-          klicken, dann stimmt die Rechnung.
-        </div>
+        <Hinweis art="warn" kurz="Noch keine Zuordnung — jeder gilt als frei" titel="Keine Daten zur Zuordnung">
+          <p>
+            Weder Kader noch Transfers sind gespeichert, deshalb gilt hier gerade{" "}
+            <strong>jeder</strong> Spieler als frei und das Verhältnis unten ist wertlos.
+          </p>
+          <p>Auf der Ligaseite „Alles aktualisieren“ klicken, dann stimmt die Rechnung.</p>
+        </Hinweis>
       )}
 
       {!quellenLeer && kader.zeilen.length === 0 && (
-        <div className="kb-hinweis kb-hinweis--info">
-          Die Zuordnung stammt allein aus den Transfers ({besitz.besitzer.size} Spieler) —
-          gespeicherte Kader gibt es noch keine. Spieler, die seit dem Liga-Reset nie
-          gehandelt wurden, gelten dadurch fälschlich als frei. „Alles aktualisieren“ auf
-          der Ligaseite lädt die Kader nach; klappt das nicht, zeigt die{" "}
-          <Link href={`/manager?league=${leagueId}&uid=${manager[0]?.i ?? ""}`}>
-            Manager-Diagnose
-          </Link>{" "}
-          was Kickbase stattdessen liefert.
-        </div>
+        <Hinweis kurz="Zuordnung stammt nur aus Transfers" titel="Woher die Zuordnung stammt">
+          <p>
+            Wem ein Spieler gehört, kommt hier allein aus den Transfers
+            ({besitz.besitzer.size} Spieler) — gespeicherte Kader gibt es noch keine.
+          </p>
+          <p>
+            Der Haken: Spieler, die seit dem Liga-Reset nie gehandelt wurden, gelten dadurch
+            fälschlich als frei. „Alles aktualisieren“ auf der Ligaseite lädt die Kader nach;
+            klappt das nicht, zeigt die{" "}
+            <Link href={`/manager?league=${leagueId}&uid=${manager[0]?.i ?? ""}`}>
+              Manager-Diagnose
+            </Link>{" "}
+            was Kickbase stattdessen liefert.
+          </p>
+        </Hinweis>
       )}
 
       {ohneWert > 0 && (
-        <div className="kb-hinweis kb-hinweis--warn">
-          Für {ohneWert} der {frei.length} freien Spieler liefert Kickbase im Vereinskader
-          keinen Marktwert. Die zählen unten als 0 € und fehlen damit in der Summe.
-        </div>
+        <Hinweis art="warn" kurz={`${ohneWert} freie Spieler ohne Marktwert`} titel="Fehlende Marktwerte">
+          <p>
+            Für {ohneWert} der {frei.length} freien Spieler liefert Kickbase im Vereinskader
+            keinen Marktwert.
+          </p>
+          <p>
+            Die zählen unten als 0 € und fehlen damit in der Summe — das Verhältnis fällt
+            dadurch etwas zu günstig aus.
+          </p>
+        </Hinweis>
       )}
 
       <div className="kb-status">
@@ -151,12 +165,18 @@ export default async function Markt({ searchParams }) {
         </div>
       </div>
 
-      <div className="kb-hinweis kb-hinweis--info">
-        <strong>Verhältnis</strong> = Kontostände aller Manager ÷ Marktwert der freien Spieler
-        im gewählten Bereich. Über 100 % heißt: die Liga könnte den ganzen freien Markt
-        kaufen. Der Filter ist dabei das eigentliche Werkzeug — ohne ihn zählen hunderte
-        Ergänzungsspieler mit, die nie jemand kauft.
-      </div>
+      <Hinweis kurz="Wie das Verhältnis zu lesen ist" titel="Verhältnis und Filter">
+        <p>
+          <strong>Verhältnis</strong> = Kontostände aller Manager ÷ Marktwert der freien
+          Spieler im gewählten Bereich. Über 100 % heißt: die Liga könnte den ganzen freien
+          Markt kaufen.
+        </p>
+        <p>
+          Der Filter ist dabei das eigentliche Werkzeug. Ohne ihn zählen hunderte
+          Ergänzungsspieler mit, die nie jemand kauft — das Verhältnis sieht dann
+          schlechter aus, als es ist.
+        </p>
+      </Hinweis>
 
       <div className="kb-sortleiste kb-sortleiste--immer">
         {SCHWELLEN.map((s) => (

@@ -206,6 +206,126 @@ body {
 .kb-hinweis--warn    { background: var(--kb-warn-weich); border-color: var(--kb-warn-rand); }
 .kb-hinweis--fehler  { background: #fef2f2; border-color: #fca5a5; color: var(--kb-schlecht); }
 
+/* ------------------------------------------------------------------
+   Hinweise als Popup
+   ------------------------------------------------------------------ */
+
+.kb-hinweisknopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--kb-rand);
+  border-radius: 999px;
+  background: var(--kb-flaeche);
+  color: var(--kb-text-leise);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kb-hinweisknopf:hover { border-color: var(--kb-akzent); color: var(--kb-text); }
+
+.kb-hinweiszeichen {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--kb-akzent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.kb-hinweiskurz {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-hinweismehr {
+  flex: 0 0 auto;
+  color: var(--kb-akzent);
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.kb-hinweisknopf--warn   { background: var(--kb-warn-weich); border-color: var(--kb-warn-rand); color: #78350f; }
+.kb-hinweisknopf--warn   .kb-hinweiszeichen { background: #d97706; }
+.kb-hinweisknopf--warn   .kb-hinweismehr { color: #92400e; }
+.kb-hinweisknopf--fehler { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+.kb-hinweisknopf--fehler .kb-hinweiszeichen { background: var(--kb-schlecht); }
+.kb-hinweisknopf--fehler .kb-hinweismehr { color: #991b1b; }
+
+.kb-dialog {
+  /* <dialog> zentriert sich über margin:auto der Browser-Vorgabe. Der
+     Reset von Tailwind setzt margin:0 auf alles und hat das Fenster
+     dadurch in die linke obere Ecke gezogen. */
+  margin: auto;
+  width: min(540px, calc(100vw - 28px));
+  padding: 0;
+  border: none;
+  border-radius: var(--kb-radius);
+  background: var(--kb-flaeche);
+  color: var(--kb-text);
+  box-shadow: 0 12px 40px rgb(15 23 42 / 0.22);
+}
+
+.kb-dialog::backdrop { background: rgb(15 23 42 / 0.45); }
+
+.kb-dialog-inhalt { position: relative; padding: 20px 22px 18px; }
+
+.kb-dialog-zu {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  color: var(--kb-text-schwach);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kb-dialog-zu:hover { color: var(--kb-text); }
+
+.kb-dialog-titel { padding-right: 30px; }
+
+.kb-dialog-titel {
+  font-size: 16px;
+  font-weight: 650;
+  margin: 0 0 10px;
+}
+
+.kb-dialog-text {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--kb-text-leise);
+}
+
+.kb-dialog-text p { margin: 0 0 10px; }
+.kb-dialog-text p:last-child { margin-bottom: 0; }
+.kb-dialog-text strong { color: var(--kb-text); }
+.kb-dialog-text a { color: var(--kb-akzent); }
+.kb-dialog-text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: var(--kb-flaeche-leise);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.kb-dialog .kb-btn--stark { margin-top: 16px; width: 100%; }
+
 .kb-luecke {
   padding: 14px 16px;
   background: var(--kb-warn-weich);

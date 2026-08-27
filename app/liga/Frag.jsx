@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Hinweis from "../_ui/Hinweis";
 
 const ANBIETER = {
   claude:  { name: "Claude",  hilfe: "console.anthropic.com → API Keys",   url: "https://console.anthropic.com/settings/keys" },
@@ -203,9 +204,22 @@ export default function Frag({ leagueId }) {
             Schlüssel gibt es unter{" "}
             <a href={ANBIETER[anbieter].url} target="_blank" rel="noopener noreferrer">
               {ANBIETER[anbieter].hilfe}
-            </a>. Er bleibt in <strong>deinem Browser</strong> und wird nur für den Aufruf
-            weitergereicht — nicht gespeichert, nicht protokolliert. Die Kosten laufen
-            über deinen eigenen Zugang.
+            </a>.{" "}
+            <Hinweis kurz="Was passiert mit meinem Schlüssel?" titel="Dein API-Schlüssel">
+              <p>
+                Er bleibt in <strong>deinem Browser</strong> (localStorage) und wird bei
+                jeder Frage einmal an den Server weitergereicht, der den Aufruf beim
+                Anbieter macht. Gespeichert oder protokolliert wird er dort nicht.
+              </p>
+              <p>
+                Direkt aus dem Browser ginge es nicht sauber — die Anbieter blockieren das.
+                Der Schlüssel passiert also die Maschine, bleibt aber nicht dort.
+              </p>
+              <p>
+                Abgerechnet wird über <strong>deinen eigenen Zugang</strong>, nicht über den
+                Betreiber der Seite.
+              </p>
+            </Hinweis>
             {schluessel && (
               <>
                 {" "}<button className="kb-textknopf" onClick={vergessen}>Schlüssel löschen</button>

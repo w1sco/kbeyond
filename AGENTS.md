@@ -306,6 +306,24 @@ Blocker, der in den nächsten Schritten stand.
   Alles, was sich auf schmalen Displays anders verhalten muss, gehört in eine Klasse.
 - Breakpoints: `900px` (Kopfzeile stapelt), `640px` (Handy hochkant), `360px` (kleine Handys).
 
+### Hinweise sind Popups
+
+Erklärungen und Warnungen standen früher als große Kästen dauerhaft auf der Seite und haben
+die Zahlen verdrängt, um die es geht. `app/_ui/Hinweis.jsx` zeigt stattdessen einen
+einzeiligen Anreißer; der ganze Text kommt auf Klick in einem `<dialog>`.
+
+Zwei Fallen dabei, beide beim Testen aufgefallen:
+
+- `<dialog>` zentriert sich über `margin: auto` aus der Browser-Vorgabe. Der Reset von
+  Tailwind setzt `margin: 0` auf alles und zieht das Fenster damit in die linke obere Ecke.
+  `.kb-dialog` setzt `margin: auto` deshalb wieder.
+- Der Klick neben das Fenster lässt sich **nicht** über `e.target === dialog` erkennen: der
+  Inhalt füllt das `<dialog>` vollständig aus, es bleibt keine Fläche des Elements selbst
+  übrig. Geprüft werden die Klickkoordinaten gegen `getBoundingClientRect()`.
+
+Kurze Rückmeldungen auf eine gerade ausgelöste Aktion („12 neue Events importiert") bleiben
+einzeilig im Fluss — sie sind die Antwort auf einen Klick und verschwinden von selbst.
+
 ### Tabelle auf schmalen Displays
 
 Sichtbar bleiben **Gesamtwert, Max-Gebot, Liquidität** — die drei Zahlen, mit denen man
@@ -344,6 +362,7 @@ app/
   liga/markt/page.js               Markt: freie Spieler, Kaufkraft der Liga
   liga/markt/Freieliste.jsx        "use client" — sortier- und durchsuchbar
   liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
+  _ui/Hinweis.jsx                  "use client" — Hinweis als anklickbares Popup
   api/frag/route.js                Frage → Antwortstrom
   api/modelle/route.js             Modellliste beim Anbieter erfragen
   api/aktualisieren/route.js       Feed, Teamwerte, Kader, Historie in einem Lauf
@@ -426,6 +445,13 @@ Winterzeit gelesen. Für einen Stichtag ohne Belang.
 **Der Liga-Admin wird gefiltert** (`m.adm !== true`), weil er in der Beispielliga nicht mitspielt. Sobald das Tool an fremde Ligen geht, sollte das eine Einstellung werden — in anderen Ligen kann der Admin durchaus Manager sein.
 
 **Selbstzuordnung:** Erst über `kb_uid` (aus dem Login, Feldname unsicher), dann über `kb_name`. Schlägt beides fehl, wählt der Nutzer sich einmalig aus einer Liste — das ist der zuverlässige Fallback.
+
+**Keine Heuristik ohne Plausibilitätsgrenze.** Die Kalibrierung deutete eine Abweichung
+als „so viele Tage Login-Bonus", sobald sie glatt durch 100.000 teilbar war. Transferpreise
+sind fast immer glatte Beträge — so kamen „227 Tage Login-Bonus" bei einer Liga heraus, die
+20 Tage alt ist. Ein Tagesäquivalent wird jetzt nur genannt, wenn es überhaupt in die
+Laufzeit der Liga passt; sonst stehen dort nur die beiden wahrscheinlichen Ursachen
+(Login-Bonus, alte Strafe) ohne erfundene Genauigkeit.
 
 **Punkte-Bonus (10.000 €/Punkt) ist unverifiziert.** Zur Zeit der Entwicklung war `sp: 0` bei allen, weil die Saison noch nicht lief. Nach dem ersten Spieltag muss die Kalibrierung erneut geprüft werden.
 
