@@ -52,6 +52,24 @@ Mit `KB_MW=1` liefert die Attrappe unter genau einem Pfad eine
 Marktwert-Historie. So lassen sich beide Wege prüfen: die Suche, die fündig
 wird, und die, die aufgibt.
 
+## KB_NEUZUGANG und KB_TEAMFEHLER
+
+`KB_NEUZUGANG=1` legt einen Spieler in einen Vereinskader und ändert den
+Marktwert eines anderen. Damit lässt sich prüfen, dass der Pool wirklich
+**zusammenführt** und Neuzugänge meldet — und nicht bloß fehlerfrei
+durchläuft.
+
+`KB_TEAMFEHLER=1` lässt einen Verein mit HTTP 500 antworten. Seine Spieler
+müssen danach **noch im Pool stehen** und der Stand darf **nicht**
+fortgeschrieben sein, sonst fiele der Verein bis zum nächsten Tag aus.
+
+```bash
+# nächster Tag simulieren
+psql -h /tmp -p 5433 -U postgres -c \
+  "UPDATE pool_cache SET daten = jsonb_set(daten,'{stand}',
+   to_jsonb((now() - interval '1 day')::text)) WHERE id='bundesliga_v2';"
+```
+
 ## Was er nicht leistet
 
 Er prüft, ob Seiten **rendern** — nicht, ob die Zahlen stimmen. Dafür sind

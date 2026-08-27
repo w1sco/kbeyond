@@ -39,6 +39,16 @@ const eslintConfig = defineConfig([
     },
   },
 
+  {
+    // Der Prüfstand ist ein Node-Skript, kein Next-Code: er läuft über
+    // `node pruefstand/seiten.js` und lädt seine Abhängigkeiten mit
+    // require. Die Modulregeln der App gelten hier nicht.
+    files: ["pruefstand/**/*.js", "pruefstand/**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

@@ -89,7 +89,25 @@ function fuerPfad(pfad) {
   if (pfad.includes("/competitions/1/table")) return { it: TEAMS.map((tid) => ({ tid })) };
 
   const team = pfad.match(/\/teams\/(\d+)\/teamprofile/);
-  if (team) return { it: VEREINSKADER[team[1]] ?? [] };
+  if (team) {
+    // Mit KB_TEAMFEHLER=1 antwortet ein Verein nicht. Seine Spieler müssen
+    // trotzdem im Pool bleiben – genau dafür wird zusammengeführt statt
+    // ersetzt.
+    if (process.env.KB_TEAMFEHLER === "1" && team[1] === "2") {
+      const fehler = new Error("API-Fehler: 500");
+      fehler.status = 500;
+      throw fehler;
+    }
+    const kader = [...(VEREINSKADER[team[1]] ?? [])];
+    // Mit KB_NEUZUGANG=1 kommt ein Spieler dazu und einer ändert seinen
+    // Marktwert. So lässt sich prüfen, dass der Pool wirklich zusammenführt
+    // und Neuzugänge meldet – und nicht bloß fehlerfrei durchläuft.
+    if (process.env.KB_NEUZUGANG === "1" && team[1] === "7") {
+      kader.push({ i: "999", n: "Neuzugang Winter", mv: 12000000, pos: 3 });
+      kader[0] = { ...kader[0], mv: 70000000 };
+    }
+    return { it: kader };
+  }
 
   const hist = pfad.match(/\/players\/(\d+)\/transferHistory/);
   if (hist) return { it: [] };

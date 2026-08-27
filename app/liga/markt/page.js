@@ -3,7 +3,7 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKader, getBesitz, getTeamwerte } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
-import { holePoolGecached } from "@/lib/rekonstruktion";
+import { holePool } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
 import { bildeAuftritte, abstaendeAus, schaetzeZyklus, prognostiziere, MINDEST_ABSTAENDE, BASIS_ZYKLUS_TAGE } from "@/lib/rhythmus";
@@ -45,7 +45,7 @@ export default async function Markt({ searchParams }) {
   const tw = await getTeamwerte(leagueId);
   const kader = await getKader(leagueId);
   const besitz = await getBesitz(leagueId);
-  const pool = await holePoolGecached(token);
+  const pool = await holePool();
 
   // ── Rhythmus: wann kommt wer wieder auf den Markt? ──────────────────
   const { beobachtungen, fremdangebote } = await sammleBeobachtungen(leagueId, settings.stichtag);
@@ -116,7 +116,12 @@ export default async function Markt({ searchParams }) {
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Markt · {ranking.ti}</h1>
           <p className="kb-unter">
             Spieler, die keinem Manager gehören — also bei Kickbase liegen.
-            {" "}Pool vom {zeitpunkt(pool.stand)}
+            {/* Die Spielerliste wird im Aktualisieren-Lauf gepflegt, nicht
+                beim Seitenaufruf. Ist sie noch nie geladen worden, soll das
+                dastehen und nicht als leerer Markt aussehen. */}
+            {pool.leer
+              ? " Spielerliste noch nicht geladen — einmal aktualisieren."
+              : ` Spielerliste vom ${zeitpunkt(pool.stand)}`}
             {kader.stand && ` · Kader vom ${zeitpunkt(kader.stand)}`}
           </p>
         </div>

@@ -1,9 +1,9 @@
-import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDaten, sql } from "@/lib/db";
+import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDaten, mitternachtDeutsch, sql } from "@/lib/db";
 import { kbFetch } from "@/lib/kickbase";
 import { importiere } from "@/lib/importer";
 import { ladeTeamwerte } from "@/lib/teamwerte";
 import { ladeKader } from "@/lib/kader";
-import { rekonstruiere } from "@/lib/rekonstruktion";
+import { rekonstruiere, holePool, aktualisierePool } from "@/lib/rekonstruktion";
 import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { ergaenzeMarktwerte } from "@/lib/marktwerte";
 import { pruefeApi, sitzung } from "@/lib/auth";
@@ -81,7 +81,44 @@ export async function POST(request) {
       // Der Markt ist Beiwerk – der Rest des Laufs soll daran nicht scheitern
     }
 
-    // 3. Teamwerte – ohne sie stimmen Max-Gebot und Gesamtwert nicht
+    // 3. Spielerpool – Neuzugänge, Vereinswechsel, neue Marktwerte.
+    //
+    //    Einmal am Tag, nach derselben Regel wie Teamwerte und Kader: Ist
+    //    der Stand von vor der letzten Mitternacht, wird nachgesehen.
+    //
+    //    Das lief früher beim Seitenaufruf der Marktseite los — 19 Anfragen
+    //    mitten im Rendern, an der Bremse vorbei. Jetzt hier, im Lauf, den
+    //    der Nutzer bewusst auslöst.
+    const pool = await holePool();
+    const poolAlt =
+      pool.leer || !pool.stand || new Date(pool.stand) < mitternachtDeutsch();
+
+    if (!poolAlt && !voll) {
+      erledigt.push("Spielerliste aktuell");
+    } else if (rest() > MINDESTZEIT_MS) {
+      try {
+        const pl = await aktualisierePool(token, { frist: ende - 25_000 });
+        if (pl.neu > 0) {
+          // Neuzugänge namentlich – daran sieht man, dass es funktioniert
+          const namen = pl.zugaenge.join(", ");
+          erledigt.push(
+            `${pl.neu} neue Spieler` + (namen ? ` (${namen}${pl.neu > pl.zugaenge.length ? " …" : ""})` : "")
+          );
+        }
+        if (pl.geaendert > 0) erledigt.push(`${pl.geaendert} Spieler geändert`);
+        if (pl.neu === 0 && pl.geaendert === 0 && pl.vollstaendig) {
+          erledigt.push("Spielerliste unverändert");
+        }
+        if (!pl.vollstaendig) offen.push(`Spielerliste (${pl.vereine}/${pl.gesamt} Vereine)`);
+      } catch (e) {
+        if (e.gedrosselt) throw e;
+        offen.push("Spielerliste");
+      }
+    } else {
+      offen.push("Spielerliste");
+    }
+
+    // 4. Teamwerte – ohne sie stimmen Max-Gebot und Gesamtwert nicht
     // Wer braucht überhaupt neue Daten? Der Feed weiß es: ein Kader ändert
     // sich nur durch Transfers, ein Teamwert zusätzlich durch die tägliche
     // Marktwertanpassung. Nichts wird doppelt geholt, und es fehlt nie etwas.
@@ -89,7 +126,6 @@ export async function POST(request) {
       ? { teamwerte: ids, kader: ids }
       : await werBrauchtNeueDaten(leagueId, ranking.us ?? []);
 
-    // 3. Teamwerte – ohne sie stimmen Max-Gebot und Gesamtwert nicht
     if (noetig.teamwerte.length === 0) {
       erledigt.push("Teamwerte aktuell");
     } else if (rest() > MINDESTZEIT_MS) {
@@ -100,7 +136,7 @@ export async function POST(request) {
       offen.push("Teamwerte");
     }
 
-    // 4. Marktwert-Historien für Käufe, deren Bezugsgröße noch fehlt.
+    // 5. Marktwert-Historien für Käufe, deren Bezugsgröße noch fehlt.
     //    Ohne sie fallen genau die Käufe aus der Aufschlags-Rechnung, deren
     //    Angebot nicht mehr im Feed steht — ein Manager mit 11 Spielern
     //    erschien dann mit 7 Käufen.
@@ -122,7 +158,7 @@ export async function POST(request) {
       else if (mw.gestoppt) offen.push("Marktwerte");
     }
 
-    // 5. Kader – Grundlage für Markt und Verkaufsrechner
+    // 6. Kader – Grundlage für Markt und Verkaufsrechner
     if (noetig.kader.length === 0) {
       erledigt.push("Kader aktuell");
     } else if (rest() > MINDESTZEIT_MS) {
@@ -140,7 +176,7 @@ export async function POST(request) {
       offen.push("Kader");
     }
 
-    // 6. Historie – nur solange die Lücke nicht abgearbeitet ist
+    // 7. Historie – nur solange die Lücke nicht abgearbeitet ist
     const log = await sql`SELECT * FROM rekon_log WHERE league_id = ${leagueId}`;
     const rekonFertig = log[0]?.fertig ?? false;
     if (!rekonFertig && rest() > MINDESTZEIT_MS) {

@@ -123,10 +123,40 @@ Format: `{ it: [{ u, unm, dt, trp, t }] }`
 ### Der Spielerpool
 
 Zwei Quellen kombiniert:
-1. Alle 18 `teamprofile`-Kader (~470 Spieler), gecached in `pool_cache` für 24 h
+1. Alle 18 `teamprofile`-Kader (~470 Spieler), gepflegt in `pool_cache`
 2. **Alle Spieler-IDs, die bereits in `events` vorkommen** — erwischt Spieler, die heute in keinem Bundesliga-Kader mehr stehen
 
 Punkt 2 wurde nachträglich ergänzt, weil ein Kauf (Baur, 8.8.) fehlte: Der Spieler war inzwischen weg, tauchte also im Kader-Pool nicht auf, war aber über sein späteres Verkaufs-Event in der Datenbank bekannt.
+
+#### Neuzugänge: täglich nachsehen, ergänzen statt ersetzen
+
+Die Bundesliga steht nicht still — Spieler kommen neu dazu, wechseln den Verein, ändern
+ihren Marktwert. `aktualisierePool()` geht deshalb einmal am Tag alle 18 Vereine durch,
+nach **derselben Regel wie Teamwerte und Kader**: Ist der Stand von vor der letzten
+deutschen Mitternacht, wird nachgesehen. Neuzugänge werden im Ergebnis namentlich genannt
+(„2 neue Spieler (Neuzugang Winter, …)"), damit man sieht, dass es greift.
+
+**Zusammengeführt, nicht überschrieben.** Der Pool wurde früher bei jedem Aufbau komplett
+ersetzt. Scheiterte ein einziger Vereinsabruf, verschwanden dessen Spieler aus dem Pool —
+und damit aus der Marktseite, der Rekonstruktion und dem Datensatz für die Frage-Funktion.
+Jetzt werden Bekannte aktualisiert und Neue ergänzt; ein ausgefallener Verein kostet nichts,
+seine Spieler bleiben aus dem letzten Stand stehen.
+
+Der **Stand wird nur fortgeschrieben, wenn wirklich alle Vereine dran waren.** Sonst stünde
+ein halber Durchlauf als „heute erledigt" da und die fehlenden Vereine kämen erst am
+nächsten Tag dran. So macht der nächste Klick einfach weiter; solange etwas fehlt, steht es
+unter „offen" (`Spielerliste (14/18 Vereine)`).
+
+#### Gebaut wird nur im Aktualisieren-Lauf
+
+**`holePool()` liest, `aktualisierePool()` schreibt — und schreiben darf nur die
+Aktualisieren-Route.** Vorher hing beides in `holePoolGecached()` zusammen: War der Cache
+24 Stunden alt, feuerte der **Seitenaufruf** der Marktseite 19 Kickbase-Anfragen mitten im
+Rendern — an der Bremse vorbei und ohne dass jemand auf einen Knopf gedrückt hätte. Genau
+die Art versteckter Last, wegen der der Nutzer schon einmal nicht mehr in Kickbase kam.
+
+Ist der Pool leer, sagt die Marktseite das („Spielerliste noch nicht geladen — einmal
+aktualisieren") statt einen leeren Markt vorzutäuschen.
 
 ### Überlappungsfreiheit — wichtig!
 
@@ -524,7 +554,7 @@ lib/
   importer.js       importiere() — Feed, Batch-Insert via UNNEST
   marktbeobachtung.js speichereMarkt(), sammleBeobachtungen(), aktuellAmMarkt()
   marktwerte.js     ladeMarktwertVerlauf(), ergaenzeMarktwerte() — Historie je Spieler
-  rekonstruktion.js rekonstruiere(), holeSpielerPool()
+  rekonstruktion.js rekonstruiere(), holePool(), aktualisierePool()
   rhythmus.js       bildeAuftritte(), schaetzeZyklus(), prognostiziere()
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   verlauf.js        tagesraster(), tagesreihen() — Tagesstützstellen 0 Uhr
