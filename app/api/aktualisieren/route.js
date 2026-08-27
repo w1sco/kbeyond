@@ -4,6 +4,7 @@ import { importiere } from "@/lib/importer";
 import { ladeTeamwerte } from "@/lib/teamwerte";
 import { ladeKader } from "@/lib/kader";
 import { rekonstruiere } from "@/lib/rekonstruktion";
+import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { pruefeApi, sitzung } from "@/lib/auth";
 
 export const maxDuration = 60;
@@ -63,7 +64,17 @@ export async function POST(request) {
     erledigt.push(`${imp.neu} neue Events`);
     if (imp.gestoppt) offen.push("Feed");
 
-    // 2. Teamwerte – ohne sie stimmen Max-Gebot und Gesamtwert nicht
+    // 2. Transfermarkt mitschreiben – ein Angebot ist nach einem Tag weg,
+    //    und daraus ergibt sich der Rhythmus, nach dem Spieler wiederkommen.
+    //    Ein einzelner Abruf, deshalb ohne eigene Zeitprüfung.
+    try {
+      const mk = await speichereMarkt(leagueId, token);
+      if (mk.neu > 0) erledigt.push(`${mk.neu} neue Marktangebote`);
+    } catch {
+      // Der Markt ist Beiwerk – der Rest des Laufs soll daran nicht scheitern
+    }
+
+    // 3. Teamwerte – ohne sie stimmen Max-Gebot und Gesamtwert nicht
     if (rest() > MINDESTZEIT_MS) {
       const tw = await ladeTeamwerte(leagueId, ids, token, { frist: ende - 12_000 });
       erledigt.push(`Teamwerte ${tw.geladen}/${tw.gesamt}`);
@@ -72,7 +83,7 @@ export async function POST(request) {
       offen.push("Teamwerte");
     }
 
-    // 3. Kader – Grundlage für Markt und Verkaufsrechner
+    // 4. Kader – Grundlage für Markt und Verkaufsrechner
     if (rest() > MINDESTZEIT_MS) {
       const kd = await ladeKader(leagueId, ids, token, { frist: ende - 4_000 });
       erledigt.push(`Kader ${kd.geladen}/${kd.gesamt}`);
@@ -81,7 +92,7 @@ export async function POST(request) {
       offen.push("Kader");
     }
 
-    // 4. Historie – nur solange die Lücke nicht abgearbeitet ist
+    // 5. Historie – nur solange die Lücke nicht abgearbeitet ist
     const log = await sql`SELECT * FROM rekon_log WHERE league_id = ${leagueId}`;
     const rekonFertig = log[0]?.fertig ?? false;
     if (!rekonFertig && rest() > MINDESTZEIT_MS) {

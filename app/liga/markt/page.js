@@ -4,6 +4,8 @@ import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { holePoolGecached } from "@/lib/rekonstruktion";
+import { sammleBeobachtungen, aktuellAmMarkt } from "@/lib/marktbeobachtung";
+import { bildeAuftritte, abstaendeAus, schaetzeZyklus, prognostiziere, MINDEST_ABSTAENDE } from "@/lib/rhythmus";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt } from "@/lib/format";
 import Freieliste from "./Freieliste";
@@ -44,6 +46,19 @@ export default async function Markt({ searchParams }) {
   const besitz = await getBesitz(leagueId);
   const pool = await holePoolGecached(token);
 
+  // ── Rhythmus: wann kommt wer wieder auf den Markt? ──────────────────
+  const beobachtungen = await sammleBeobachtungen(leagueId, settings.stichtag);
+  const amMarkt = await aktuellAmMarkt(leagueId);
+
+  const auftritteJe = new Map();
+  const alleAbstaende = [];
+  for (const [id, zeiten] of beobachtungen) {
+    const auftritte = bildeAuftritte(zeiten);
+    auftritteJe.set(id, auftritte);
+    alleAbstaende.push(...abstaendeAus(auftritte));
+  }
+  const zyklus = schaetzeZyklus(alleAbstaende);
+
   // Kaufkraft der Liga: Kontostände plus das erlaubte Minus (Teamwert ÷ 3)
   const summeKonten = konten.reduce((s, k) => s + k.konto, 0);
   const summeLimit = konten.reduce((s, k) => {
@@ -57,9 +72,19 @@ export default async function Markt({ searchParams }) {
   // einem Format kommt, das wir nicht auswerten können.
   const vergeben = new Set([...kader.besetzt, ...besitz.besitzer.keys()]);
 
+  const jetzt = new Date();
   const frei = pool.spieler
     .filter((s) => !vergeben.has(String(s.id)))
-    .map((s) => ({ ...s, marktwert: s.marktwert == null ? null : Number(s.marktwert) }));
+    .map((s) => ({
+      ...s,
+      marktwert: s.marktwert == null ? null : Number(s.marktwert),
+      prognose: prognostiziere({
+        auftritte: auftritteJe.get(String(s.id)) ?? [],
+        zyklusTage: zyklus.tage,
+        jetzt,
+        aufMarktBis: amMarkt.get(String(s.id)) ?? null,
+      }),
+    }));
 
   const ohneWert = frei.filter((s) => s.marktwert == null).length;
   const schwelle = Number(p.min ?? 0);
@@ -159,6 +184,13 @@ export default async function Markt({ searchParams }) {
           <strong className={summeKonten < 0 ? "kb-minus" : undefined}>{euro(summeKonten)}</strong>
         </div>
         <div>
+          <span className="kb-label">Rhythmus</span>
+          {zyklus.tage
+            ? <><strong>~{zyklus.tage.toLocaleString("de-DE", { maximumFractionDigits: 1 })} Tage</strong>
+                <span className="kb-leise"> aus {zyklus.anzahl}</span></>
+            : <span className="kb-gedaempft">noch unbekannt</span>}
+        </div>
+        <div>
           <span className="kb-label">Verhältnis</span>
           <strong>{verhaeltnis == null ? "–" : prozent(verhaeltnis)}</strong>
         </div>
@@ -170,6 +202,35 @@ export default async function Markt({ searchParams }) {
           </span>
         </div>
       </div>
+
+      <Hinweis kurz="Wie die Rückkehr-Prognose entsteht" titel="Wann kommt ein Spieler wieder?">
+        <p>
+          Spieler kehren nach einem festen Rhythmus auf den Markt zurück — anfangs etwa alle
+          14 Tage. Je leerer der Markt wird, desto schneller kommen sie wieder, deshalb wird
+          der Rhythmus laufend neu aus den <strong>jüngsten</strong> Abständen geschätzt.
+        </p>
+        <p>
+          Gezählt wird das <strong>Erscheinen</strong> am Markt, nicht der Kauf. Ein Spieler
+          kann ungekauft ablaufen und 14 Tage später wiederkommen und dann gekauft werden —
+          zwischen den Käufen lägen 28 Tage, der Rhythmus ist aber 14. Erscheinen und Kauf
+          desselben Angebots zählen als ein Auftritt.
+        </p>
+        <p>
+          Alles vor dem Stichtag bleibt draußen: die Historie vor dem Liga-Reset sagt über
+          den heutigen Rhythmus nichts.
+        </p>
+        <p>
+          <strong>„kommt demnächst"</strong> heißt: seit dem Reset noch nicht am Markt
+          gewesen. Diese Spieler tauchen in den nächsten Tagen auf, aber ohne festen
+          Abstand — der erste Auftritt nach einem Reset folgt keinem Rhythmus.
+        </p>
+        <p>
+          Die Schätzung braucht mindestens {MINDEST_ABSTAENDE} beobachtete Abstände. Solange
+          steht überall „Rhythmus noch unbekannt" — lieber nichts sagen als etwas erfinden.
+          Abstände, die grob ein Vielfaches des Medians sind, werden verworfen: sie kommen
+          von Auftritten, die niemand mitbekommen hat.
+        </p>
+      </Hinweis>
 
       <Hinweis kurz="Wie das Verhältnis zu lesen ist" titel="Verhältnis und Filter">
         <p>

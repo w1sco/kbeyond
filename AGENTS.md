@@ -211,6 +211,8 @@ pool_cache(id PK, daten JSONB)                        -- 'bundesliga', 24h TTL
 teamwerte(league_id, manager_id, teamwert, spieler, stand)  -- PK (league_id, manager_id)
 teamwert_verlauf(league_id, manager_id, teamwert, stand)   -- PK (league_id, manager_id, stand)
   + Index (league_id, manager_id, stand DESC)
+markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, player_id, ablauf)
+  + Index (league_id, player_id)
 kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis, punkte, stand)
   + Index (league_id)                                 -- PK (league_id, manager_id, player_id)
 ```
@@ -267,6 +269,62 @@ Frage hinfällig.
 Manager- und Spielernamen stammen von Kickbase-Nutzern. Sie stehen zwischen klaren
 Markierungen, und die Anweisung sagt ausdrücklich, dass Text, der wie eine Anweisung
 aussieht, als Name zu behandeln ist.
+
+---
+
+## Wann kommt ein Spieler wieder auf den Markt?
+
+Spieler kehren nach einem festen Rhythmus zurück, anfangs etwa alle 14 Tage. Der Rhythmus
+verkürzt sich, je leerer der Markt wird. `/liga/markt` zeigt daraus eine Prognose je Spieler.
+
+### Beobachtet wird das Erscheinen, nicht der Kauf
+
+Das ist der Kern. Ein Spieler kann auf den Markt kommen, **ungekauft ablaufen** und 14 Tage
+später wiederkommen und dann gekauft werden. Zwischen den beiden *Käufen* lägen 28 Tage,
+der Rhythmus ist aber 14. Wer aus Kaufabständen rechnet, bekommt systematisch Vielfache.
+
+Der Feed liefert dafür **Typ 3** („Spieler neu am Markt") — das Erscheinen selbst. Drei
+Quellen laufen in eine Zeitreihe:
+
+| Quelle | Was sie sagt |
+|---|---|
+| Events Typ 3 | Der Spieler ist am Markt erschienen — die beste Quelle |
+| Events Typ 15 ohne `slr` | Kauf von Kickbase, der Spieler war also am Markt |
+| `markt_beobachtung` | Was wir selbst beim Aktualisieren am Markt gesehen haben |
+
+Käufe **zwischen zwei Managern** zählen nicht: die betreffen Spieler, die jemandem gehören,
+und folgen nicht dem Rhythmus der freien Spieler.
+
+Die Mitschrift ist nötig, weil der Live-Markt flüchtig ist: Ein Angebot steht rund einen
+Tag, und das Feed-Fenster reicht nur ~670 Einträge zurück. Ein Angebot wird über seinen
+**Ablaufzeitpunkt** identifiziert (auf die Minute gerundet, weil die Restzeit sekundenweise
+läuft) — zweimal aktualisieren legt dasselbe Angebot deshalb nicht zweimal ab.
+
+### Beobachtungen werden zu Auftritten gebündelt
+
+Erscheinen und Kauf desselben Angebots sind **ein** Auftritt, keine zwei. Alles, was enger
+als 36 Stunden beieinanderliegt, gilt als derselbe Auftritt.
+
+### Der Rhythmus wird laufend neu geschätzt
+
+Median der Abstände, nicht Mittelwert — einzelne Ausreißer sollen nicht durchschlagen.
+Zwei Korrekturen:
+
+- **Nur die jüngsten Abstände** (21 Tage) zählen, solange es genug davon gibt. Der Rhythmus
+  verkürzt sich mit der Zeit; ein Abstand von vor sechs Wochen beschreibt nicht das Heute.
+- **Abstände über dem 1,6-fachen des Medians fliegen raus.** Sie entstehen durch Auftritte,
+  die niemand mitbekommen hat — ein doppelter Abstand ist eine Datenlücke, kein doppelter
+  Rhythmus.
+
+Unter vier Abständen wird **nicht geschätzt**, sondern „Rhythmus noch unbekannt" angezeigt.
+
+### Was nicht prognostiziert wird
+
+- **Alles vor dem Stichtag.** Die Historie vor dem Liga-Reset sagt über den heutigen
+  Rhythmus nichts.
+- **Spieler, die seit dem Reset nie am Markt waren.** Die kommen in den nächsten Tagen,
+  aber ohne festen Abstand — der erste Auftritt nach einem Reset folgt keinem Rhythmus.
+  Dort steht „kommt demnächst", kein Datum.
 
 ---
 
@@ -392,7 +450,9 @@ lib/
   kickbase.js       kbLogin, kbFetch
   db.js             sql, initSchema, getSettings, logImport, getImportStatus, getTeamwerte
   importer.js       importiere() — Feed, Batch-Insert via UNNEST
+  marktbeobachtung.js speichereMarkt(), sammleBeobachtungen(), aktuellAmMarkt()
   rekonstruktion.js rekonstruiere(), holeSpielerPool()
+  rhythmus.js       bildeAuftritte(), schaetzeZyklus(), prognostiziere()
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi() — Zugriffsschutz
   kader.js          ladeKader() — Kader je Manager
