@@ -9,7 +9,7 @@ import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { holeAufschlaege } from "@/lib/marktbeobachtung";
-import { werteAus, proManager, ZEITRAEUME, zeitraumAb } from "@/lib/aufschlag";
+import { werteAus, proManager, ZEITRAEUME, zeitraumAb, HERKUNFT, filtereHerkunft } from "@/lib/aufschlag";
 import { tagesraster, tagesreihen } from "@/lib/verlauf";
 
 export const dynamic = "force-dynamic";
@@ -144,8 +144,13 @@ export default async function Liga({ searchParams }) {
     settings.stichtag,
     zeitraumAb(zeitraum, settings.stichtag)
   );
-  const aufLiga = werteAus(aufschlagZeilen);
-  const aufManager = proManager(aufschlagZeilen);
+  // Marktkäufe und Deals zwischen Mitspielern folgen unterschiedlicher
+  // Logik und gehören nicht in denselben Durchschnitt.
+  const herkunft = HERKUNFT.some((h) => h.schluessel === p.her) ? p.her : "markt";
+  const gefilterteKaeufe = filtereHerkunft(aufschlagZeilen, herkunft);
+
+  const aufLiga = werteAus(gefilterteKaeufe);
+  const aufManager = proManager(gefilterteKaeufe);
 
   const kaderStand = (await sql`
     SELECT MAX(stand) AS stand FROM kader WHERE league_id = ${leagueId}`)[0]?.stand ?? null;
@@ -361,10 +366,22 @@ export default async function Liga({ searchParams }) {
         </h2>
 
         <div className="kb-sortleiste kb-sortleiste--immer">
+          {HERKUNFT.map((h) => (
+            <a
+              key={h.schluessel}
+              href={`/liga?league=${leagueId}&auf=${zeitraum}&her=${h.schluessel}`}
+              className={`kb-sortchip${herkunft === h.schluessel ? " kb-sortchip--aktiv" : ""}`}
+            >
+              {h.label}
+            </a>
+          ))}
+        </div>
+
+        <div className="kb-sortleiste kb-sortleiste--immer">
           {ZEITRAEUME.map((z) => (
             <a
               key={z.schluessel}
-              href={`/liga?league=${leagueId}&auf=${z.schluessel}`}
+              href={`/liga?league=${leagueId}&auf=${z.schluessel}&her=${herkunft}`}
               className={`kb-sortchip${zeitraum === z.schluessel ? " kb-sortchip--aktiv" : ""}`}
             >
               {z.label}
@@ -399,7 +416,7 @@ export default async function Liga({ searchParams }) {
               </div>
               <div>
                 <span className="kb-label">Summe über Marktwert</span>
-                {euro(Math.round(aufLiga.gesamt))}
+                {euro(Math.round(aufLiga.gesamtsumme))}
               </div>
             </div>
 
@@ -408,7 +425,7 @@ export default async function Liga({ searchParams }) {
                 <thead>
                   <tr>
                     <th className="kb-namensspalte">Manager</th>
-                    <th>Käufe</th>
+                    <th>Bewertet</th>
                     <th>Ø Aufschlag</th>
                     <th>Ø relativ</th>
                   </tr>
@@ -419,7 +436,10 @@ export default async function Liga({ searchParams }) {
                       <td className="kb-namensspalte">
                         <span className="kb-spielername">{m.name}</span>
                       </td>
-                      <td>{m.anzahl}</td>
+                      <td>
+                        {m.anzahl}
+                        <span className="kb-leise"> von {m.gesamt}</span>
+                      </td>
                       <td className={m.schnitt > 0 ? "kb-minus" : "kb-plus"}>
                         {m.schnitt > 0 ? "+" : ""}{euro(Math.round(m.schnitt))}
                       </td>
@@ -462,6 +482,19 @@ export default async function Liga({ searchParams }) {
           <p>
             <strong>Ø relativ</strong> gewichtet jeden Kauf gleich. Sonst bestimmte ein
             einziger teurer Spieler die Quote der ganzen Liga.
+          </p>
+          <p>
+            <strong>Vom Markt oder von Mitspielern</strong> — das sind zwei verschiedene
+            Dinge. Beim Markt bietet man über den Marktwert, um den Zuschlag zu bekommen;
+            bei einem Mitspieler wird verhandelt, und der Preis hat mit dem Marktwert oft
+            wenig zu tun. In einen Topf geworfen ergibt der Durchschnitt keine Aussage,
+            deshalb die Umschaltung oben.
+          </p>
+          <p>
+            <strong>„Bewertet&ldquo;</strong> sagt, auf wie vielen Käufen der Durchschnitt beruht
+            und wie viele es insgesamt gab. Steht dort „7 von 11&ldquo;, ist der Wert ein
+            Ausschnitt — vergleiche ihn nicht ungeprüft mit einem Manager, bei dem alle
+            Käufe bewertet sind.
           </p>
         </Hinweis>
       </section>

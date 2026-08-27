@@ -737,6 +737,19 @@ Zwei Dinge, die man leicht falsch rechnet:
 Maßgeblich ist nicht der Kontostand danach, sondern die **Luft bis zur Grenze**
 (Kontostand + Limit). Sie darf nicht negativ werden.
 
+### Aufschläge: Herkunft trennen, Abdeckung zeigen
+
+Zwei Dinge machten die erste Fassung der Tabelle wertlos:
+
+**Marktkäufe und Deals zwischen Mitspielern liefen in denselben Durchschnitt.** Am Markt
+bietet man über den Marktwert, um den Zuschlag zu bekommen; bei einem Mitspieler wird
+verhandelt, und der Preis hat mit dem Marktwert oft wenig zu tun. Ein einziger solcher Deal
+hebt den Schnitt eines Managers von 15 % auf 43 %. Umschaltbar über `?her=` (Vorgabe:
+`markt`), unterschieden am `seller` des Transfers.
+
+**Die Spalte „Käufe" zeigte nur die bewerteten.** Ein Manager mit 7 bewerteten von 11 stand
+neben einem mit 22 von 22, als wären die Zahlen vergleichbar. Jetzt steht dort „7 von 11".
+
 ### Die Marktseite
 
 `/liga/markt` beantwortet zwei Fragen: welche Spieler gehören niemandem, und könnte die
