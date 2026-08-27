@@ -36,6 +36,18 @@ const SEITEN = [
   ]);
 
   let fehler = 0;
+
+  // Der Aktualisieren-Lauf gehört mit geprüft: Er hat schon zweimal einen
+  // Fehler geworfen, den keine Seitenansicht gezeigt hätte.
+  const lauf = await ctx.request.post(
+    `http://localhost:${port}/api/aktualisieren?league=${LIGA}`,
+    { headers: { Origin: `http://localhost:${port}` } }
+  );
+  const lauftext = await lauf.text();
+  const laufKaputt = lauf.status() >= 400 || /"error"/.test(lauftext);
+  console.log(`  ${laufKaputt ? "✗" : "✓"} ${"Alles aktualisieren".padEnd(22)} HTTP ${lauf.status()}  ${lauftext.slice(0, 120)}`);
+  if (laufKaputt) fehler++;
+
   for (const [name, pfad] of SEITEN) {
     const p = await ctx.newPage();
     const konsole = [];

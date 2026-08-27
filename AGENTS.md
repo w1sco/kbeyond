@@ -858,6 +858,11 @@ Daraus zwei Regeln für Textersetzungen im Quelltext:
 - **Keine gierigen Regex über Zeilengrenzen.** `[^,]+` frisst Zeilenumbrüche und hat sich
   einmal quer durch eine SQL-Abfrage gefressen. Exakte Zeichenketten sind sicherer.
 
+**Fehler an ihrer Ursache unterscheiden, nicht am Wortlaut.** `kbFetch` setzt `status` am
+Fehlerobjekt — daran erkennt man einen Fehler des Endpunkts. Ein Versuch, das über
+`/HTTP \d+/` am Meldungstext zu prüfen, ging schief, weil die Meldung `API-Fehler: 404`
+lautet: Jeder 404 galt damit als eigener Fehler und riss den ganzen Aktualisieren-Lauf mit.
+
 Bei Unsicherheit über einen Endpoint oder ein Datenformat: **erst eine Diagnose-Seite bauen, die mehrere Kandidaten durchprobiert, dann implementieren.** So sind alle bisherigen Erkenntnisse entstanden. Raten hat in diesem Projekt mehrfach zu Fehlern geführt, die erst durch die Kalibrierung auffielen — oder gar nicht, weil sie nur Gegner betrafen.
 
 Alles auf Deutsch: UI, Variablennamen, Kommentare.
