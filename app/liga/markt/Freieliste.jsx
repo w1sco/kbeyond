@@ -40,8 +40,9 @@ function Prognose({ p }) {
     case "erwartet": {
       const tage = Math.round(p.tageHin);
       const text = tage <= 0 ? "heute" : tage === 1 ? "morgen" : `in ${tage} Tagen`;
+      const woher = p.durchVerkauf ? "Verkauf" : "Auftritt";
       return (
-        <span title={`Letzter Auftritt ${zeitpunkt(p.letzter)}`}>
+        <span title={`${woher} am ${zeitpunkt(p.anker)}${p.gemessen ? "" : " · angenommener Rhythmus"}`}>
           {text}
           {p.sicherheit !== "gut" && <span className="kb-leise"> ca.</span>}
         </span>

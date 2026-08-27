@@ -4,8 +4,8 @@ import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKader, getBesitz, getTeamwerte } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { holePoolGecached } from "@/lib/rekonstruktion";
-import { sammleBeobachtungen, aktuellAmMarkt } from "@/lib/marktbeobachtung";
-import { bildeAuftritte, abstaendeAus, schaetzeZyklus, prognostiziere, MINDEST_ABSTAENDE } from "@/lib/rhythmus";
+import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe } from "@/lib/marktbeobachtung";
+import { bildeAuftritte, abstaendeAus, schaetzeZyklus, prognostiziere, MINDEST_ABSTAENDE, BASIS_ZYKLUS_TAGE } from "@/lib/rhythmus";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt } from "@/lib/format";
 import Freieliste from "./Freieliste";
@@ -49,6 +49,7 @@ export default async function Markt({ searchParams }) {
   // ── Rhythmus: wann kommt wer wieder auf den Markt? ──────────────────
   const { beobachtungen, fremdangebote } = await sammleBeobachtungen(leagueId, settings.stichtag);
   const amMarkt = await aktuellAmMarkt(leagueId);
+  const verkauft = await letzteVerkaeufe(leagueId, settings.stichtag);
 
   const auftritteJe = new Map();
   const alleAbstaende = [];
@@ -80,6 +81,7 @@ export default async function Markt({ searchParams }) {
       marktwert: s.marktwert == null ? null : Number(s.marktwert),
       prognose: prognostiziere({
         auftritte: auftritteJe.get(String(s.id)) ?? [],
+        verkauftAm: verkauft.get(String(s.id)) ?? null,
         zyklusTage: zyklus.tage,
         jetzt,
         aufMarktBis: amMarkt.get(String(s.id)) ?? null,
@@ -187,7 +189,8 @@ export default async function Markt({ searchParams }) {
           {zyklus.tage
             ? <><strong>~{zyklus.tage.toLocaleString("de-DE", { maximumFractionDigits: 1 })} Tage</strong>
                 <span className="kb-leise"> aus {zyklus.anzahl} Abständen</span></>
-            : <span className="kb-gedaempft">noch unbekannt</span>}
+            : <><strong>{BASIS_ZYKLUS_TAGE} Tage</strong>
+                <span className="kb-leise"> angenommen, noch nicht gemessen</span></>}
         </div>
         <div>
           <span className="kb-label">Verhältnis</span>
@@ -233,10 +236,17 @@ export default async function Markt({ searchParams }) {
           Abstand — der erste Auftritt nach einem Reset folgt keinem Rhythmus.
         </p>
         <p>
-          Die Schätzung braucht mindestens {MINDEST_ABSTAENDE} beobachtete Abstände. Solange
-          steht überall „Rhythmus noch unbekannt&ldquo; — lieber nichts sagen als etwas erfinden.
-          Abstände, die grob ein Vielfaches des Medians sind, werden verworfen: sie kommen
-          von Auftritten, die niemand mitbekommen hat.
+          <strong>Ein Verkauf setzt die Uhr neu.</strong> Wer gekauft und wieder an Kickbase
+          verkauft wurde, geht zurück in den Pool und kommt von dort nach dem Rhythmus
+          wieder. Verankert wird deshalb am letzten Ereignis, das den Spieler frei gemacht
+          hat: sein letzter Auftritt am Markt oder sein Verkauf — je nachdem, was später war.
+        </p>
+        <p>
+          Solange weniger als {MINDEST_ABSTAENDE} Abstände beobachtet sind, wird mit dem
+          bekannten Startwert von {BASIS_ZYKLUS_TAGE} Tagen gerechnet und die Prognose als{" "}
+          <strong>Annahme</strong> gekennzeichnet. Sobald genug gemessen ist, ersetzt der
+          gemessene Rhythmus die Annahme. Abstände, die grob ein Vielfaches des Medians
+          sind, werden verworfen: sie kommen von Auftritten, die niemand mitbekommen hat.
         </p>
       </Hinweis>
 

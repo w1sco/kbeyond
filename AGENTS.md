@@ -333,13 +333,30 @@ Zwei Korrekturen:
 
 Unter vier Abständen wird **nicht geschätzt**, sondern „Rhythmus noch unbekannt" angezeigt.
 
+### Ein Verkauf setzt die Uhr neu
+
+Verankert wird am letzten Ereignis, das den Spieler **frei gemacht** hat: sein letzter
+Auftritt am Markt (er lief ungekauft ab) oder sein **Verkauf an Kickbase** — je nachdem,
+was später war. Wer gekauft und wieder verkauft wurde, geht zurück in den Pool und kommt
+von dort nach dem Rhythmus wieder.
+
+Ohne diesen Anker stand bei genau diesen Spielern „Rhythmus unbekannt", obwohl sich die
+Prognose direkt ausrechnen lässt: Verkaufsdatum + Rhythmus.
+
+### Solange nichts gemessen ist, gilt der Startwert
+
+`BASIS_ZYKLUS_TAGE = 14` — die bekannte Ausgangslage einer Liga. Solange weniger als vier
+Abstände beobachtet sind, wird damit gerechnet und die Prognose als **Annahme**
+gekennzeichnet. Das ist keine erfundene Genauigkeit, sondern die dokumentierte
+Ausgangslage; sobald genug gemessen ist, ersetzt der gemessene Rhythmus sie.
+
 ### Was nicht prognostiziert wird
 
 - **Alles vor dem Stichtag.** Die Historie vor dem Liga-Reset sagt über den heutigen
   Rhythmus nichts.
-- **Spieler, die seit dem Reset nie am Markt waren.** Die kommen in den nächsten Tagen,
-  aber ohne festen Abstand — der erste Auftritt nach einem Reset folgt keinem Rhythmus.
-  Dort steht „kommt demnächst", kein Datum.
+- **Spieler, die seit dem Reset weder am Markt waren noch verkauft wurden.** Die kommen in
+  den nächsten Tagen, aber ohne festen Abstand — der erste Auftritt nach einem Reset folgt
+  keinem Rhythmus. Dort steht „kommt demnächst", kein Datum.
 
 ---
 
