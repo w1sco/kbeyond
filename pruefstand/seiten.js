@@ -15,6 +15,7 @@ const SEITEN = [
   ["Freie Spieler",      `/liga/markt?league=${LIGA}`],
   ["Freie Spieler Filter", `/liga/markt?league=${LIGA}&min=10000000`],
   ["Transfermarkt",      `/liga/transfermarkt?league=${LIGA}`],
+  ["News",               `/liga/news?league=${LIGA}`],
   ["Einstellungen",      `/liga/einstellungen?league=${LIGA}`],
   ["Marktwert-Diagnose", `/marktwert?league=${LIGA}`],
   ["Feed-Diagnose",      `/feed?league=${LIGA}`],

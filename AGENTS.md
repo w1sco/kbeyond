@@ -272,6 +272,8 @@ teamwert_verlauf(league_id, manager_id, teamwert, stand)   -- PK (league_id, man
   + Index (league_id, manager_id, stand DESC)
 markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, player_id, ablauf)
   + Index (league_id, player_id)
+news(league_id, player_id, name, text, stimmung, quellen JSONB, stand)
+  PK (league_id, player_id) — leerer text = nachgesehen, nichts gefunden
 kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis, punkte, stand)
   + Index (league_id)                                 -- PK (league_id, manager_id, player_id)
 ```
@@ -330,6 +332,64 @@ Markierungen, und die Anweisung sagt ausdrücklich, dass Text, der wie eine Anwe
 aussieht, als Name zu behandeln ist.
 
 ---
+
+## Spieler-News
+
+`/liga/news` zeigt Meldungen der letzten 30 Tage zu den Spielern im eigenen Kader und zu
+allen Angeboten am Transfermarkt, kurz zusammengefasst unter dem jeweiligen Namen.
+
+### Die News werden recherchiert, nicht geliefert
+
+Kickbase hat keine Nachrichten, und das Projekt hat keine Redaktion. Geholt wird über die
+**Websuche des Modells**: Claude sucht selbst und fasst zusammen. Damit sind überregionale
+Quellen (kicker, ligainsider), Regionalmedien (Deichstube, DerWesten) und
+Transfer-Journalisten wie Fabrizio Romano gleichermaßen erreichbar.
+
+**Die Suche wird bewusst nicht auf eine Domainliste eingeengt.** Eine feste Liste schlösse
+genau die regionalen Quellen aus, die man vorher nicht aufzählen kann. Stattdessen stehen
+die bevorzugten Quellen in der Anweisung, und jede Meldung muss ihre Herkunft nennen — so
+ist am Ergebnis ablesbar, worauf sie beruht.
+
+**Nur Claude.** Die Websuche ist ein serverseitiges Werkzeug der Anthropic-API; ChatGPT und
+Gemini haben eigene, anders geformte Mechanismen. Die Frage-Funktion kann weiterhin alle
+drei; die Recherche kann es nicht, und die Seite sagt das.
+
+### Alles vom Modell wird geprüft, nicht übernommen
+
+Das Modell antwortet mit Text, nicht mit einem Versprechen. `findeArray()` schneidet das
+JSON heraus (auch aus einem Codeblock oder aus Fließtext) und probiert **jede** öffnende
+Klammer als Anfang durch — eine Klammer im Fließtext („laut [1] und [2]") zerriss sonst den
+Ausschnitt. `saubereMeldung()` verwirft unbekannte Spieler-IDs, erfundene Stimmungswerte und
+Nicht-http-URLs und deckelt Textlänge und Quellenzahl. 22 Fälle durchgerechnet
+(`pruefstand/news.mjs`).
+
+### Bündelweise, damit ein Abbruch nichts kostet
+
+Eine Recherche über einen ganzen Kader dauert Minuten und liefe in Vercels 60-Sekunden-
+Grenze. Der Browser ruft deshalb wiederholt auf, fünf Spieler je Anfrage, und zeigt den
+Fortschritt. Was fertig ist, steht in `news` und bleibt — ein Abbruch kostet nur das
+laufende Bündel.
+
+**Auch Spieler ohne Fund bekommen einen Eintrag.** Sonst würden sie bei jedem Lauf erneut
+abgefragt, obwohl die Antwort feststeht. „Nichts Neues in den letzten 30 Tagen" und „Noch
+nicht recherchiert" sind deshalb zwei verschiedene Zustände, und die Seite zeigt sie
+verschieden.
+
+Frisches wird nicht neu geholt: Was jünger als 12 Stunden ist, bleibt stehen. Ein zweiter
+Knopf holt trotzdem alles neu.
+
+### Welche Fassung der Websuche gilt, wird nicht geraten
+
+Der Nutzer wählt sein Modell selbst, und das Werkzeug gibt es in zwei Fassungen
+(`web_search_20260209`, `web_search_20250305`). Versucht wird die neuere; **nur bei 400**
+wird die ältere genommen. Alles andere (Schlüssel ungültig, Guthaben leer) schlägt durch,
+statt ein zweites Mal Geld zu kosten.
+
+### Erfinden ist schlimmer als nichts
+
+In der Anweisung steht ausdrücklich, dass ein Spieler ohne Meldung ein gültiges Ergebnis
+ist. Eine erfundene Verletzungsmeldung wäre hier deutlich schädlicher als eine leere Zeile
+— danach würde jemand verkaufen.
 
 ## Wann kommt ein Spieler wieder auf den Markt?
 
@@ -605,8 +665,11 @@ app/
   liga/transfermarkt/Marktliste.jsx  "use client" — filtern nach Anbieter
   liga/Verlauf.jsx                 "use client" — Teamwert-Verlauf als Liniendiagramm
   liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
+  liga/news/page.js                Spieler-News: eigener Kader und Transfermarkt
+  liga/news/Newsliste.jsx          "use client" — Recherche in Bündeln, Fortschritt
   _ui/Hinweis.jsx                  "use client" — Hinweis als anklickbares Popup
   api/frag/route.js                Frage → Antwortstrom
+  api/news/route.js                Ein Bündel Spieler recherchieren und ablegen
   api/modelle/route.js             Modellliste beim Anbieter erfragen
   api/aktualisieren/route.js       Feed, Markt, Marktwerte, Teamwerte, Kader, Historie
   marktwert/page.js                Diagnose: welcher Endpunkt liefert die Marktwert-Historie
@@ -635,6 +698,7 @@ lib/
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   verlauf.js        tagesraster(), tagesreihen() — Tagesstützstellen 0 Uhr
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
+  news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
                     holeLigen(), istAbgelaufen() — Zugriffsschutz
   kader.js          ladeKader() — Kader je Manager
