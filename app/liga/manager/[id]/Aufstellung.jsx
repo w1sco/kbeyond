@@ -21,13 +21,23 @@ function kurz(p) {
 }
 
 export default function Aufstellung({ kader }) {
-  // Die Aufstellung gilt für den Besuch, sie wird nicht gespeichert. Ein
-  // Wiederherstellen aus dem localStorage müsste beim ersten Rendern
-  // greifen — dann steht auf dem Server etwas anderes als im Browser, und
-  // die Seite hydriert mit einem Konflikt. Das ist es nicht wert.
-  const [gewaehlt, setGewaehlt] = useState(() => new Set());
+  // Vorbelegt ist die **echte** Aufstellung aus Kickbase, soweit sie beim
+  // letzten Kaderabruf erkennbar war. Änderungen daran gelten für den
+  // Besuch und werden nicht gespeichert — ein Wiederherstellen aus dem
+  // localStorage müsste beim ersten Rendern greifen, dann stünde auf dem
+  // Server etwas anderes als im Browser und die Seite hydrierte mit einem
+  // Konflikt.
+  const echte = useMemo(
+    () => kader.filter((s) => s.aufgestellt).map((s) => String(s.id)),
+    [kader]
+  );
+  const [gewaehlt, setGewaehlt] = useState(() => new Set(echte));
 
   const setzen = (neu) => setGewaehlt(neu);
+
+  // Weicht die Anzeige von der echten Aufstellung ab?
+  const geaendert =
+    gewaehlt.size !== echte.length || echte.some((id) => !gewaehlt.has(id));
 
   function umschalten(id) {
     const neu = new Set(gewaehlt);
@@ -89,10 +99,21 @@ export default function Aufstellung({ kader }) {
         <button className="kb-btn kb-btn--stark" onClick={vorschlag}>
           Vorschlag: teuerste Elf
         </button>
+        {echte.length > 0 && (
+          <button className="kb-btn" disabled={!geaendert} onClick={() => setzen(new Set(echte))}>
+            Echte Aufstellung
+          </button>
+        )}
         <button className="kb-btn" disabled={gewaehlt.size === 0} onClick={() => setzen(new Set())}>
-          Zurücksetzen
+          Leeren
         </button>
         <span className="kb-leise">
+          {echte.length === 0
+            ? "eigene Auswahl"
+            : geaendert
+              ? "geändert"
+              : "wie in Kickbase aufgestellt"}
+          {" · "}
           {gewaehlt.size} von {ELF} gewählt
           {gewaehlt.size === ELF ? ` · ${system} · ${euroKurz(wert)}` : ""}
           {punkte > 0 ? ` · ${punkte} Punkte` : ""}
@@ -128,6 +149,13 @@ export default function Aufstellung({ kader }) {
           );
         })}
       </div>
+
+      {echte.length === 0 && (
+        <p className="kb-info">
+          Für diesen Manager ist keine Aufstellung erkennbar — Kickbase kennzeichnet sie
+          nicht in allen Fällen. Wähle die Elf selbst oder nimm den Vorschlag.
+        </p>
+      )}
 
       {aufbau.ohne > 0 && (
         <p className="kb-info">

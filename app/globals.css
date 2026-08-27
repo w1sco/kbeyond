@@ -994,6 +994,64 @@ th.kb-namensspalte { z-index: 3; }
   margin-left: auto;
 }
 
+/* Off-Canvas: die Managerseite als Schublade über der Ligatabelle. */
+.kb-schublade-huelle {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.kb-schublade {
+  width: min(920px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--kb-bg);
+  border-left: 1px solid var(--kb-rand);
+  box-shadow: -12px 0 32px rgba(15, 23, 42, 0.18);
+  animation: kb-rein 0.18s ease-out;
+}
+
+@keyframes kb-rein {
+  from { transform: translateX(24px); opacity: 0.6; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* Wer Bewegung reduziert haben möchte, bekommt sie nicht. */
+@media (prefers-reduced-motion: reduce) {
+  .kb-schublade { animation: none; }
+}
+
+.kb-schubladenkopf {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--kb-rand);
+  background: var(--kb-flaeche);
+}
+
+.kb-schubladeninhalt {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* In der Schublade braucht die Seite keinen eigenen Außenabstand oben. */
+.kb-seite--panel {
+  padding-top: 14px;
+  max-width: none;
+}
+
+@media (max-width: 640px) {
+  .kb-schublade { width: 100%; border-left: 0; }
+}
+
 /* Der Platz: vier Reihen von Sturm oben bis Tor unten – so, wie man eine
    Aufstellung liest. Kein Bild, nur ein Verlauf und Linien: ein echtes
    Spielfeldbild bräuchte Grafiken und trüge nichts zur Aussage bei. */

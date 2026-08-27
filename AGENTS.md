@@ -274,7 +274,8 @@ markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, pla
   + Index (league_id, player_id)
 news(league_id, player_id, name, text, stimmung, quellen JSONB, stand)
   PK (league_id, player_id) — leerer text = nachgesehen, nichts gefunden
-kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis, punkte, stand)
+kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis,
+      punkte, aufgestellt, stand)
   + Index (league_id)                                 -- PK (league_id, manager_id, player_id)
 ```
 
@@ -728,6 +729,9 @@ app/
   liga/news/page.js                Spieler-News: eigener Kader und Transfermarkt
   liga/news/Newsliste.jsx          "use client" — Recherche in Bündeln, Fortschritt
   _ui/Hinweis.jsx                  "use client" — Hinweis als anklickbares Popup
+  _ui/Schublade.jsx                "use client" — Off-Canvas, schließt über den Verlauf
+  liga/layout.js                   children + paralleler Slot @panel
+  liga/@panel/(.)manager/[id]/     fängt die Managerseite ab und zeigt sie als Schublade
   api/frag/route.js                Frage → Antwortstrom
   api/news/route.js                Ein Bündel Spieler recherchieren und ablegen
   api/modelle/route.js             Modellliste beim Anbieter erfragen
@@ -965,7 +969,37 @@ Der Managername führt zur **Managerseite** (`/liga/manager/{id}?league={liga}`)
 die vollständige Kontorechnung Posten für Posten, der aktuelle Kader und alle Transfers mit
 Quelle (Feed oder rekonstruiert).
 
+### Die Managerseite öffnet als Schublade
+
+Ein Klick auf einen Managernamen in der Tabelle schiebt dessen Seite von rechts über die
+Liga, statt die Seite zu wechseln — man verliert seine Stelle in der Tabelle nicht.
+
+Gebaut über **parallele und abfangende Routen** (`app/liga/@panel/(.)manager/[id]`). Der
+Inhalt wird dabei **nicht kopiert**: Die Schublade rendert dieselbe Managerseite und teilt
+ihr über `imPanel` nur mit, dass sie ohne Seitenrahmen und ohne „zurück zur Liga"
+auskommt. Ein direkter Aufruf derselben Adresse (Neuladen, geteilter Link) zeigt
+unverändert die vollständige Seite.
+
+**Geschlossen wird über die Verlaufsgeschichte** (`router.back()`), nicht über einen
+eigenen Zustand. Dann schließt auch der Zurück-Knopf des Browsers die Schublade, statt die
+Ligaseite zu verlassen. Escape und ein Klick daneben tun dasselbe; der Klick daneben wird
+beim `mousedown` geprüft, damit eine Textauswahl, die im Inhalt beginnt und draußen endet,
+nicht zuklappt.
+
+Solange die Schublade offen ist, wird das Scrollen der Seite darunter gesperrt.
+
 ### Wahrscheinliche Aufstellung
+
+Vorbelegt ist die **echte Aufstellung aus Kickbase**. Unter welchem Feld sie im Kader
+gekennzeichnet ist, ist nicht belegt — `findeAufstellung()` sucht deshalb das Feld, bei dem
+**genau elf** Spieler markiert sind, und prüft gegen, dass die übrigen auch erkennbar nicht
+dabei sind (leer, `false` oder `0`). Ohne diese Gegenprobe ging ein Spieler-ID-Feld als
+Aufstellung durch: Bei 18 Spielern liegen zufällig genau elf IDs zwischen 1 und 11. Trifft
+kein Feld zu, bleibt die Auswahl leer und die Seite sagt das. Zwölf Fälle durchgerechnet
+(`pruefstand/aufstellung.mjs`).
+
+Ein Knopf **„Echte Aufstellung"** holt sie zurück, und die Leiste sagt, woran man ist:
+„wie in Kickbase aufgestellt" oder „geändert".
 
 Auf der Managerseite lassen sich **elf Spieler** wählen; sie erscheinen positionsgetreu auf
 einem Platz — Sturm oben, Tor unten, so wie man eine Aufstellung liest. Darunter steht das
@@ -1148,6 +1182,10 @@ Frag-die-Liga mit drei Anbietern.
 ## Arbeitsweise
 
 Der Nutzer arbeitete bisher über die GitHub-Weboberfläche, deshalb wurden **immer vollständige Dateien** geliefert, nie Ausschnitte. Fast alle Build-Fehler entstanden durch abgeschnittene oder doppelt eingefügte Blöcke beim Copy-Paste.
+
+**Der Prüfstand achtet auch auf Konsolenfehler.** Er hörte lange nur auf abgestürzte
+Skripte. React meldet ungültiges HTML und Hydrierungskonflikte aber über `console.error` —
+ein `<dialog>` in einem `<p>` (in `Frag.jsx`) blieb deshalb lange unbemerkt.
 
 **`pruefstand/seiten.js` vor dem Ausliefern.** Der Build sagt nur, ob der Code übersetzt —
 nicht, ob die Seite läuft. Drei Ausfälle in Folge kamen genau daher. Der Prüfstand rendert

@@ -200,7 +200,10 @@ export default function Frag({ leagueId }) {
             </button>
           </div>
 
-          <p className="kb-info" style={{ marginTop: 10, marginBottom: 0 }}>
+          {/* div statt p: Hinweis rendert ein <dialog> mit Überschrift und
+              Absätzen. In einem <p> ist das ungültiges HTML — der Browser
+              bricht den Absatz auf und die Seite hydriert mit einem Konflikt. */}
+          <div className="kb-info" style={{ marginTop: 10, marginBottom: 0 }}>
             Schlüssel gibt es unter{" "}
             <a href={ANBIETER[anbieter].url} target="_blank" rel="noopener noreferrer">
               {ANBIETER[anbieter].hilfe}
@@ -225,7 +228,7 @@ export default function Frag({ leagueId }) {
                 {" "}<button className="kb-textknopf" onClick={vergessen}>Schlüssel löschen</button>
               </>
             )}
-          </p>
+          </div>
 
           {modelle.length > 0 && (
             <label className="kb-feld" style={{ marginTop: 12, marginBottom: 0 }}>

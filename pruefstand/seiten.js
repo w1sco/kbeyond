@@ -55,6 +55,12 @@ const SEITEN = [
     const p = await ctx.newPage();
     const konsole = [];
     p.on("pageerror", (e) => konsole.push(e.message));
+    // Auch Konsolenfehler zählen. React meldet ungültiges HTML und
+    // Hydrierungskonflikte über console.error, nicht als Ausnahme — ein
+    // <dialog> in einem <p> blieb deshalb lange unbemerkt.
+    p.on("console", (m) => {
+      if (m.type() === "error") konsole.push(m.text().split("\n")[0]);
+    });
     let status = 0;
     try {
       const res = await p.goto(`http://localhost:${port}${pfad}`, { waitUntil: "networkidle", timeout: 25000 });

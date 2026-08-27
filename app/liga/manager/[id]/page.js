@@ -26,7 +26,10 @@ const POSITIONEN = [
   { kuerzel: "ANG", name: "Sturm" },
 ];
 
-export default async function ManagerSeite({ params, searchParams }) {
+// imPanel: dieselbe Seite in der Schublade. Dann entfallen der
+// Seitenrahmen und der Zurück-Link — die Schublade hat einen eigenen
+// Kopf und schließt über ihren eigenen Knopf.
+export default async function ManagerSeite({ params, searchParams, imPanel = false }) {
   const { token, nutzer, uid: meineUid, name: meinName } = await sitzung();
 
   const { id } = await params;
@@ -182,11 +185,13 @@ export default async function ManagerSeite({ params, searchParams }) {
   });
 
   return (
-    <main className="kb-seite">
+    <main className={imPanel ? "kb-seite kb-seite--panel" : "kb-seite"}>
       <header className="kb-kopf">
         <div>
-          <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
-          <h1 className="kb-titel" style={{ marginTop: 8 }}>
+          {!imPanel && (
+            <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+          )}
+          <h1 className="kb-titel" style={{ marginTop: imPanel ? 0 : 8 }}>
             {manager.n}
             {binIch && <span className="kb-marke kb-marke--exakt">exakt</span>}
             {unsicher && <span className="kb-marke kb-marke--circa">ca.</span>}
