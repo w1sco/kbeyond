@@ -639,6 +639,25 @@ th.kb-namensspalte { z-index: 3; }
 @keyframes kb-blinken { 50% { opacity: 0; } }
 
 /* ------------------------------------------------------------------
+   Spielerbilder
+   ------------------------------------------------------------------ */
+
+.kb-spielerzeile { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+
+.kb-spielerbild {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  object-fit: cover;
+  background: var(--kb-flaeche-leise);
+  border: 1px solid var(--kb-rand);
+}
+
+/* Platzhalter, damit die Namen bündig bleiben, wenn ein Bild fehlt */
+.kb-spielerbild--leer { display: inline-block; }
+
+/* ------------------------------------------------------------------
    Diagramm
    ------------------------------------------------------------------ */
 

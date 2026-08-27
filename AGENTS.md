@@ -461,6 +461,8 @@ app/
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
   liga/markt/page.js               Markt: freie Spieler, Kaufkraft der Liga
   liga/markt/Freieliste.jsx        "use client" — sortier- und durchsuchbar
+  liga/transfermarkt/page.js       Live-Sicht: was gerade angeboten wird
+  liga/transfermarkt/Marktliste.jsx  "use client" — filtern nach Anbieter
   liga/Verlauf.jsx                 "use client" — Teamwert-Verlauf als Liniendiagramm
   liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
   _ui/Hinweis.jsx                  "use client" — Hinweis als anklickbares Popup
@@ -497,7 +499,7 @@ lib/
   schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
   format.js         euro, euroKurz, prozent, zeitpunkt, vorZeit, restzeit, position,
-                    normalisiereSpieler, findeSpielerListe
+                    normalisiereSpieler, findeSpielerListe, findeBild
 ```
 
 ---
@@ -631,6 +633,23 @@ Statt weitere Feldnamen zu raten, holt `lib/spielernamen.js` die Namen über die
 aus zwei vorhandenen Quellen: dem Bundesliga-Pool und den `events` dieser Liga, wo jeder
 Transfer den Namen mitführt. Events gewinnen, weil sie den Namen so schreiben, wie die Liga
 ihn sieht. Bleibt einer übrig, steht dort `Spieler #4711` statt dreizehnmal „Unbekannt".
+
+### Bilder und Spielerdaten werden gesucht, nicht geraten
+
+Unter welchem Feld Kickbase Bilder ausliefert, ist nicht belegt. `findeBild()` probiert
+bekannte Kandidaten (`pim`, `uim`, `img`, …) und nimmt sonst das erste Feld, dessen Wert
+wie eine Bildadresse aussieht. Fehlt eines, steht ein Platzhalter — die Namen bleiben
+bündig.
+
+Dasselbe gilt für Punkteschnitt, Punkte und Marktwert-Trend auf `/liga/transfermarkt`:
+`normalisiereSpieler()` probiert die bekannten Feldnamen durch. Wie viele Angebote die
+jeweilige Angabe tatsächlich haben, steht als **Abdeckung** unter der Tabelle. Leere
+Spalten sind damit sichtbar als fehlende Daten und nicht als Fehler — und wenn eine Angabe
+durchgehend fehlt, sagt die Seite das ausdrücklich.
+
+**Was noch nicht geht:** die Punkte der letzten fünf Spiele. Dafür liefert der
+Markt-Endpoint nichts; es bräuchte einen zweiten Abruf je Spieler. Ob es ihn gibt, ist
+unbelegt — `/spieler?league=…&pid=…` probiert die Kandidaten durch.
 
 ### Der Kader-Endpoint
 
