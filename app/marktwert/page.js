@@ -66,8 +66,13 @@ export default async function MarktwertDiagnose({ searchParams }) {
     );
   }
 
+  // Nur EIN Kandidat je Aufruf. Vorher feuerte diese Seite dreizehn
+  // Anfragen auf einmal — bei mehreren Spielern war das genug, um die
+  // Drosselung auszulösen. Jetzt klickt man sich durch.
+  const alle = KANDIDATEN(p.league, p.pid);
+  const index = Math.min(Math.max(Number(p.n ?? 0) || 0, 0), alle.length - 1);
   const ergebnisse = [];
-  for (const pfad of KANDIDATEN(p.league, p.pid)) {
+  for (const pfad of [alle[index]]) {
     try {
       const daten = await kbFetch(pfad, token);
       const reihe = findeWertreihe(daten);
@@ -91,15 +96,40 @@ export default async function MarktwertDiagnose({ searchParams }) {
     <main className="kb-seite">
       <DiagnoseKopf
         titel="Marktwert-Diagnose"
-        unter={`Liga ${p.league} · Spieler ${p.pid} · ${ergebnisse.filter((r) => r.ok).length} von ${ergebnisse.length} Endpunkten erreichbar`}
+        unter={`Liga ${p.league} · Spieler ${p.pid} · ein Kandidat je Aufruf, um Kickbase nicht zu belasten`}
         leagueId={p.league}
       />
 
       <div className={`kb-hinweis ${brauchbar.length ? "kb-hinweis--gut" : "kb-hinweis--warn"}`}>
         {brauchbar.length
-          ? `Reihe gefunden bei: ${brauchbar.map((r) => r.pfad).join(", ")}`
-          : "Kein Endpunkt liefert eine erkennbare Reihe aus Datum und Wert. Die Rohdaten unten zeigen, was stattdessen kommt."}
+          ? `Treffer: ${brauchbar[0].pfad} liefert ${brauchbar[0].treffer} Wertepunkte.`
+          : "Dieser Kandidat liefert keine erkennbare Reihe aus Datum und Wert. Unten stehen die Rohdaten, daneben der nächste Kandidat."}
       </div>
+
+      <div className="kb-sortleiste kb-sortleiste--immer">
+        {alle.map((pfad, i) => (
+          <Link
+            key={pfad}
+            href={`/marktwert?league=${p.league}&pid=${p.pid}&n=${i}`}
+            className={`kb-sortchip${i === index ? " kb-sortchip--aktiv" : ""}`}
+            title={pfad}
+          >
+            {i + 1}
+          </Link>
+        ))}
+      </div>
+
+      <p className="kb-info">
+        Kandidat {index + 1} von {alle.length} · <code>{alle[index]}</code>
+        {index + 1 < alle.length && (
+          <>
+            {" · "}
+            <Link href={`/marktwert?league=${p.league}&pid=${p.pid}&n=${index + 1}`}>
+              nächsten probieren →
+            </Link>
+          </>
+        )}
+      </p>
 
       {ergebnisse.map((r) => (
         <section key={r.pfad} className="kb-karte">

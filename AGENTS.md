@@ -542,7 +542,31 @@ lib/
 
 ## Umgang mit Rate Limits und Timeouts
 
-Kickbase drosselt. Alle Importer folgen demselben Muster:
+Kickbase drosselt — und einmal so hart, dass der Nutzer sich vorübergehend nicht mehr
+einloggen konnte. Auslöser war ein Aktualisieren-Lauf mit **60 bis 300 Anfragen**, mehrfach
+hintereinander geklickt.
+
+**Alle Kickbase-Aufrufe laufen deshalb durch `kbFetch` in `lib/kickbase.js`** — eine Stelle,
+eine Bremse. Vorher hatte jeder Lader seine eigene Kopie mit eigener Pause, es gab also
+nirgends einen gemeinsamen Hebel.
+
+Die Bremse macht drei Dinge:
+
+1. **Mindestabstand von 600 ms** zwischen zwei Anfragen, über alle Lader hinweg.
+2. **Bei 429/503 warten und wiederholen**, mit wachsendem Abstand und nach `Retry-After`,
+   wenn Kickbase einen nennt.
+3. **Bleibt es dabei, gilt der ganze Lauf als gedrosselt** und jeder weitere Aufruf bricht
+   sofort ab. Das ist der wichtigste Punkt: Vorher machte jeder Lader für sich weiter und
+   hat die Drosselung damit verlängert.
+
+Dazu wird nur noch geholt, was gebraucht wird: Teamwerte höchstens alle 6 Stunden, Kader
+alle 12 (mit `?voll=1` übergehbar), Marktwert-Historien höchstens 10 Spieler je Lauf. Der
+Endpunkt für die Historie wird **einmal mit einem Spieler sondiert** statt für jeden
+Spieler blind durchprobiert — das allein waren bis zu 250 Anfragen pro Lauf.
+
+Ein Lauf kostet damit rund 20 statt 100+ Anfragen.
+
+Alle Importer folgen zusätzlich demselben Muster:
 
 - 200–350 ms Pause zwischen Requests
 - Bei HTTP 429/503: exponentieller Retry (max. 4 Versuche)

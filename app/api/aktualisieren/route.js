@@ -7,6 +7,7 @@ import { rekonstruiere } from "@/lib/rekonstruktion";
 import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { ergaenzeMarktwerte } from "@/lib/marktwerte";
 import { pruefeApi, sitzung } from "@/lib/auth";
+import { bremseZuruecksetzen } from "@/lib/kickbase";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -19,6 +20,17 @@ const GESAMTBUDGET_MS = 50_000;
 
 // Unter dieser Restzeit lohnt ein weiterer Schritt nicht mehr.
 const MINDESTZEIT_MS = 8_000;
+
+// Wie lange dürfen Teamwerte und Kader alt sein, bevor neu geladen wird?
+//
+// Vorher lud jeder Klick beides komplett neu: bei 17 Managern 34 Anfragen,
+// auch wenn die Daten zwei Minuten alt waren. Kickbase passt Marktwerte
+// einmal am Tag an — häufiger als ein paar Stunden lohnt sich nicht, und
+// jede unnötige Anfrage bringt einer Drosselung näher.
+//
+// Mit ?voll=1 lässt sich das übergehen.
+const TEAMWERTE_FRISCH_MS = 6 * 3600_000;
+const KADER_FRISCH_MS = 12 * 3600_000;
 
 // Wohin es nach dem Lauf zurückgeht. Feste Liste statt Pfad aus der URL —
 // sonst ließe sich die Weiterleitung auf eine fremde Seite umbiegen.
@@ -47,7 +59,10 @@ export async function POST(request) {
   const erledigt = [];
   const offen = [];
 
+  const voll = searchParams.get("voll") === "1";
+
   try {
+    bremseZuruecksetzen();
     await initSchema();
     const settings = await getSettings(leagueId, nutzer);
     const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
@@ -78,7 +93,13 @@ export async function POST(request) {
     }
 
     // 3. Teamwerte – ohne sie stimmen Max-Gebot und Gesamtwert nicht
-    if (rest() > MINDESTZEIT_MS) {
+    const twStand = (await sql`
+      SELECT MAX(stand) AS stand FROM teamwerte WHERE league_id = ${leagueId}`)[0]?.stand ?? null;
+    const twFrisch = twStand && Date.now() - new Date(twStand) < TEAMWERTE_FRISCH_MS;
+
+    if (twFrisch && !voll) {
+      erledigt.push("Teamwerte frisch");
+    } else if (rest() > MINDESTZEIT_MS) {
       const tw = await ladeTeamwerte(leagueId, ids, token, { frist: ende - 12_000 });
       erledigt.push(`Teamwerte ${tw.geladen}/${tw.gesamt}`);
       if (tw.gestoppt) offen.push("Teamwerte");
@@ -95,14 +116,23 @@ export async function POST(request) {
         frist: ende - 8_000,
         stichtag: settings.stichtag,
       });
-      if (mw.geholt > 0 || mw.ohneHistorie > 0) {
+      if (mw.ohnePfad) {
+        erledigt.push("Marktwert-Historie: kein Endpunkt gefunden");
+      } else if (mw.geholt > 0) {
         erledigt.push(`Marktwerte ${mw.geholt}/${mw.offen}`);
       }
-      if (mw.gestoppt) offen.push("Marktwerte");
+      if (mw.gedrosselt) offen.push("Marktwerte (gedrosselt)");
+      else if (mw.gestoppt) offen.push("Marktwerte");
     }
 
     // 5. Kader – Grundlage für Markt und Verkaufsrechner
-    if (rest() > MINDESTZEIT_MS) {
+    const kdStand = (await sql`
+      SELECT MAX(stand) AS stand FROM kader WHERE league_id = ${leagueId}`)[0]?.stand ?? null;
+    const kdFrisch = kdStand && Date.now() - new Date(kdStand) < KADER_FRISCH_MS;
+
+    if (kdFrisch && !voll) {
+      erledigt.push("Kader frisch");
+    } else if (rest() > MINDESTZEIT_MS) {
       const kd = await ladeKader(leagueId, ids, token, { frist: ende - 4_000 });
       erledigt.push(`Kader ${kd.geladen}/${kd.gesamt}`);
       if (kd.gestoppt) offen.push("Kader");
@@ -139,10 +169,14 @@ export async function POST(request) {
     }
     return Response.json({ erledigt, offen });
   } catch (e) {
+    // Drosselung ist kein Fehler im Code, sondern ein Hinweis zu warten.
+    const text = e.gedrosselt
+      ? "Kickbase drosselt gerade. Bitte ein paar Minuten warten — der Lauf macht danach dort weiter, wo er stand."
+      : e.message;
     if (zurueck) {
       return Response.redirect(
-        new URL(`${ziel}?league=${leagueId}&fehler=${encodeURIComponent(e.message)}`, request.url), 303);
+        new URL(`${ziel}?league=${leagueId}&fehler=${encodeURIComponent(text)}`, request.url), 303);
     }
-    return Response.json({ error: e.message }, { status: 500 });
+    return Response.json({ error: text }, { status: e.gedrosselt ? 503 : 500 });
   }
 }
