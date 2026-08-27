@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
-import { euro, euroKurz, prozent } from "@/lib/format";
+import { euro, euroKurz, prozent, posRang } from "@/lib/format";
 
 // Kader zum Durchspielen: Spieler anklicken heißt "verkaufen", und oben
 // steht sofort, was das mit Kontostand und Max-Gebot macht.
@@ -13,13 +13,21 @@ export default function Verkaufsrechner({ kader, konto, teamwert, boni = null })
   // Bis zum Anpfiff kommen noch Login-Gutschriften. Die sind sicher und
   // deshalb vorbelegt – wer nur mit dem Ist-Stand planen will, hakt aus.
   const [boniAn, setBoniAn] = useState(true);
-  const [sortKey, setSortKey] = useState("marktwert");
-  const [absteigend, setAbsteigend] = useState(true);
+  // Vorbelegt nach Position: So liest sich ein Kader wie eine
+  // Aufstellung – Tor, Abwehr, Mittelfeld, Sturm.
+  const [sortKey, setSortKey] = useState("position");
+  const [absteigend, setAbsteigend] = useState(false);
 
   const zeilen = useMemo(() => {
     const kopie = [...kader];
     kopie.sort((a, b) => {
-      if (sortKey === "name" || sortKey === "position") {
+      if (sortKey === "position") {
+        // Nach Platzreihenfolge, bei Gleichstand der teurere zuerst.
+        const d = posRang(a.position) - posRang(b.position);
+        if (d !== 0) return absteigend ? -d : d;
+        return Number(b.marktwert ?? 0) - Number(a.marktwert ?? 0);
+      }
+      if (sortKey === "name") {
         const av = a[sortKey] ?? "";
         const bv = b[sortKey] ?? "";
         return absteigend ? bv.localeCompare(av) : av.localeCompare(bv);

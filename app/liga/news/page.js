@@ -26,7 +26,9 @@ export default async function News({ searchParams }) {
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const kader = await getKader(leagueId);
   const pool = await holePool();
-  const vereine = new Map(pool.spieler.map((s) => [String(s.id), s.teamId]));
+  // Der Vereinsname, nicht die Team-ID: Für eine Nachrichtensuche ist
+  // "(7)" schlimmer als gar keine Angabe.
+  const vereine = new Map(pool.spieler.map((s) => [String(s.id), s.verein ?? null]));
 
   // Wer bin ich? Ohne Zuordnung gibt es keinen eigenen Kader – dann bleibt
   // die Marktliste, die ist für alle gleich.

@@ -335,7 +335,7 @@ aussieht, als Name zu behandeln ist.
 
 ## Spieler-News
 
-`/liga/news` zeigt Meldungen der letzten 30 Tage zu den Spielern im eigenen Kader und zu
+`/liga/news` zeigt Meldungen der letzten 7 Tage zu den Spielern im eigenen Kader und zu
 allen Angeboten am Transfermarkt, kurz zusammengefasst unter dem jeweiligen Namen.
 
 ### Die News werden recherchiert, nicht geliefert
@@ -353,6 +353,22 @@ ist am Ergebnis ablesbar, worauf sie beruht.
 **Nur Claude.** Die Websuche ist ein serverseitiges Werkzeug der Anthropic-API; ChatGPT und
 Gemini haben eigene, anders geformte Mechanismen. Die Frage-Funktion kann weiterhin alle
 drei; die Recherche kann es nicht, und die Seite sagt das.
+
+### Gesucht wird über Name und Verein, nicht über die ID
+
+Das Internet kennt die Kickbase-Spieler-ID nicht. Sie stand trotzdem in der Spielerliste
+des Prompts und half dort niemandem — schlimmstenfalls landete sie in einer Suchanfrage.
+Übergeben werden jetzt **Name und Vereinsname**, zugeordnet wird über eine **laufende
+Nummer** aus der Liste.
+
+Der Verein war der eigentliche Fehler: Übergeben wurde die **Team-ID**, also „Undav (7)".
+Der Pool trägt deshalb jetzt den Vereinsnamen. Unter welchem Feld er in der Tabelle steht,
+ist nicht belegt — `vereinsname()` probiert die Kandidaten durch und gibt im Zweifel `null`
+zurück. **Lieber keine Angabe als eine Zahl:** „(7)" ist für eine Nachrichtensuche
+schlimmer als gar nichts.
+
+**Sieben Tage, nicht dreißig.** Was älter ist, hat für die Aufstellung am Wochenende keine
+Bedeutung mehr, und ein enger Zeitraum liefert schärfere Treffer.
 
 ### Alles vom Modell wird geprüft, nicht übernommen
 
@@ -399,7 +415,7 @@ daran scheiterte ein Lauf über 70 Spieler: Alle wurden als „nichts gefunden" 
 galten damit als erledigt und wurden nie wieder abgefragt — obwohl in Wahrheit nie eine
 Antwort kam. Ein Knopf **„N leere verwerfen"** räumt solche Einträge weg.
 
-„Nichts Neues in den letzten 30 Tagen" und „Noch nicht recherchiert" sind deshalb zwei
+„Nichts Neues in den letzten 7 Tagen" und „Noch nicht recherchiert" sind deshalb zwei
 verschiedene Zustände, und die Seite zeigt sie verschieden.
 
 ### Ein stiller Ausfall sieht aus wie ein Ergebnis
@@ -702,6 +718,7 @@ app/
   liga/aufschlaege/page.js         Aufschläge über Marktwert, je Herkunft und Zeitraum
   liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
+  liga/manager/[id]/Aufstellung.jsx      "use client" — elf Spieler auf dem Platz
   liga/markt/page.js               Markt: freie Spieler, Kaufkraft der Liga
   liga/markt/Freieliste.jsx        "use client" — sortier- und durchsuchbar
   liga/transfermarkt/page.js       Live-Sicht: was gerade angeboten wird
@@ -947,6 +964,23 @@ Position würden den Bedarf verfälschen — sie werden separat gezählt und aus
 Der Managername führt zur **Managerseite** (`/liga/manager/{id}?league={liga}`): Kennzahlen,
 die vollständige Kontorechnung Posten für Posten, der aktuelle Kader und alle Transfers mit
 Quelle (Feed oder rekonstruiert).
+
+### Wahrscheinliche Aufstellung
+
+Auf der Managerseite lassen sich **elf Spieler** wählen; sie erscheinen positionsgetreu auf
+einem Platz — Sturm oben, Tor unten, so wie man eine Aufstellung liest. Darunter steht das
+System (`4-3-3`), der Gesamtmarktwert und die Punktsumme.
+
+Der Kader ist deshalb **nach Position vorsortiert** (`posRang` in `lib/format.js`): Tor,
+Abwehr, Mittelfeld, Sturm. Alphabetisch käme ABW, ANG, MF, TW heraus — für einen Kader
+unbrauchbar.
+
+Der Platz ist **kein Bild**, sondern vier Reihen mit Verlauf und Linien. Eine echte
+Spielfeldgrafik bräuchte Assets und trüge zur Aussage nichts bei.
+
+**Die Auswahl wird nicht gespeichert.** Ein Wiederherstellen aus dem `localStorage` müsste
+beim ersten Rendern greifen — dann steht auf dem Server etwas anderes als im Browser und
+die Seite hydriert mit einem Konflikt. Für ein Gedankenspiel ist das den Preis nicht wert.
 
 ### Der Aufschlag braucht den Marktwert von damals
 

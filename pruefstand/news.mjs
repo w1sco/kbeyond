@@ -24,39 +24,40 @@ pruefe("null", findeArray(null), null);
 pruefe("Klammer im Text vor dem Array",
   findeArray('Quellen [1] und [2] sagen:\n[{"id":"4"}]'), [{ id: "4" }]);
 
-console.log("\nsaubereMeldung (alles vom Modell wird geprüft):");
-const erlaubt = new Set(["101", "202"]);
+console.log("\nsaubereMeldung (Zuordnung über die Nummer, nicht die Kickbase-ID):");
+const nachNummer = new Map([[1, { id: "101", name: "Tah" }], [2, { id: "202", name: "Neuer" }]]);
 pruefe("normale Meldung",
-  saubereMeldung({ id: "101", text: " Muskelverletzung. ", stimmung: "schlecht",
-                   quellen: [{ name: "kicker", url: "https://kicker.de/x" }] }, erlaubt),
+  saubereMeldung({ nr: 1, text: " Muskelverletzung. ", stimmung: "schlecht",
+                   quellen: [{ name: "kicker", url: "https://kicker.de/x" }] }, nachNummer),
   { id: "101", text: "Muskelverletzung.", stimmung: "schlecht",
     quellen: [{ name: "kicker", url: "https://kicker.de/x" }] });
 
-pruefe("unbekannte Spieler-ID wird verworfen",
-  saubereMeldung({ id: "999", text: "x" }, erlaubt), null);
+pruefe("Nummer als Text", saubereMeldung({ nr: "2", text: "x" }, nachNummer)?.id, "202");
+pruefe("unbekannte Nummer wird verworfen", saubereMeldung({ nr: 99, text: "x" }, nachNummer), null);
+pruefe("Nummer 0 wird verworfen", saubereMeldung({ nr: 0, text: "x" }, nachNummer), null);
+pruefe("keine Nummer", saubereMeldung({ text: "x" }, nachNummer), null);
+pruefe("alte Form mit id greift noch", saubereMeldung({ id: 1, text: "x" }, nachNummer)?.id, "101");
 pruefe("erfundene Stimmung wird neutral",
-  saubereMeldung({ id: "101", text: "x", stimmung: "grandios" }, erlaubt).stimmung, "neutral");
+  saubereMeldung({ nr: 1, text: "x", stimmung: "grandios" }, nachNummer).stimmung, "neutral");
 pruefe("nichts=true → leerer Text",
-  saubereMeldung({ id: "202", nichts: true, text: "irgendwas" }, erlaubt),
+  saubereMeldung({ nr: 2, nichts: true, text: "irgendwas" }, nachNummer),
   { id: "202", text: "", stimmung: "neutral", quellen: [] });
 pruefe("leerer Text zählt als nichts",
-  saubereMeldung({ id: "202", text: "   " }, erlaubt).text, "");
+  saubereMeldung({ nr: 2, text: "   " }, nachNummer).text, "");
 pruefe("javascript:-URL fliegt raus",
-  saubereMeldung({ id: "101", text: "x", quellen: [{ name: "böse", url: "javascript:alert(1)" }] }, erlaubt).quellen,
+  saubereMeldung({ nr: 1, text: "x", quellen: [{ name: "böse", url: "javascript:alert(1)" }] }, nachNummer).quellen,
   [{ name: "böse", url: null }]);
 pruefe("Quelle ohne Name und ohne URL fliegt ganz raus",
-  saubereMeldung({ id: "101", text: "x", quellen: [{}, { name: "kicker" }] }, erlaubt).quellen,
+  saubereMeldung({ nr: 1, text: "x", quellen: [{}, { name: "kicker" }] }, nachNummer).quellen,
   [{ name: "kicker", url: null }]);
 pruefe("höchstens vier Quellen",
-  saubereMeldung({ id: "101", text: "x",
-    quellen: Array.from({ length: 9 }, (_, i) => ({ name: `q${i}` })) }, erlaubt).quellen.length, 4);
+  saubereMeldung({ nr: 1, text: "x",
+    quellen: Array.from({ length: 9 }, (_, i) => ({ name: `q${i}` })) }, nachNummer).quellen.length, 4);
 pruefe("Text wird gedeckelt",
-  saubereMeldung({ id: "101", text: "a".repeat(2000) }, erlaubt).text.length, 600);
-pruefe("Zahl als ID wird zu Text",
-  saubereMeldung({ id: 101, text: "x" }, erlaubt)?.id, "101");
+  saubereMeldung({ nr: 1, text: "a".repeat(2000) }, nachNummer).text.length, 600);
 pruefe("quellen kein Array",
-  saubereMeldung({ id: "101", text: "x", quellen: "kicker" }, erlaubt).quellen, []);
-pruefe("Müll-Eintrag", saubereMeldung(null, erlaubt), null);
+  saubereMeldung({ nr: 1, text: "x", quellen: "kicker" }, nachNummer).quellen, []);
+pruefe("Müll-Eintrag", saubereMeldung(null, nachNummer), null);
 
 console.log(fehler ? `\n${fehler} Fall/Fälle falsch` : "\nAlle Fälle richtig.");
 process.exit(fehler ? 1 : 0);

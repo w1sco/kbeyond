@@ -994,6 +994,98 @@ th.kb-namensspalte { z-index: 3; }
   margin-left: auto;
 }
 
+/* Der Platz: vier Reihen von Sturm oben bis Tor unten – so, wie man eine
+   Aufstellung liest. Kein Bild, nur ein Verlauf und Linien: ein echtes
+   Spielfeldbild bräuchte Grafiken und trüge nichts zur Aussage bei. */
+.kb-platz {
+  display: grid;
+  gap: 10px;
+  padding: 14px 12px;
+  border-radius: var(--kb-radius);
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.06) 0 28px,
+      rgba(255, 255, 255, 0) 28px 56px
+    ),
+    linear-gradient(to bottom, #2f7d4f, #276a43);
+  border: 1px solid #1f5334;
+}
+
+.kb-platzreihe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+}
+
+.kb-platzmarke {
+  flex: none;
+  width: 84px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.kb-platzspieler {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.kb-platzleer {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.kb-trikot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--kb-text);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+}
+
+.kb-trikotname { font-size: 13px; font-weight: 600; }
+.kb-trikotwert { font-size: 11px; color: var(--kb-text-leise); }
+
+/* Auswahl darunter, nach Position gruppiert */
+.kb-kaderwahl { display: grid; gap: 10px; margin-top: 14px; }
+.kb-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+.kb-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--kb-rand);
+  background: var(--kb-flaeche);
+  color: var(--kb-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.kb-chip--an {
+  border-color: var(--kb-akzent);
+  background: var(--kb-akzent-weich);
+  font-weight: 600;
+}
+
+.kb-chip:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .kb-platzreihe { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .kb-platzmarke { width: auto; }
+}
+
 /* News: eine Zeile je Spieler, Text darunter statt daneben – auf dem
    Handy bliebe für zwei Spalten kein Platz. */
 .kb-newsleiste {

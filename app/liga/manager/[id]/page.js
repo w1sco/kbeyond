@@ -9,6 +9,7 @@ import { holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
 import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
+import Aufstellung from "./Aufstellung";
 
 export const dynamic = "force-dynamic";
 
@@ -373,6 +374,16 @@ export default async function ManagerSeite({ params, searchParams }) {
           </>
         )}
       </section>
+
+      {kader.length > 0 && (
+        <section className="kb-karte">
+          <h2 className="kb-abschnitt-titel">
+            Wahrscheinliche Aufstellung
+            <span className="kb-leise"> elf Spieler wählen</span>
+          </h2>
+          <Aufstellung kader={JSON.parse(JSON.stringify(kader))} />
+        </section>
+      )}
 
       <section className="kb-karte">
         <h2 className="kb-abschnitt-titel">

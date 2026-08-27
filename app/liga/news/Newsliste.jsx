@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { euroKurz, vorZeit, position } from "@/lib/format";
+import { TAGE_ZURUECK } from "@/lib/news";
 
 // Derselbe Speicher wie bei "Frag die Liga" – wer dort schon einen
 // Schlüssel hinterlegt hat, muss ihn hier nicht noch einmal eintragen.
@@ -292,7 +293,7 @@ export default function Newsliste({ leagueId, gruppen }) {
                     ) : (
                       <p className="kb-newstext kb-gedaempft">
                         {s.meldung
-                          ? "Nichts Neues in den letzten 30 Tagen."
+                          ? `Nichts Neues in den letzten ${TAGE_ZURUECK} Tagen.`
                           : "Noch nicht recherchiert."}
                       </p>
                     )}

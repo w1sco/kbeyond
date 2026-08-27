@@ -99,7 +99,11 @@ function fuerPfad(pfad) {
   const squad = pfad.match(/\/managers\/(\d+)\/squad/);
   if (squad) return { it: KADER[squad[1]] ?? [] };
 
-  if (pfad.includes("/competitions/1/table")) return { it: TEAMS.map((tid) => ({ tid })) };
+  if (pfad.includes("/competitions/1/table")) {
+    // Mit Vereinsnamen: Der Pool soll den Namen tragen, nicht die Team-ID.
+    const namen = { 7: "FC Bayern München", 2: "VfB Stuttgart", 3: "Bayer 04 Leverkusen" };
+    return { it: TEAMS.map((tid) => ({ tid, tn: namen[tid] ?? null })) };
+  }
 
   const team = pfad.match(/\/teams\/(\d+)\/teamprofile/);
   if (team) {
