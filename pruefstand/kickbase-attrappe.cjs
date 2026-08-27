@@ -130,6 +130,9 @@ function fuerPfad(pfad) {
   if (squad) {
     // Mit KB_ELF=1 trägt der Kader eine Aufstellung, kodiert wie bei
     // Kickbase vermutet: 1..11 Startelf, danach die Bank.
+    // Mit KB_LEER=1 liefert ein Manager eine unauswertbare Antwort – der
+    // Lauf muss ihn dann namentlich nennen, nicht nur zählen.
+    if (process.env.KB_LEER === "1" && squad[1] === "3") return { irgendwas: true };
     const eigene = vollerKader(squad[1]);
     if (process.env.KB_ELF === "1" && eigene.length > 0) {
       // Auf 18 Spieler auffüllen – erst bei mehr als elf greift die

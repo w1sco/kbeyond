@@ -88,6 +88,12 @@ Cookie-Laufzeit wirklich aus dem Token gelesen und nicht geraten wird.
 Startelf, danach die Bank). Erst ab zwölf Spielern greift die Felderkennung
 überhaupt; mit weniger gilt der Kader ohnehin komplett als aufgestellt.
 
+## KB_LEER
+
+`KB_LEER=1` lässt einen Manager eine unauswertbare Kaderantwort liefern.
+Der Lauf muss ihn dann **namentlich** nennen („ohne auswertbare Liste:
+PetzS"), nicht nur zählen — sonst weiß man nicht, wo man nachsehen soll.
+
 ## Was er nicht leistet
 
 Er prüft, ob Seiten **rendern** — nicht, ob die Zahlen stimmen. Dafür sind

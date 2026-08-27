@@ -166,7 +166,17 @@ export async function POST(request) {
       const kd = await ladeKader(leagueId, noetig.kader, token, { frist: ende - 4_000 });
       // Sagen, WARUM etwas fehlt – "1/2" allein lässt einen raten
       const gruende = [];
-      if (kd.leer > 0) gruende.push(`${kd.leer} ohne auswertbare Liste`);
+      if (kd.leer > 0) {
+        // Namen statt Zahl: "1 ohne auswertbare Liste" sagt nicht, wo man
+        // nachsehen soll.
+        const namen = (kd.leereManager ?? [])
+          .map((uid) => (ranking.us ?? []).find((m) => String(m.i) === uid)?.n ?? `#${uid}`)
+          .slice(0, 3);
+        gruende.push(
+          `ohne auswertbare Liste: ${namen.join(", ")}` +
+            (kd.leer > namen.length ? ` und ${kd.leer - namen.length} weitere` : "")
+        );
+      }
       if (kd.fehler > 0) gruende.push(`${kd.fehler} mit Abruffehler`);
       if (kd.ohneNamen > 0) gruende.push(`${kd.ohneNamen} Spieler ohne Namen`);
       erledigt.push(
