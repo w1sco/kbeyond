@@ -441,10 +441,22 @@ export default async function Liga({ searchParams }) {
             Marktwertänderung den Aufschlag verfälschen.
           </p>
           <p>
-            Der Marktwert kommt aus dem Feed-Event „Spieler neu am Markt“ oder aus der
-            eigenen Mitschrift des Transfermarkts. Käufe, zu denen sich kein Angebot finden
-            lässt, bleiben außen vor und werden separat gezählt — ein Durchschnitt aus der
-            Hälfte der Käufe soll nicht aussehen, als käme er aus allen.
+            Der Marktwert kommt aus drei Quellen, in dieser Reihenfolge: dem Feed-Event
+            „Spieler neu am Markt“, der eigenen Mitschrift des Transfermarkts und der
+            <strong> Marktwert-Historie des Spielers</strong>. Die dritte trägt auch Käufe,
+            deren Angebot längst aus dem Feed-Fenster gefallen ist — ohne sie erschien ein
+            Manager mit 11 Spielern hier mit 7 Käufen.
+          </p>
+          <p>
+            Die Historien werden bei „Alles aktualisieren“ nachgeladen, und zwar nur für
+            Käufe, denen die Bezugsgröße noch fehlt. Bleibt die Zahl hinter „ohne
+            Marktwert“ hoch, hat Kickbase für diese Spieler keine Historie geliefert; was
+            der Abruf zurückgibt, zeigt die{" "}
+            <a href={`/spieler?league=${leagueId}`}>Spieler-Diagnose</a>.
+          </p>
+          <p>
+            Käufe ohne jede Bezugsgröße bleiben außen vor und werden separat gezählt — ein
+            Durchschnitt aus der Hälfte der Käufe soll nicht aussehen, als käme er aus allen.
           </p>
           <p>
             <strong>Ø relativ</strong> gewichtet jeden Kauf gleich. Sonst bestimmte ein

@@ -209,6 +209,8 @@ import_log(league_id PK, letzter_lauf, neue_events, gesamt, offset_pos, komplett
 rekon_log(league_id PK, position, fertig, letzter, gefunden)
 pool_cache(id PK, daten JSONB)                        -- 'bundesliga', 24h TTL
 teamwerte(league_id, manager_id, teamwert, spieler, stand)  -- PK (league_id, manager_id)
+marktwert_verlauf(player_id, tag, marktwert)                -- PK (player_id, tag), ligaunabhängig
+marktwert_geprueft(player_id, geprueft, gefunden)           -- wen wir schon gefragt haben
 teamwert_verlauf(league_id, manager_id, teamwert, stand)   -- PK (league_id, manager_id, stand)
   + Index (league_id, manager_id, stand DESC)
 markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, player_id, ablauf)
@@ -520,6 +522,7 @@ lib/
   db.js             sql, initSchema, getSettings, logImport, getImportStatus, getTeamwerte
   importer.js       importiere() — Feed, Batch-Insert via UNNEST
   marktbeobachtung.js speichereMarkt(), sammleBeobachtungen(), aktuellAmMarkt()
+  marktwerte.js     ladeMarktwertVerlauf(), ergaenzeMarktwerte() — Historie je Spieler
   rekonstruktion.js rekonstruiere(), holeSpielerPool()
   rhythmus.js       bildeAuftritte(), schaetzeZyklus(), prognostiziere()
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
@@ -641,6 +644,27 @@ Position würden den Bedarf verfälschen — sie werden separat gezählt und aus
 Der Managername führt zur **Managerseite** (`/liga/manager/{id}?league={liga}`): Kennzahlen,
 die vollständige Kontorechnung Posten für Posten, der aktuelle Kader und alle Transfers mit
 Quelle (Feed oder rekonstruiert).
+
+### Der Aufschlag braucht den Marktwert von damals
+
+Kaufpreis minus Marktwert **zum Kaufzeitpunkt**. Drei Quellen, in dieser Reihenfolge:
+
+1. Feed-Event Typ 3 („Spieler neu am Markt") — trägt `mv` mit
+2. Die eigene Mitschrift des Live-Markts
+3. Die **Marktwert-Historie** des Spielers (`marktwert_verlauf`)
+
+Die dritte kam nach, weil die ersten beiden nur Käufe abdecken, deren Angebot noch im
+Feed-Fenster liegt: Ein Manager mit 11 Spielern erschien mit 7 Käufen. Gesucht wird der
+Wert des Kauftags, sonst der letzte davor.
+
+Welcher Endpunkt die Historie liefert, ist **nicht belegt**. `ladeMarktwertVerlauf()`
+probiert Kandidaten durch und `findeWertreihe()` sucht in der Antwort die längste Reihe aus
+Datum und Wert, statt Feldnamen zu raten — geprüft gegen `dt/mv`, `d/m`, `date/value`,
+`t/v`, verschachtelte Objekte, Sekunden- und Millisekunden-Zeitstempel. Unplausible Daten
+(etwa ein Tagesindex 1, 2, 3) werden verworfen.
+
+`marktwert_geprueft` merkt sich, wen wir schon gefragt haben — sonst würde jeder Lauf
+dieselben Spieler ohne Historie erneut abfragen.
 
 ### Die Marktseite
 
