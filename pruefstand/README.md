@@ -70,6 +70,17 @@ psql -h /tmp -p 5433 -U postgres -c \
    to_jsonb((now() - interval '1 day')::text)) WHERE id='bundesliga_v2';"
 ```
 
+## KB_401 und KB_TOKEN_TAGE
+
+`KB_401=1` lässt Kickbase auf alles mit 401 antworten — wie bei einem
+abgelaufenen Token. Alle Einstiege müssen dann nach
+`/login?abgelaufen=1` führen. Damit wurde nachgemessen, dass `/liga`
+vorher mit **HTTP 500** antwortete.
+
+`KB_TOKEN_TAGE` (Vorgabe 30) steuert, wie lange das JWT gilt, das die
+Attrappe beim Login ausgibt. So lässt sich prüfen, dass die
+Cookie-Laufzeit wirklich aus dem Token gelesen und nicht geraten wird.
+
 ## Was er nicht leistet
 
 Er prüft, ob Seiten **rendern** — nicht, ob die Zahlen stimmen. Dafür sind

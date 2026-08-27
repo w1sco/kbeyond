@@ -23,6 +23,7 @@ const SEITEN = [
   ["Login-Bonus",        `/bonus?league=${LIGA}`],
   ["Transfers nach Name", `/manager-detail?league=${LIGA}`],
   ["Login",              "/login"],
+  ["Login abgelaufen",   "/login?abgelaufen=1"],
 ];
 
 (async () => {

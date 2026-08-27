@@ -61,6 +61,19 @@ function antwort(daten, status = 200) {
 }
 
 function fuerPfad(pfad) {
+  // Anmeldung: liefert ein echtes JWT mit Ablauf, damit sich prüfen lässt,
+  // ob "angemeldet bleiben" die Cookie-Laufzeit wirklich aus dem Token
+  // liest. Tage über KB_TOKEN_TAGE einstellbar, Vorgabe 30.
+  if (pfad.includes("/user/login")) {
+    const tage = Number(process.env.KB_TOKEN_TAGE ?? 30);
+    const exp = Math.floor(Date.now() / 1000) + tage * 86400;
+    const teil = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+    return {
+      tkn: `${teil({ alg: "HS256" })}.${teil({ exp, sub: "1" })}.sig`,
+      u: { i: "1", n: "W1zco" },
+    };
+  }
+
   if (pfad.includes("/leagues/selection")) {
     return { it: [{ i: Number(LIGA), n: "Prüfstand-Liga", b: 200000000, tv: 495000000 }] };
   }
@@ -138,6 +151,14 @@ globalThis.fetch = async function (eingabe, init) {
   if (!url.includes("api.kickbase.com")) return echterFetch(eingabe, init);
 
   const pfad = url.replace(/^https?:\/\/api\.kickbase\.com/, "");
+
+  // Mit KB_401=1 antwortet Kickbase auf alles mit 401 – so wie bei einem
+  // abgelaufenen Token. Die Seiten müssen dann zur Anmeldung führen und
+  // nicht mit einem Serverfehler sterben.
+  if (process.env.KB_401 === "1" && !pfad.includes("/user/login")) {
+    return antwort({ error: "token expired" }, 401);
+  }
+
   const daten = fuerPfad(pfad);
 
   if (daten === null) {

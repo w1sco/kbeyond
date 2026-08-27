@@ -434,6 +434,53 @@ fremden Liga-ID in der URL deren Einstellungen überschreiben oder gespeicherte 
 lesen. `lib/auth.js` prüft deshalb bei jedem Zugriff gegen `/v4/leagues/selection`, ob der
 Token zu einem Mitglied dieser Liga gehört.
 
+### Angemeldet bleiben
+
+Das Cookie hielt sieben Tage, trotzdem musste man sich ständig neu anmelden. Zwei
+Ursachen, beide nicht am Cookie:
+
+**`loy` stand fest auf `false`.** Das ist Kickbases eigenes Kennzeichen für
+„angemeldet bleiben" — bei jeder Anmeldung wurde also die kurze Sitzung
+angefordert, auch wenn der Nutzer sie gar nicht wollte. Es folgt jetzt dem
+Ankreuzfeld auf der Login-Seite (vorbelegt: ja).
+
+**Ein abgelaufenes Token war ein Serverfehler.** Nachgemessen mit `KB_401=1`:
+`/liga` antwortete mit **HTTP 500**, `/liga?league=1` leitete auf „Kickbase
+antwortet gerade nicht" — also auf `/liga`, das ebenfalls mit 500 endete. Wer
+zurückkam, landete in jedem Fall auf einer Fehlerseite und hat sich wohl
+deshalb neu angemeldet. Ursache: `app/liga/page.js` und `app/markt/page.js`
+riefen `/leagues/selection` ohne Absicherung auf, und `verlangeLiga` warf alle
+Fehler in denselben Topf.
+
+`istAbgelaufen()` unterscheidet das jetzt am **Status am Fehlerobjekt**, nicht
+am Meldungstext — `kbFetch` wirft `API-Fehler: 401`, ein Muster auf den Text
+hat in diesem Projekt schon einmal die falschen Fehler eingefangen. Alle
+Einstiege führen bei 401/403 nach `/login?abgelaufen=1`.
+
+#### Die Laufzeit wird abgelesen, nicht geraten
+
+Kickbase liefert ein JWT; dessen Nutzlast trägt den Ablauf als `exp`.
+`tokenAblauf()` liest ihn und die Login-Route setzt das Cookie **genau so
+lang, wie das Token wirklich gilt**. Ein Cookie, das ein totes Token trägt,
+sieht aus wie „angemeldet" und ist es nicht.
+
+Alles daran ist unsicher — es muss kein JWT sein, es muss kein `exp` enthalten,
+der Wert muss nicht plausibel sein. Jeder Schritt prüft deshalb selbst und gibt
+im Zweifel `null` zurück; dann greifen 90 Tage. Die Plausibilitätsgrenze fängt
+unter anderem ein `exp` in Millisekunden ab, das sonst im Jahr 56000 landet und
+das Cookie faktisch nie ablaufen ließe. Elf Fälle durchgerechnet.
+
+Ohne Haken ist es ein **Sitzungscookie** — weg, sobald der Browser zugeht.
+
+Wie lange ein Token tatsächlich gilt, ist unbelegt. Deshalb steht **„Anmeldung
+gültig bis"** in der Statusleiste der Ligaseite: Die Antwort steht damit auf der
+Seite, statt geschätzt zu werden.
+
+> **Zugangsdaten werden nicht gespeichert.** Eine stille Neuanmeldung im
+> Hintergrund („nie wieder anmelden") bräuchte das Passwort auf dem Server oder
+> im Cookie. Das widerspricht dem, was die Login-Seite zusagt, und wurde bewusst
+> nicht gebaut.
+
 ### Regeln
 
 - **Jede Seite und jede Route, die eine `league`-ID aus der URL nimmt, prüft sie.**
@@ -518,7 +565,8 @@ app/
   layout.js                        Wurzel-Layout: Viewport-Meta, Metadaten, Schrift
   page.js                          Startseite → leitet auf /liga um
   globals.css                      Design-Tokens, Komponentenklassen, Breakpoints
-  login/page.js                    Client-Komponente, Login-Formular → /liga
+  login/page.js                    Login: Server-Teil, liest ?abgelaufen
+  login/Formular.jsx               "use client" — Formular, „Angemeldet bleiben“
   liga/page.js                     Hauptseite: Auswahl, Kalibrierung, Status, Datenlücke
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
   liga/aufschlaege/page.js         Aufschläge über Marktwert, je Herkunft und Zeitraum
@@ -550,7 +598,7 @@ app/
   feed|ranking|spieler|pool|team|manager/page.js   Endpoint-Diagnosen
 
 lib/
-  kickbase.js       kbLogin, kbFetch
+  kickbase.js       kbLogin, kbFetch, tokenAblauf
   db.js             sql, initSchema, getSettings, logImport, getImportStatus, getTeamwerte
   importer.js       importiere() — Feed, Batch-Insert via UNNEST
   marktbeobachtung.js speichereMarkt(), sammleBeobachtungen(), aktuellAmMarkt()
@@ -560,13 +608,14 @@ lib/
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   verlauf.js        tagesraster(), tagesreihen() — Tagesstützstellen 0 Uhr
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
-  auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi() — Zugriffsschutz
+  auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
+                    holeLigen(), istAbgelaufen() — Zugriffsschutz
   kader.js          ladeKader() — Kader je Manager
   ledger.js         loginBonus(), berechneKonten() — das Herzstück
   schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
   format.js         euro, euroKurz, prozent, zeitpunkt, vorZeit, restzeit, position,
-                    normalisiereSpieler, findeSpielerListe, findeBild
+                    inZeit, normalisiereSpieler, findeSpielerListe, findeBild
 ```
 
 ---

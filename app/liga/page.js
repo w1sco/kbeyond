@@ -2,24 +2,26 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getImportStatus, getTeamwerte, getTeamwertTrend, getTeamwertVerlauf, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
-import { euro, zeitpunkt, vorZeit } from "@/lib/format";
+import { euro, zeitpunkt, vorZeit, inZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
 import Frag from "./Frag";
 import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
-import { sitzung, verlangeLiga } from "@/lib/auth";
+import { sitzung, verlangeLiga, holeLigen } from "@/lib/auth";
 import { tagesraster, tagesreihen } from "@/lib/verlauf";
 
 export const dynamic = "force-dynamic";
 
 export default async function Liga({ searchParams }) {
-  const { token, nutzer, name: meinName, uid: meineUid } = await sitzung();
+  const { token, nutzer, name: meinName, uid: meineUid, ablauf } = await sitzung();
 
   const p = await searchParams;
   const leagueId = p.league;
 
   if (!leagueId) {
-    const ligen = await kbFetch("/v4/leagues/selection", token);
+    // Über holeLigen: Eine abgelaufene Sitzung führt damit zur Anmeldung
+    // statt zu einem Serverfehler.
+    const ligen = { it: await holeLigen(token) };
     return (
       <main className="kb-seite kb-seite--schmal">
         <h1 className="kb-titel">KBeyond</h1>
@@ -241,6 +243,16 @@ export default async function Liga({ searchParams }) {
       </div>
 
       <div className="kb-status">
+        {/* Wie lange ein Kickbase-Token gilt, ist nicht dokumentiert. Der
+            Wert wird aus dem Token selbst gelesen und hier gezeigt – damit
+            steht die Antwort da, statt geschätzt zu werden. */}
+        {ablauf && (
+          <div>
+            <span className="kb-label">Anmeldung gültig bis</span>
+            {zeitpunkt(ablauf)}
+            <span className="kb-leise"> {inZeit(ablauf)}</span>
+          </div>
+        )}
         <div>
           <span className="kb-label">Letzte Aktualisierung</span>
           {zeitpunkt(status.letzterLauf)}

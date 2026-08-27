@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { euro, restzeit, normalisiereSpieler } from "@/lib/format";
+import { holeLigen } from "@/lib/auth";
 
 
 const S = {
@@ -30,7 +31,9 @@ export default async function Markt({ searchParams }) {
   const leagueId = params.league;
 
   if (!leagueId) {
-    const ligen = await kbFetch("/v4/leagues/selection", token);
+    // Über holeLigen: Eine abgelaufene Sitzung führt damit zur Anmeldung
+    // statt zu einem Serverfehler.
+    const ligen = { it: await holeLigen(token) };
     return (
       <main style={S.main}>
         <h1 style={S.h1}>KBeyond</h1>
