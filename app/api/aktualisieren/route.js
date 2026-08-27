@@ -3,7 +3,7 @@ import { kbFetch } from "@/lib/kickbase";
 import { importiere } from "@/lib/importer";
 import { berechneKonten } from "@/lib/ledger";
 import { ladeTeamwerte } from "@/lib/teamwerte";
-import { ladeKader } from "@/lib/kader";
+import { ladeKader, ladeAufstellungen } from "@/lib/kader";
 import { rekonstruiere, holePool, aktualisierePool } from "@/lib/rekonstruktion";
 import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { ergaenzeMarktwerte } from "@/lib/marktwerte";
@@ -173,15 +173,30 @@ export async function POST(request) {
         `Kader ${kd.geladen}/${kd.gesamt}` + (gruende.length ? ` (${gruende.join(", ")})` : "")
       );
 
-      // Die Aufstellung ist die Stelle, an der ein Fehlschlag sonst stumm
-      // bliebe: Ohne Erkennung stünde einfach überall "keine Aufstellung".
+      // Die echte Aufstellung: erst der eigene Endpunkt, der sie belegt
+      // liefert; nur wenn der schweigt, zählt die Felderkennung aus dem
+      // Kader. Ein Fehlschlag bleibt hier nicht stumm.
       if (kd.geladen > 0) {
-        erledigt.push(
-          kd.mitAufstellung > 0
-            ? `Aufstellung ${kd.mitAufstellung}/${kd.geladen}` +
+        let auf = { manager: 0, spieler: 0, pfad: null };
+        try {
+          auf = await ladeAufstellungen(leagueId, token, noetig.kader, { frist: ende - 3_000 });
+        } catch (e) {
+          if (e.gedrosselt) throw e;
+        }
+
+        if (auf.manager > 0) {
+          erledigt.push(
+            `Aufstellung ${auf.manager} Manager` +
+              (auf.pfad === "ligaweit" ? " (nur die eigene)" : "")
+          );
+        } else if (kd.mitAufstellung > 0) {
+          erledigt.push(
+            `Aufstellung ${kd.mitAufstellung}/${kd.geladen} aus dem Kader` +
               (kd.erkanntAn ? ` über ${kd.erkanntAn}` : "")
-            : "Aufstellung nicht erkennbar — siehe /aufstellung"
-        );
+          );
+        } else {
+          erledigt.push("Aufstellung nicht erkennbar — siehe /aufstellung");
+        }
       }
       if (kd.gestoppt) offen.push("Kader");
     } else {

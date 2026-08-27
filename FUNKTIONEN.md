@@ -348,8 +348,15 @@ Erlös, Kontostand danach, Max-Gebot danach, Teamwert danach, Gesamtwert danach.
 Ein Knopf **„so wenig wie möglich"** schlägt die kleinste Auswahl vor, die das
 Konto ins Plus bringt (teuerste zuerst, damit möglichst wenige Spieler gehen).
 
-**Wahrscheinliche Aufstellung** — elf Spieler wählen, die positionsgetreu auf
-einem Platz erscheinen: **Sturm oben, Tor unten**, so wie man eine Aufstellung
+**Wahrscheinliche Aufstellung** — vorbelegt mit der **echten Aufstellung aus
+Kickbase**. Dafür gibt es einen eigenen Endpunkt, der die Startelf mit ihrer
+Position liefert; für wen er antwortet, muss man nicht wissen — die
+zurückgegebenen Spieler werden dem Manager zugeordnet, in dessen Kader sie
+stehen. Schweigt er, wird im Kader nach einem Feld gesucht, das genau elf
+Spieler auszeichnet (als Reihenfolge 1–11, als Wahrheitswert oder als
+Status-Code). Trifft nichts zu, bleibt die Auswahl leer und die Seite sagt das.
+
+Elf Spieler wählen, die positionsgetreu auf einem Platz erscheinen: **Sturm oben, Tor unten**, so wie man eine Aufstellung
 liest. Dazu System (z. B. `4-3-3`), Gesamtmarktwert und Punktsumme. Ein
 Vorschlag sichert die Mindestbesetzung je Position (1 Tor, 3 Abwehr,
 2 Mittelfeld, 1 Sturm) und füllt nach Marktwert auf. Die Auswahl gilt für den

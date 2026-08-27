@@ -53,6 +53,7 @@ Auth: `Authorization: Bearer {token}`, Token aus dem Login.
 | `/v4/leagues/{id}/ranking` | `us[]`: `i`, `n`, `adm`, `sp` (Saisonpunkte), `tv`, `spl` |
 | `/v4/leagues/{id}/activitiesFeed?start=&max=` | Der Feed, siehe unten |
 | `/v4/leagues/{id}/players/{pid}/transferHistory` | Komplette Transferhistorie eines Spielers, bis 2020 zurück |
+| `/v4/leagues/{id}/lineup` | **Die echte Aufstellung**: `it[]` mit `i`, `n`, `lo` (Position 1–11), `st`, `lst` |
 | `/v4/leagues/{id}/managers/{uid}/dashboard` | `tv` (Teamwert), `prft` (kumulierter Gewinn), `t` |
 | `/v4/leagues/{id}/managers/{uid}/squad` | Kader mit `prc` (Kaufpreis!), `mv`, `mvgl` |
 | `/v4/leagues/{id}/market` | Aktueller Transfermarkt |
@@ -1045,9 +1046,32 @@ Solange die Schublade offen ist, wird das Scrollen der Seite darunter gesperrt.
 
 ### Wahrscheinliche Aufstellung
 
-Vorbelegt ist die **echte Aufstellung aus Kickbase**. Unter welchem Feld sie im Kader
-gekennzeichnet ist, ist nicht belegt — `findeAufstellung()` sucht deshalb ein Feld, das
-**genau elf** Spieler auszeichnet, und kennt dafür **drei Muster**:
+Vorbelegt ist die **echte Aufstellung aus Kickbase**.
+
+#### Es gibt einen eigenen Endpunkt — belegt, nicht geraten
+
+```
+/v4/leagues/{id}/lineup
+→ { it: [ { i, n, ap, lo, st, lst, mdst, tid, pos, os } ] }
+```
+
+`lo` ist die Position in der Aufstellung. **Das ist die Quelle**, und sie schlägt jede
+Felderkennung. Gefunden über die Diagnoseseite `/aufstellung`; die drei Varianten
+`/managers/{uid}/lineup`, `/lineup/{uid}` und `/teamcenter` antworteten nicht.
+
+Zwei Antwortformen werden bedient: Stehen genau elf Einträge da, ist die Liste selbst die
+Aufstellung; sonst zählt `lo` von 1 bis 11.
+
+**Für wen der Endpunkt antwortet, muss man nicht wissen.** Die zurückgegebenen Spieler-IDs
+werden dem Manager zugeordnet, in dessen gespeichertem Kader sie stehen — wer die Spieler
+hat, hat die Aufstellung. Ob es eine Fassung je Manager gibt, entscheidet der erste
+Versuch: Greift eine Variante mit `uid`, wird jede Aufstellung einzeln geholt; sonst gibt
+es genau einen Abruf.
+
+#### Die Felderkennung bleibt als Rückfall
+
+Schweigt der Endpunkt, wird im Kader gesucht: ein Feld, das **genau elf** Spieler
+auszeichnet, in drei Mustern.
 
 | Muster | Form | Beispiel |
 |---|---|---|
@@ -1056,22 +1080,16 @@ gekennzeichnet ist, ist nicht belegt — `findeAufstellung()` sucht deshalb ein 
 | **Status-Code** | wenige Werte, einer kommt genau elfmal vor | `lineup_status: 1/2/0` |
 
 **Die erste Fassung kannte nur eine Mischform** und verlangte, dass alle übrigen Spieler
-„leer, false oder 0" sind. Damit scheiterte sie an genau den beiden wahrscheinlichsten
-Formen: Eine durchnummerierte Bank (12–18) ist nicht „aus", und ein Status 2 für die Bank
-zählte fälschlich als markiert — 18 Treffer statt 11, also verworfen.
+„leer, false oder 0" sind. Damit scheiterte sie an den beiden wahrscheinlichsten Formen:
+Eine durchnummerierte Bank (12–18) ist nicht „aus", und ein Status 2 für die Bank zählte
+fälschlich als markiert — 18 Treffer statt 11, also verworfen.
 
 Felder, deren Bedeutung wir kennen (Position, ID, Marktwert, Preis, Punkte, Name), sind
-**gesperrt**: Sie können die Aufstellung nicht sein und würden sonst zufällig passen.
-23 Fälle durchgerechnet (`pruefstand/aufstellung.mjs`).
+**gesperrt**. 23 Fälle durchgerechnet (`pruefstand/aufstellung.mjs`).
 
-Der Aktualisieren-Lauf meldet, **woran** erkannt wurde („Aufstellung 3/3 über lineup_order
-(Reihenfolge 1–11)") oder dass nichts erkennbar war. Ohne diese Angabe bliebe ein Fehlgriff
-stumm.
-
-**`/aufstellung?league=…&uid=…`** zeigt die Rohdaten und je Feld, was auffällt — welche
-Endpunkte für eine Aufstellung antworten, welche Felder wie viele verschiedene Werte haben
-und welches Muster passen würde. Damit ist ein Fehlgriff in einer Runde behoben statt in
-fünf.
+Der Aktualisieren-Lauf meldet, **woher** die Aufstellung kommt („Aufstellung 3 Manager"
+oder „… aus dem Kader über `lineup_order`") oder dass nichts erkennbar war.
+`/aufstellung?league=…&uid=…` zeigt die Rohdaten und je Feld, was auffällt.
 
 Ein Knopf **„Echte Aufstellung"** holt sie zurück, und die Leiste sagt, woran man ist:
 „wie in Kickbase aufgestellt" oder „geändert".

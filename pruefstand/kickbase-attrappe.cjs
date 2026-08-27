@@ -60,6 +60,20 @@ function antwort(daten, status = 200) {
   });
 }
 
+// Ein Kader auf 18 Spieler aufgefüllt – erst ab zwölf greift die
+// Felderkennung, und der Aufstellungs-Endpunkt soll dieselben Spieler
+// nennen wie der Kader.
+function vollerKader(uid) {
+  const eigene = KADER[uid] ?? [];
+  if (eigene.length === 0 || process.env.KB_ELF !== "1") return eigene;
+  const voll = [...eigene];
+  while (voll.length < 18) {
+    const i = voll.length;
+    voll.push({ i: `9${uid}${i}`, n: `Ersatz ${i}`, mv: 3_000_000 + i * 1000, pos: (i % 4) + 1 });
+  }
+  return voll;
+}
+
 function fuerPfad(pfad) {
   // Anmeldung: liefert ein echtes JWT mit Ablauf, damit sich prüfen lässt,
   // ob "angemeldet bleiben" die Cookie-Laufzeit wirklich aus dem Token
@@ -96,21 +110,32 @@ function fuerPfad(pfad) {
     return { tv: eigene.reduce((s, x) => s + x.mv, 0), t: eigene.length * 3, prft: 0 };
   }
 
+  // Der belegte Aufstellungs-Endpunkt. Antwortform wie live gesehen:
+  // { it: [ { i, n, lo, st, lst, ... } ] }, `lo` ist die Position.
+  // Mit KB_ELF=1 aktiv, sonst 404 – damit lässt sich beides prüfen.
+  const lineup = pfad.match(new RegExp(`/leagues/${LIGA}/(?:managers/(\\d+)/)?lineup(?:\\?uid=(\\d+))?$`));
+  if (lineup && process.env.KB_ELF === "1") {
+    // Für wen? Aus dem Pfad, sonst der eigene Manager.
+    const wer = lineup[1] ?? lineup[2] ?? "1";
+    const voll = vollerKader(wer);
+    if (voll.length === 0) return null;
+    return {
+      it: voll.map((s, i) => ({
+        i: String(s.i), n: s.n, ap: 24, lo: i + 1, st: 0, lst: 1, pos: s.pos,
+      })),
+    };
+  }
+
   const squad = pfad.match(/\/managers\/(\d+)\/squad/);
   if (squad) {
     // Mit KB_ELF=1 trägt der Kader eine Aufstellung, kodiert wie bei
     // Kickbase vermutet: 1..11 Startelf, danach die Bank.
-    const eigene = KADER[squad[1]] ?? [];
+    const eigene = vollerKader(squad[1]);
     if (process.env.KB_ELF === "1" && eigene.length > 0) {
       // Auf 18 Spieler auffüllen – erst bei mehr als elf greift die
       // Felderkennung überhaupt. Kodiert wie vermutet: 1..11 Startelf,
       // 12..18 Bank.
-      const voll = [...eigene];
-      while (voll.length < 18) {
-        const i = voll.length;
-        voll.push({ i: `9${squad[1]}${i}`, n: `Ersatz ${i}`, mv: 3_000_000 + i * 1000, pos: (i % 4) + 1 });
-      }
-      return { it: voll.map((s, i) => ({ ...s, lineup_order: i + 1 })) };
+      return { it: eigene.map((s, i) => ({ ...s, lineup_order: i + 1 })) };
     }
     return { it: eigene };
   }
