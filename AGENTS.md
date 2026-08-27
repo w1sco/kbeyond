@@ -300,6 +300,21 @@ Tag, und das Feed-Fenster reicht nur ~670 Einträge zurück. Ein Angebot wird ü
 **Ablaufzeitpunkt** identifiziert (auf die Minute gerundet, weil die Restzeit sekundenweise
 läuft) — zweimal aktualisieren legt dasselbe Angebot deshalb nicht zweimal ab.
 
+### Nur Angebote von Kickbase zählen
+
+**Das war der Fehler, der die ersten Prognosen unbrauchbar machte.** Typ 3 feuert auch,
+wenn ein *Mitspieler* einen Spieler einstellt. Solche Auftritte folgen keinem Rhythmus,
+sondern der Laune des Besitzers: Wer kauft und zwei Tage später wieder anbietet, erzeugt
+einen Abstand von zwei Tagen. Genug davon drücken den Median der ganzen Liga nach unten —
+dann steht überall „jederzeit / überfällig", obwohl der echte Rhythmus 14 Tage ist.
+
+Ob ein Spieler frei war, sagt der **letzte Transfer davor**: hatte er einen Käufer, lag der
+Spieler in einem Kader; stand dort nur ein Verkäufer, ging er zurück an Kickbase. Auftritte
+aus der ersten Gruppe fliegen raus, ihre Zahl steht im Hinweis auf der Marktseite.
+
+Zweite Sicherung: Abstände unter zwei Tagen zählen nicht (`MINDEST_ABSTAND_TAGE`). Ein
+Angebot steht rund einen Tag; alles Engere ist eine Doppelbeobachtung, kein Rhythmus.
+
 ### Beobachtungen werden zu Auftritten gebündelt
 
 Erscheinen und Kauf desselben Angebots sind **ein** Auftritt, keine zwei. Alles, was enger

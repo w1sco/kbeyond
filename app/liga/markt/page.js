@@ -47,7 +47,7 @@ export default async function Markt({ searchParams }) {
   const pool = await holePoolGecached(token);
 
   // ── Rhythmus: wann kommt wer wieder auf den Markt? ──────────────────
-  const beobachtungen = await sammleBeobachtungen(leagueId, settings.stichtag);
+  const { beobachtungen, fremdangebote } = await sammleBeobachtungen(leagueId, settings.stichtag);
   const amMarkt = await aktuellAmMarkt(leagueId);
 
   const auftritteJe = new Map();
@@ -187,7 +187,7 @@ export default async function Markt({ searchParams }) {
           <span className="kb-label">Rhythmus</span>
           {zyklus.tage
             ? <><strong>~{zyklus.tage.toLocaleString("de-DE", { maximumFractionDigits: 1 })} Tage</strong>
-                <span className="kb-leise"> aus {zyklus.anzahl}</span></>
+                <span className="kb-leise"> aus {zyklus.anzahl} Abständen</span></>
             : <span className="kb-gedaempft">noch unbekannt</span>}
         </div>
         <div>
@@ -208,6 +208,15 @@ export default async function Markt({ searchParams }) {
           Spieler kehren nach einem festen Rhythmus auf den Markt zurück — anfangs etwa alle
           14 Tage. Je leerer der Markt wird, desto schneller kommen sie wieder, deshalb wird
           der Rhythmus laufend neu aus den <strong>jüngsten</strong> Abständen geschätzt.
+        </p>
+        <p>
+          <strong>Nur Angebote von Kickbase zählen.</strong> Stellt ein Mitspieler einen
+          Spieler ein, folgt das keinem Rhythmus, sondern seiner Laune — wer kauft und zwei
+          Tage später wieder anbietet, erzeugt einen Abstand von zwei Tagen. Genug davon
+          drücken den Median nach unten, und dann steht überall „überfällig", obwohl der
+          echte Rhythmus 14 Tage ist. Ob ein Spieler frei war, sagt der letzte Transfer
+          davor: hatte er einen Käufer, lag der Spieler in einem Kader.
+          {fremdangebote > 0 && ` In dieser Liga sind so ${fremdangebote} Auftritte ausgeschlossen.`}
         </p>
         <p>
           Gezählt wird das <strong>Erscheinen</strong> am Markt, nicht der Kauf. Ein Spieler
