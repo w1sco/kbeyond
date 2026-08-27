@@ -639,6 +639,69 @@ th.kb-namensspalte { z-index: 3; }
 @keyframes kb-blinken { 50% { opacity: 0; } }
 
 /* ------------------------------------------------------------------
+   Kaderprofil
+   ------------------------------------------------------------------ */
+
+.kb-topspieler { margin-bottom: 14px; }
+
+.kb-namensband {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.kb-topchip {
+  padding: 5px 11px;
+  border: 1px solid var(--kb-rand);
+  border-radius: 999px;
+  background: var(--kb-flaeche-leise);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.kb-profil {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.kb-posfeld {
+  position: relative;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius-klein);
+  background: var(--kb-flaeche-leise);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bedarf soll ins Auge springen – das ist der Punkt der ganzen Ansicht */
+.kb-posfeld--bedarf {
+  background: var(--kb-warn-weich);
+  border-color: var(--kb-warn-rand);
+}
+
+.kb-posbester {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--kb-text-leise);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-bedarf {
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #b45309;
+}
+
+/* ------------------------------------------------------------------
    Verkaufsrechner
    ------------------------------------------------------------------ */
 
@@ -941,6 +1004,8 @@ th.kb-namensspalte { z-index: 3; }
   .kb-detailgitter .kb-kurz { display: none; }
 
   .kb-roh { max-height: 300px; font-size: 10px; }
+
+  .kb-profil { grid-template-columns: repeat(2, 1fr); }
 
   .kb-rechner-knoepfe { width: 100%; }
   .kb-rechner-knoepfe .kb-btn { flex: 1 1 100%; }

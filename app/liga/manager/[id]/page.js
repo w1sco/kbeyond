@@ -5,10 +5,23 @@ import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getTeamwerte, getTeamwertTrend, getKader, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { sitzung, verlangeLiga } from "@/lib/auth";
-import { euro, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
+import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
 
 export const dynamic = "force-dynamic";
+
+// Ab hier gilt ein Spieler als Topspieler.
+const TOPSPIELER_AB = 25_000_000;
+
+// Wer auf einer Position keinen Spieler darüber hat, hat dort Bedarf.
+const BEDARF_UNTER = 10_000_000;
+
+const POSITIONEN = [
+  { kuerzel: "TW", name: "Tor" },
+  { kuerzel: "ABW", name: "Abwehr" },
+  { kuerzel: "MF", name: "Mittelfeld" },
+  { kuerzel: "ANG", name: "Sturm" },
+];
 
 export default async function ManagerSeite({ params, searchParams }) {
   const { token, nutzer, uid: meineUid, name: meinName } = await sitzung();
@@ -108,6 +121,30 @@ export default async function ManagerSeite({ params, searchParams }) {
   const kaderGroesse = kader.length > 0 ? kader.length : kaderGerechnet;
   const kaderWert = kader.reduce((s, x) => s + Number(x.marktwert ?? 0), 0);
 
+  // ── Kaderprofil: Topspieler und Bedarf je Position ──────────────────
+  const topspieler = kader
+    .filter((x) => Number(x.marktwert ?? 0) > TOPSPIELER_AB)
+    .sort((a, b) => Number(b.marktwert ?? 0) - Number(a.marktwert ?? 0));
+
+  const profil = POSITIONEN.map((pos) => {
+    const eigene = kader.filter((x) => x.position === pos.kuerzel);
+    const bester = eigene.reduce(
+      (b, x) => (b == null || Number(x.marktwert ?? 0) > Number(b.marktwert ?? 0) ? x : b),
+      null
+    );
+    return {
+      ...pos,
+      anzahl: eigene.length,
+      bester,
+      bedarf: bester == null || Number(bester.marktwert ?? 0) < BEDARF_UNTER,
+    };
+  });
+
+  // Spieler ohne erkennbare Position würden den Bedarf verfälschen
+  const ohnePosition = kader.filter(
+    (x) => !POSITIONEN.some((pos) => pos.kuerzel === x.position)
+  ).length;
+
   const posten = [
     { label: "Startbudget", betrag: Number(settings.startbudget) },
     { label: "Login-Bonus", betrag: k.loginBonus },
@@ -186,6 +223,63 @@ export default async function ManagerSeite({ params, searchParams }) {
           {limit > 0 ? euro(limit) : "–"}
         </div>
       </div>
+
+      {kader.length > 0 && (
+        <section className="kb-karte">
+          <h2 className="kb-abschnitt-titel">
+            Kaderprofil
+            <span className="kb-leise">
+              {" "}Topspieler ab {euro(TOPSPIELER_AB)} · Bedarf unter {euro(BEDARF_UNTER)}
+            </span>
+          </h2>
+
+          <div className="kb-topspieler">
+            <span className="kb-label">
+              Topspieler: {topspieler.length}
+            </span>
+            {topspieler.length === 0 ? (
+              <span className="kb-gedaempft">keiner über {euro(TOPSPIELER_AB)}</span>
+            ) : (
+              <div className="kb-namensband">
+                {topspieler.map((x) => (
+                  <span key={x.id} className="kb-topchip">
+                    {x.name}
+                    <span className="kb-leise"> {euroKurz(x.marktwert)}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="kb-profil">
+            {profil.map((pos) => (
+              <div key={pos.kuerzel} className={`kb-posfeld${pos.bedarf ? " kb-posfeld--bedarf" : ""}`}>
+                <span className="kb-label">
+                  {pos.name}
+                  <span className="kb-leise"> {pos.anzahl}</span>
+                </span>
+                {pos.bester ? (
+                  <>
+                    <strong>{euroKurz(pos.bester.marktwert)}</strong>
+                    <div className="kb-posbester">{pos.bester.name}</div>
+                  </>
+                ) : (
+                  <strong className="kb-minus">kein Spieler</strong>
+                )}
+                {pos.bedarf && <div className="kb-bedarf">Bedarf</div>}
+              </div>
+            ))}
+          </div>
+
+          {ohnePosition > 0 && (
+            <p className="kb-info" style={{ margin: "12px 0 0" }}>
+              {ohnePosition} {ohnePosition === 1 ? "Spieler hat" : "Spieler haben"} keine
+              erkennbare Position und {ohnePosition === 1 ? "fehlt" : "fehlen"} oben in der
+              Aufteilung.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="kb-karte">
         <h2 className="kb-abschnitt-titel">Finanzen</h2>

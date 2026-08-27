@@ -555,6 +555,18 @@ Laufzeit der Liga passt; sonst stehen dort nur die beiden wahrscheinlichen Ursac
 Werte von Managern in einer Liga mit Datenlücke werden mit `~` und `ca.` gekennzeichnet,
 die eigene Zeile mit `exakt`.
 
+### Kaderprofil auf der Managerseite
+
+Direkt unter den Kennzahlen steht, was der Manager hat und was ihm fehlt:
+
+- **Topspieler** (Marktwert über 25 Mio) mit Anzahl und Namen
+- **Bedarf je Position** (Tor, Abwehr, Mittelfeld, Sturm): hat der Manager dort keinen
+  Spieler über 10 Mio, ist das Feld gelb markiert. Gezeigt wird jeweils der teuerste
+  Spieler der Position, damit man den Abstand zur Schwelle sieht.
+
+Beide Schwellen stehen als benannte Konstanten oben in der Datei. Spieler ohne erkennbare
+Position würden den Bedarf verfälschen — sie werden separat gezählt und ausgewiesen.
+
 Der Managername führt zur **Managerseite** (`/liga/manager/{id}?league={liga}`): Kennzahlen,
 die vollständige Kontorechnung Posten für Posten, der aktuelle Kader und alle Transfers mit
 Quelle (Feed oder rekonstruiert).
