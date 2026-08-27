@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKader, getBesitz, getTeamwerte } from "@/lib/db";
-import { berechneKonten } from "@/lib/ledger";
+import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { holePool } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
@@ -107,6 +107,16 @@ export default async function Markt({ searchParams }) {
   const nurAusEvents = [...besitz.besitzer.keys()].filter((id) => !kader.besetzt.has(id)).length;
   const quellenLeer = vergeben.size === 0;
   const verhaeltnis = summeFrei > 0 ? summeKonten / summeFrei : null;
+
+
+  // Bis zum ersten Spiel des Spieltags kommen noch Login-Gutschriften
+  // dazu — die um 0:00 Uhr, also je Mitternacht eine. Für die Planung
+  // eines Kaufs ist das Geld, mit dem man rechnen darf.
+  const boni = kommendeLoginBoni({
+    referenz: settings.login_start ?? settings.stichtag,
+    spieltagStart: settings.spieltag_start,
+    aktiv: settings.login_aktiv,
+  });
 
   return (
     <main className="kb-seite">
@@ -297,6 +307,7 @@ export default async function Markt({ searchParams }) {
         teamwert={meinTeamwert}
         ligaAufschlag={aufLiga.relativ}
         eigenerKader={meinKader}
+        boni={boni}
       />
     </main>
   );

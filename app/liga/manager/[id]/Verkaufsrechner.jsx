@@ -8,8 +8,11 @@ import { euro, euroKurz, prozent } from "@/lib/format";
 // Gerechnet wird mit dem Marktwert. Beim Verkauf an Kickbase ist das der
 // tatsächliche Erlös; verkauft man an einen Mitspieler, kann dessen Gebot
 // darüber liegen — dann ist die Rechnung hier die vorsichtige Variante.
-export default function Verkaufsrechner({ kader, konto, teamwert }) {
+export default function Verkaufsrechner({ kader, konto, teamwert, boni = null }) {
   const [gewaehlt, setGewaehlt] = useState(() => new Set());
+  // Bis zum Anpfiff kommen noch Login-Gutschriften. Die sind sicher und
+  // deshalb vorbelegt – wer nur mit dem Ist-Stand planen will, hakt aus.
+  const [boniAn, setBoniAn] = useState(true);
   const [sortKey, setSortKey] = useState("marktwert");
   const [absteigend, setAbsteigend] = useState(true);
 
@@ -33,15 +36,18 @@ export default function Verkaufsrechner({ kader, konto, teamwert }) {
     [kader, gewaehlt]
   );
 
-  const neuesKonto = konto + erloes;
+  const zusatz = boniAn && boni ? boni.betrag : 0;
+  // Basis ist der Kontostand, den der Manager am Spieltag tatsächlich hat.
+  const basis = konto + zusatz;
+  const neuesKonto = basis + erloes;
   const neuerTeamwert = Math.max(0, teamwert - erloes);
   const neuesLimit = Math.floor(neuerTeamwert / 3);
   const neuesMaxGebot = neuesKonto + neuesLimit;
   const neuesGesamt = neuesKonto + neuerTeamwert;
 
   // Was fehlt noch bis zur schwarzen Null?
-  const fehlt = konto < 0 ? -konto : 0;
-  const geschafft = konto < 0 && neuesKonto >= 0;
+  const fehlt = basis < 0 ? -basis : 0;
+  const geschafft = basis < 0 && neuesKonto >= 0;
 
   function umschalten(id) {
     setGewaehlt((alt) => {
@@ -55,12 +61,12 @@ export default function Verkaufsrechner({ kader, konto, teamwert }) {
   // Kleinstmögliche Auswahl, die das Konto ins Plus bringt: teuerste zuerst,
   // damit möglichst wenige Spieler den Kader verlassen.
   function vorschlag() {
-    if (konto >= 0) return;
+    if (basis >= 0) return;
     const nachWert = [...kader].sort((a, b) => Number(b.marktwert ?? 0) - Number(a.marktwert ?? 0));
     const neu = new Set();
     let summe = 0;
     for (const s of nachWert) {
-      if (konto + summe >= 0) break;
+      if (basis + summe >= 0) break;
       neu.add(s.id);
       summe += Number(s.marktwert ?? 0);
     }
@@ -91,11 +97,30 @@ export default function Verkaufsrechner({ kader, konto, teamwert }) {
   return (
     <>
       <div className={`kb-rechner${geschafft ? " kb-rechner--gut" : ""}`}>
+        {boni && boni.betrag > 0 && (
+          <label className="kb-ankreuz">
+            <input type="checkbox" checked={boniAn} onChange={(e) => setBoniAn(e.target.checked)} />
+            <span>
+              Login-Boni bis {boni.wahl.label} mitrechnen
+              <span className="kb-leise"> ({euro(boni.betrag)} in {boni.naechte} {boni.naechte === 1 ? "Nacht" : "Nächten"})</span>
+            </span>
+          </label>
+        )}
+
         <div className="kb-kennzahlen">
           <div>
             <span className="kb-label">Verkauf von {gewaehlt.size} Spieler{gewaehlt.size === 1 ? "" : "n"}</span>
             <strong>{euro(erloes)}</strong>
           </div>
+          {boni && boni.betrag > 0 && (
+            <div>
+              <span className="kb-label">Login-Boni bis {boni.wahl.label}</span>
+              <strong className={zusatz > 0 ? "kb-plus" : "kb-gedaempft"}>
+                {zusatz > 0 ? "+" : ""}{euro(zusatz)}
+              </strong>
+              <span className="kb-leise"> {boni.naechte} {boni.naechte === 1 ? "Nacht" : "Nächte"}</span>
+            </div>
+          )}
           <div>
             <span className="kb-label">Kontostand danach</span>
             <strong className={neuesKonto < 0 ? "kb-minus" : "kb-plus"}>{euro(neuesKonto)}</strong>

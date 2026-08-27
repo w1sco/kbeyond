@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getTeamwerte, getMwTrend, getKader, sql } from "@/lib/db";
-import { berechneKonten } from "@/lib/ledger";
+import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { holeNamen, benenne } from "@/lib/spielernamen";
 import { holeAufschlaege } from "@/lib/marktbeobachtung";
@@ -42,7 +42,7 @@ export default async function ManagerSeite({ params, searchParams }) {
   const manager = alle.find((m) => String(m.i) === String(id));
 
   if (!manager) {
-    return (
+  return (
       <main className="kb-seite kb-seite--schmal">
         <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
         <h1 className="kb-titel" style={{ marginTop: 10 }}>Manager nicht gefunden</h1>
@@ -168,6 +168,15 @@ export default async function ManagerSeite({ params, searchParams }) {
     { label: `Strafen (${k.anzStrafen})`, betrag: k.strafen },
     { label: "Manuelle Korrektur", betrag: k.korrektur },
   ];
+
+  // Bis zum ersten Spiel des Spieltags kommen noch Login-Gutschriften dazu,
+  // eine je Mitternacht. Der Bonus wird für alle Manager gleich gerechnet —
+  // im Feed ist nur der eigene sichtbar.
+  const boni = kommendeLoginBoni({
+    referenz: settings.login_start ?? settings.stichtag,
+    spieltagStart: settings.spieltag_start,
+    aktiv: settings.login_aktiv,
+  });
 
   return (
     <main className="kb-seite">
@@ -365,7 +374,7 @@ export default async function ManagerSeite({ params, searchParams }) {
               Verkauf an Kickbase ist das der Erlös, bei einem Mitspieler kann dessen Gebot
               darüber liegen.
             </p>
-            <Verkaufsrechner kader={kader} konto={k.konto} teamwert={teamwert} />
+            <Verkaufsrechner kader={kader} konto={k.konto} teamwert={teamwert} boni={boni} />
           </>
         )}
       </section>

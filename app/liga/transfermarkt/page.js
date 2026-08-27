@@ -5,7 +5,7 @@ import { getBesitz, getKader, getSettings, getTeamwerte, initSchema } from "@/li
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { normalisiereSpieler, findeSpielerListe, findeBild } from "@/lib/format";
 import { holeNamen, benenne } from "@/lib/spielernamen";
-import { berechneKonten } from "@/lib/ledger";
+import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
 import Marktliste from "./Marktliste";
@@ -93,6 +93,16 @@ export default async function Transfermarkt({ searchParams }) {
     mitRestzeit: angebote.filter((a) => a.restSek != null).length,
   };
 
+
+  // Bis zum ersten Spiel des Spieltags kommen noch Login-Gutschriften
+  // dazu — die um 0:00 Uhr, also je Mitternacht eine. Für die Planung
+  // eines Kaufs ist das Geld, mit dem man rechnen darf.
+  const boni = kommendeLoginBoni({
+    referenz: settings.login_start ?? settings.stichtag,
+    spieltagStart: settings.spieltag_start,
+    aktiv: settings.login_aktiv,
+  });
+
   return (
     <main className="kb-seite">
       <header className="kb-kopf">
@@ -126,6 +136,7 @@ export default async function Transfermarkt({ searchParams }) {
             teamwert={meinTeamwert}
             ligaAufschlag={aufLiga.relativ}
             eigenerKader={ich ? kader.proManager.get(String(ich.id)) ?? [] : []}
+            boni={boni}
           />
 
           <Hinweis kurz="Was die Spalten bedeuten" titel="Transfermarkt">

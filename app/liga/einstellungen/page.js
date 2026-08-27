@@ -5,6 +5,7 @@ import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKorrekturen, sql } from "@/lib/db";
 import { euro, fuerEingabe, fuerTag, ausEingabe } from "@/lib/format";
 import { sitzung, verlangeLiga, istMitglied } from "@/lib/auth";
+import { SPIELTAGE, spieltagWahl } from "@/lib/loginbonus";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ async function speichern(formData) {
       punkte_bonus = ${Number(formData.get("punkte_bonus"))},
       login_aktiv  = ${formData.get("login_aktiv") === "on"},
       login_start  = ${formData.get("login_start") || null},
+      spieltag_start = ${spieltagWahl(formData.get("spieltag_start")).schluessel},
       notiz        = ${formData.get("notiz") || null}
     WHERE league_id = ${leagueId} AND user_id = ${nutzer}`;
 
@@ -130,6 +132,24 @@ export default async function Einstellungen({ searchParams }) {
               Zählung ab<small className="kb-feld-hinweis">leer = ab Stichtag</small>
             </span>
             <input name="login_start" type="date" defaultValue={fuerTag(settings.login_start)} className="kb-eingabe" />
+          </label>
+
+          {/* Bis zum Anpfiff kommen noch Gutschriften – eine je Mitternacht.
+              Damit rechnen die Kauf- und Verkaufsrechner. */}
+          <label className="kb-feld">
+            <span className="kb-feld-name">
+              Erstes Spiel des Spieltags
+              <small className="kb-feld-hinweis">bis dahin rechnen die Rechner Boni mit</small>
+            </span>
+            <select
+              name="spieltag_start"
+              defaultValue={spieltagWahl(settings.spieltag_start).schluessel}
+              className="kb-eingabe"
+            >
+              {SPIELTAGE.map((t) => (
+                <option key={t.schluessel} value={t.schluessel}>{t.label}</option>
+              ))}
+            </select>
           </label>
         </section>
 

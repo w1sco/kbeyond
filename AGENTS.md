@@ -214,6 +214,30 @@ zur Uhrzeit des Startpunkts: Bei einem Reset um 00:48 wechselte er täglich um 0
 zwischen 0:00 und 0:48 stand die Rechnung einen ganzen Tag — im konstanten Bereich also
 100.000 € — daneben. `tageSeit()` in `lib/format.js` zählt jetzt Mitternachte.
 
+### Was bis zum Anpfiff noch kommt
+
+Die Kauf- und Verkaufsrechner rechnen die **noch ausstehenden Gutschriften** mit. Wer am
+Mittwoch überlegt zu kaufen, hat bis Freitag zwei Nächte mehr auf dem Konto — das ist
+sicheres Geld und gehört in die Planung.
+
+Gezählt werden **Mitternachte bis zum ersten Spiel des Spieltags**, weil der Bonus um 0:00
+Uhr kommt. Der Wochentag steht in den Einstellungen (`liga_settings.spieltag_start`):
+Freitag (Vorgabe), Samstag oder Dienstag.
+
+**Ist heute schon Spieltag, kommt nichts mehr dazu.** Die Gutschrift von heute Nacht steckt
+bereits im Kontostand. Das ist die vorsichtige Lesart — sie verspricht nie Geld, das noch
+nicht da ist. Ein Anpfiff am Abend ändert daran nichts, weil zwischen jetzt und dem
+Anpfiff keine Mitternacht mehr liegt.
+
+Gerechnet wird mit dem **Tagesbonus**, nicht mit der Summe: `tagesBonus(n)` ist die
+Differenz zweier Staffelungssummen. In einer jungen Liga sind die nächsten Nächte deshalb
+unterschiedlich viel wert (Tag 4 = 40k, Tag 5 = 50k), ab Tag 10 konstant 100k. 19 Fälle
+durchgerechnet (`pruefstand/loginboni.mjs`), Übergang von Tag 9 auf 10 eingeschlossen.
+
+`lib/loginbonus.js` ist deshalb **von `ledger.js` getrennt**: reine Rechnung, kein `sql`.
+Sonst ließe sie sich nicht ohne Postgres durchrechnen — `ledger.js` zieht die Datenbank
+herein und ist für einen nackten Node-Lauf unerreichbar.
+
 ### Timing-Falle
 
 Der Bonus wird um 0:00 Uhr gutgeschrieben. Lag der Liga-Reset später am selben Tag (Beispiel: 0:48), verfiel die Gutschrift für Nutzer, die vor dem Reset in der App waren. Diese Nutzer liegen dauerhaft **einen Tag** hinter der Staffelung zurück — im konstanten Bereich sind das genau 100.000 €, die sich nie mehr aufholen.
@@ -233,7 +257,8 @@ events(id PK, league_id, type, dt, buyer, seller, price, player_id, player_name,
   + Index (league_id, dt DESC)
   IDs: Feed = Kickbase-Event-ID, Rekonstruktion = rk_{liga}_{spieler}_{ts}
 
-liga_settings(league_id PK, stichtag, startbudget, punkte_bonus, login_aktiv, login_start, notiz)
+liga_settings(league_id PK, stichtag, startbudget, punkte_bonus, login_aktiv,
+              login_start, spieltag_start, notiz)
 korrektur(league_id, manager, betrag, grund)          -- PK (league_id, manager)
 import_log(league_id PK, letzter_lauf, neue_events, gesamt, offset_pos, komplett)
 rekon_log(league_id PK, position, fertig, letzter, gefunden)
@@ -613,10 +638,12 @@ lib/
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
                     holeLigen(), istAbgelaufen() — Zugriffsschutz
   kader.js          ladeKader() — Kader je Manager
-  ledger.js         loginBonus(), berechneKonten() — das Herzstück
+  ledger.js         berechneKonten() — das Herzstück
+  loginbonus.js     loginBonus(), tagesBonus(), kommendeLoginBoni() — ohne DB
   schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
   format.js         euro, euroKurz, prozent, zeitpunkt, vorZeit, restzeit, position,
+                    wochentag — deutscher Wochentag,
                     mwTag, letztesMwUpdate — Marktwert-Tag ab 22:04,
                     inZeit, normalisiereSpieler, findeSpielerListe, findeBild
 ```

@@ -25,8 +25,12 @@ export default function Kaufrechner({
   ligaAufschlag = null,
   aufLeeren,
   eigenerKader = [],
+  boni = null,
 }) {
   const [aufschlag, setAufschlag] = useState(0);
+  // Bis zum Anpfiff kommen noch Login-Gutschriften – die sind sicher und
+  // deshalb vorbelegt. Abschaltbar, wer nur mit dem Ist-Stand planen will.
+  const [boniAn, setBoniAn] = useState(true);
   const [erloesAufschlag, setErloesAufschlag] = useState(0);
   const [verkauft, setVerkauft] = useState(() => new Set());
   const [kaderOffen, setKaderOffen] = useState(false);
@@ -39,17 +43,18 @@ export default function Kaufrechner({
     const verkaufMW = raus.reduce((s, x) => s + Number(x.marktwert ?? 0), 0);
     const erloes = Math.round(verkaufMW * (1 + erloesAufschlag / 100));
 
-    const neuesKonto = konto - kosten + erloes;
+    const zusatz = boniAn && boni ? boni.betrag : 0;
+    const neuesKonto = konto + zusatz - kosten + erloes;
     const neuerTeamwert = Math.max(0, teamwert + kaufMW - verkaufMW);
     const neuesLimit = Math.floor(neuerTeamwert / 3);
 
     return {
-      kaufMW, kosten, verkaufMW, erloes, anzahlRaus: raus.length,
+      kaufMW, kosten, verkaufMW, erloes, anzahlRaus: raus.length, zusatz,
       neuesKonto, neuerTeamwert, neuesLimit,
       rest: neuesKonto + neuesLimit,
       machbar: neuesKonto + neuesLimit >= 0,
     };
-  }, [gewaehlt, eigenerKader, verkauft, konto, teamwert, aufschlag, erloesAufschlag]);
+  }, [gewaehlt, eigenerKader, verkauft, konto, teamwert, aufschlag, erloesAufschlag, boni, boniAn]);
 
   const nichts = gewaehlt.length === 0 && r.anzahlRaus === 0;
 
@@ -93,6 +98,15 @@ export default function Kaufrechner({
           </strong>
           {erloesAufschlag > 0 && <span className="kb-leise"> statt {euroKurz(r.verkaufMW)}</span>}
         </div>
+        {boni && boni.betrag > 0 && (
+          <div>
+            <span className="kb-label">Login-Boni bis {boni.wahl.label}</span>
+            <strong className={r.zusatz > 0 ? "kb-plus" : "kb-gedaempft"}>
+              {r.zusatz > 0 ? "+" : ""}{euro(r.zusatz)}
+            </strong>
+            <span className="kb-leise"> {boni.naechte} {boni.naechte === 1 ? "Nacht" : "Nächte"}</span>
+          </div>
+        )}
         <div>
           <span className="kb-label">Kontostand danach</span>
           <strong className={r.neuesKonto < 0 ? "kb-minus" : "kb-plus"}>{euro(r.neuesKonto)}</strong>
@@ -107,6 +121,16 @@ export default function Kaufrechner({
           <strong className={r.rest < 0 ? "kb-minus" : undefined}>{euro(r.rest)}</strong>
         </div>
       </div>
+
+      {boni && boni.betrag > 0 && (
+        <label className="kb-ankreuz">
+          <input type="checkbox" checked={boniAn} onChange={(e) => setBoniAn(e.target.checked)} />
+          <span>
+            Login-Boni bis {boni.wahl.label} mitrechnen
+            <span className="kb-leise"> ({euro(boni.betrag)} in {boni.naechte} {boni.naechte === 1 ? "Nacht" : "Nächten"})</span>
+          </span>
+        </label>
+      )}
 
       <div className="kb-regler">
         <label className="kb-aufschlagregler">

@@ -21,7 +21,7 @@ const SPALTEN = [
   { key: "anbieter", label: "Anbieter", text: true, sek: true },
 ];
 
-export default function Marktliste({ angebote, konto = null, teamwert = 0, ligaAufschlag = null, eigenerKader = [] }) {
+export default function Marktliste({ angebote, konto = null, teamwert = 0, ligaAufschlag = null, eigenerKader = [], boni = null }) {
   const [gewaehlt, setGewaehlt] = useState(() => new Set());
   const [quelle, setQuelle] = useState("alle");
   const [sortKey, setSortKey] = useState("marktwert");
@@ -162,6 +162,7 @@ export default function Marktliste({ angebote, konto = null, teamwert = 0, ligaA
           teamwert={teamwert}
           ligaAufschlag={ligaAufschlag}
           eigenerKader={eigenerKader}
+          boni={boni}
           aufLeeren={() => setGewaehlt(new Set())}
         />
       )}
