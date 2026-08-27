@@ -5,6 +5,9 @@ import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getTeamwerte, getTeamwertTrend, getKader, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { sitzung, verlangeLiga } from "@/lib/auth";
+import { holeNamen, benenne } from "@/lib/spielernamen";
+import { holeAufschlaege } from "@/lib/marktbeobachtung";
+import { werteAus } from "@/lib/aufschlag";
 import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
 

@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getImportStatus, getTeamwerte, getTeamwertTrend, sql } from "@/lib/db";
+import { initSchema, getSettings, getImportStatus, getTeamwerte, getTeamwertTrend, getTeamwertVerlauf, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { euro, prozent, zeitpunkt, vorZeit } from "@/lib/format";
 import Tabelle from "./Tabelle";
@@ -10,6 +10,9 @@ import Frag from "./Frag";
 import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga } from "@/lib/auth";
+import { holeAufschlaege } from "@/lib/marktbeobachtung";
+import { werteAus, proManager, ZEITRAEUME, zeitraumAb } from "@/lib/aufschlag";
+import { tagesraster, tagesreihen } from "@/lib/verlauf";
 
 export const dynamic = "force-dynamic";
 
@@ -334,7 +337,7 @@ export default async function Liga({ searchParams }) {
           </p>
           <p>
             Eine Linie beginnt erst, wenn für den Manager ein Stand vorliegt. Vorher bleibt
-            sie leer statt bei null zu liegen — null wäre eine Aussage, „unbekannt" ist die
+            sie leer statt bei null zu liegen — null wäre eine Aussage, „unbekannt&ldquo; ist die
             Wahrheit.
           </p>
           <p>

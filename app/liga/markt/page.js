@@ -213,7 +213,7 @@ export default async function Markt({ searchParams }) {
           <strong>Nur Angebote von Kickbase zählen.</strong> Stellt ein Mitspieler einen
           Spieler ein, folgt das keinem Rhythmus, sondern seiner Laune — wer kauft und zwei
           Tage später wieder anbietet, erzeugt einen Abstand von zwei Tagen. Genug davon
-          drücken den Median nach unten, und dann steht überall „überfällig", obwohl der
+          drücken den Median nach unten, und dann steht überall „überfällig&ldquo;, obwohl der
           echte Rhythmus 14 Tage ist. Ob ein Spieler frei war, sagt der letzte Transfer
           davor: hatte er einen Käufer, lag der Spieler in einem Kader.
           {fremdangebote > 0 && ` In dieser Liga sind so ${fremdangebote} Auftritte ausgeschlossen.`}
@@ -229,13 +229,13 @@ export default async function Markt({ searchParams }) {
           den heutigen Rhythmus nichts.
         </p>
         <p>
-          <strong>„kommt demnächst"</strong> heißt: seit dem Reset noch nicht am Markt
+          <strong>„kommt demnächst&ldquo;</strong> heißt: seit dem Reset noch nicht am Markt
           gewesen. Diese Spieler tauchen in den nächsten Tagen auf, aber ohne festen
           Abstand — der erste Auftritt nach einem Reset folgt keinem Rhythmus.
         </p>
         <p>
           Die Schätzung braucht mindestens {MINDEST_ABSTAENDE} beobachtete Abstände. Solange
-          steht überall „Rhythmus noch unbekannt" — lieber nichts sagen als etwas erfinden.
+          steht überall „Rhythmus noch unbekannt&ldquo; — lieber nichts sagen als etwas erfinden.
           Abstände, die grob ein Vielfaches des Medians sind, werden verworfen: sie kommen
           von Auftritten, die niemand mitbekommen hat.
         </p>
