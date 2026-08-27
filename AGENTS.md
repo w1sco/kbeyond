@@ -827,12 +827,23 @@ Frag-die-Liga mit drei Anbietern.
 
 Der Nutzer arbeitete bisher über die GitHub-Weboberfläche, deshalb wurden **immer vollständige Dateien** geliefert, nie Ausschnitte. Fast alle Build-Fehler entstanden durch abgeschnittene oder doppelt eingefügte Blöcke beim Copy-Paste.
 
+**`pruefstand/seiten.js` vor dem Ausliefern.** Der Build sagt nur, ob der Code übersetzt —
+nicht, ob die Seite läuft. Drei Ausfälle in Folge kamen genau daher. Der Prüfstand rendert
+jede Seite gegen ein echtes Postgres, mit abgeklemmtem Kickbase (`NODE_OPTIONS=--require
+pruefstand/kickbase-attrappe.cjs`, es geht kein echter Aufruf raus). Er fängt, was Build und
+Linter nicht sehen können — allen voran falsche Spaltennamen in SQL. Anleitung in
+`pruefstand/README.md`.
+
 **`npm run lint` vor jedem Commit.** In `eslint.config.mjs` ist `no-undef` aktiv, und zwar
 aus konkretem Anlass: Eine Textersetzung an einer Import-Zeile griff nicht, die Ligaseite
 benutzte danach fünf Funktionen ohne Import, der Build lief trotzdem durch — JavaScript
 meldet einen unbekannten Bezeichner erst beim Aufruf. Live antwortete die Seite mit einem
 Serverfehler. Die Regel hat anschließend zwei weitere Fundstellen aufgedeckt, von denen
 niemand wusste.
+
+Seit demselben Anlass ist auch `no-use-before-define` aktiv: Eine Zeile las eine Größe,
+bevor sie berechnet war, und die Managerseite starb mit einem ReferenceError. `no-undef`
+sieht das nicht — die Variable existiert ja, nur später.
 
 Daraus zwei Regeln für Textersetzungen im Quelltext:
 
