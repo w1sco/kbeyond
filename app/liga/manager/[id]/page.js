@@ -73,7 +73,9 @@ export default async function ManagerSeite({ params, searchParams }) {
   const gesamtwert = k.konto + teamwert;
   const quote = teamwert > 0 ? k.konto / gesamtwert : null;
 
-  // Datenlücke: dieselbe Rechnung wie auf der Ligaseite
+  // Datenlücke: trägt nur noch die „ca.“-Marke am Namen. Der erklärende
+  // Kasten stand auf jeder Managerseite und sagte dasselbe wie der
+  // Hinweis auf der Ligaseite – einmal reicht.
   const feedStart = (await sql`
     SELECT MIN(dt) AS dt FROM events
     WHERE league_id = ${leagueId} AND id NOT LIKE 'rk%'`)[0]?.dt ?? null;
@@ -197,13 +199,6 @@ export default async function ManagerSeite({ params, searchParams }) {
           <Link href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Korrektur eintragen</Link>
         </div>
       </header>
-
-      {unsicher && (
-        <div className="kb-hinweis kb-hinweis--warn">
-          Diese Liga hat eine Datenlücke. Die Zahlen sind eine Näherung – Strafen aus dem
-          fehlenden Zeitraum kennt Kickbase nicht mehr.
-        </div>
-      )}
 
       <div className="kb-status">
         <div>
