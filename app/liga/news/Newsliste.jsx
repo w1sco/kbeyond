@@ -5,7 +5,14 @@ import { euroKurz, vorZeit, position } from "@/lib/format";
 // Derselbe Speicher wie bei "Frag die Liga" – wer dort schon einen
 // Schlüssel hinterlegt hat, muss ihn hier nicht noch einmal eintragen.
 const SPEICHER = "kb-llm";
-const BUENDEL = 5;
+// Zwölf Spieler je Sammelaufruf: Gesucht wird auf Übersichtsseiten, die
+// viele Spieler auf einmal abdecken. 71 Einzelrecherchen wären ein
+// Vielfaches an Kosten — und liefen in Vercels Zeitgrenze (504).
+const BUENDEL = 12;
+
+// Länger als das darf eine einzelne Anfrage nicht brauchen. Ohne eigene
+// Grenze hinge der Lauf an einer hängenden Anfrage fest.
+const GEDULD_MS = 90_000;
 const FRISCH_MS = 12 * 3600 * 1000;
 
 function ladeEinstellung() {
@@ -44,7 +51,7 @@ export default function Newsliste({ leagueId, gruppen }) {
     [alle]
   );
 
-  async function laden(liste) {
+  async function laden(liste, modus = "sammeln") {
     const { anbieter, schluessel, modell } = ladeEinstellung();
     if (anbieter && anbieter !== "claude") {
       setFehler(
@@ -61,37 +68,83 @@ export default function Newsliste({ leagueId, gruppen }) {
     setFehler("");
     setLaeuft(true);
     let fertig = 0;
+    const gescheitert = [];
+    let letzterGrund = "";
 
-    try {
-      for (let i = 0; i < liste.length; i += BUENDEL) {
-        const teil = liste.slice(i, i + BUENDEL);
-        setFortschritt({ fertig, gesamt: liste.length, namen: teil.map((s) => s.name) });
+    const schritt = modus === "einzeln" ? 1 : BUENDEL;
+    for (let i = 0; i < liste.length; i += schritt) {
+      const teil = liste.slice(i, i + schritt);
+      setFortschritt({
+        fertig,
+        gesamt: liste.length,
+        namen: teil.length > 3 ? [`${teil.length} Spieler`] : teil.map((s) => s.name),
+        gescheitert: gescheitert.length,
+      });
 
-        const res = await fetch(`/api/news?league=${leagueId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            schluessel,
-            modell,
+      // Ein einzelner Ausfall beendet den Lauf nicht mehr. Vorher riss eine
+      // Zeitüberschreitung bei Spieler 1 alle übrigen 70 mit, obwohl jeder
+      // für sich funktioniert hätte.
+      try {
+        const abbruch = new AbortController();
+        const wecker = setTimeout(() => abbruch.abort(), GEDULD_MS);
+        let res;
+        try {
+          res = await fetch(`/api/news?league=${leagueId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: abbruch.signal,
+            body: JSON.stringify({
+              schluessel,
+              modell,
+              modus,
             spieler: teil.map((s) => ({ id: s.id, name: s.name, verein: s.verein })),
-          }),
-        });
+            }),
+          });
+        } finally {
+          clearTimeout(wecker);
+        }
 
-        const daten = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(daten.fehler ?? `Fehler ${res.status}`);
-
+        // Bei einer Zeitüberschreitung antwortet nicht die Route, sondern
+        // das Netz davor — mit einer HTML-Seite, nicht mit JSON.
+        const daten = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(
+            daten?.fehler ??
+              (res.status === 504
+                ? "Zeitüberschreitung — die Recherche hat zu lange gebraucht"
+                : `Fehler ${res.status}`)
+          );
+        }
         fertig += teil.length;
-        setFortschritt({ fertig, gesamt: liste.length, namen: [] });
-      }
+      } catch (e) {
+        gescheitert.push(teil[0]?.name ?? "?");
+        letzterGrund = e?.name === "AbortError" ? "Zeitüberschreitung" : e?.message ?? "Fehler";
 
-      // Die Seite liest aus der Datenbank – neu laden zeigt das Ergebnis.
-      window.location.reload();
-    } catch (e) {
+        // Schlägt gleich der Anfang mehrfach fehl, stimmt etwas
+        // Grundsätzliches — dann nicht 70-mal weiter Geld ausgeben.
+        if (gescheitert.length >= 3 && fertig === 0) {
+          setFehler(`Abgebrochen: die ersten ${gescheitert.length} Versuche schlugen fehl (${letzterGrund}).`);
+          setLaeuft(false);
+          setFortschritt(null);
+          return;
+        }
+      }
+    }
+
+    if (gescheitert.length > 0) {
       setFehler(
-        `${e.message}${fertig > 0 ? ` — ${fertig} Spieler waren schon fertig und sind gespeichert.` : ""}`
+        `${fertig} von ${liste.length} geholt. Nicht geklappt hat es bei: ` +
+          `${gescheitert.slice(0, 8).join(", ")}${gescheitert.length > 8 ? " …" : ""} (${letzterGrund}). ` +
+          "Nochmal klicken holt nur die fehlenden."
       );
+    }
+
+    // Die Seite liest aus der Datenbank – neu laden zeigt das Ergebnis.
+    if (fertig > 0 && gescheitert.length === 0) window.location.reload();
+    else {
       setLaeuft(false);
       setFortschritt(null);
+      if (fertig > 0) setTimeout(() => window.location.reload(), 4000);
     }
   }
 
@@ -113,6 +166,15 @@ export default function Newsliste({ leagueId, gruppen }) {
         <button className="kb-btn" disabled={laeuft || alle.length === 0} onClick={() => laden(alle)}>
           Alle {alle.length} neu holen
         </button>
+
+        <span className="kb-leise">
+          {(() => {
+            const n = Math.ceil(offen.length / BUENDEL);
+            return n === 0
+              ? "nichts offen"
+              : `Sammellauf: ${n} ${n === 1 ? "Anfrage" : "Anfragen"} über Übersichtsseiten`;
+          })()}
+        </span>
 
         <label className="kb-ankreuz" style={{ marginBottom: 0 }}>
           <input type="checkbox" checked={nurNeues} onChange={(e) => setNurNeues(e.target.checked)} />
@@ -153,6 +215,17 @@ export default function Newsliste({ leagueId, gruppen }) {
                         {posText(s.position) ? ` ${posText(s.position)}` : ""}
                         {s.marktwert > 0 ? ` · ${euroKurz(s.marktwert)}` : ""}
                       </span>
+                      {/* Die Tiefensuche kostet deutlich mehr als ein Platz
+                          im Sammellauf – deshalb nur auf ausdrücklichen Klick
+                          und immer für genau einen Spieler. */}
+                      <button
+                        className="kb-btn kb-btn--klein"
+                        disabled={laeuft}
+                        onClick={() => laden([s], "einzeln")}
+                        title="Gründlich nachsehen: mehr Suchen, auch regionale Quellen"
+                      >
+                        genauer
+                      </button>
                     </div>
 
                     {s.meldung?.text ? (

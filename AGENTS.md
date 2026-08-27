@@ -363,12 +363,34 @@ Ausschnitt. `saubereMeldung()` verwirft unbekannte Spieler-IDs, erfundene Stimmu
 Nicht-http-URLs und deckelt Textlänge und Quellenzahl. 22 Fälle durchgerechnet
 (`pruefstand/news.mjs`).
 
-### Bündelweise, damit ein Abbruch nichts kostet
+### Sammeln ist der Normalfall, Tiefensuche die Ausnahme
 
-Eine Recherche über einen ganzen Kader dauert Minuten und liefe in Vercels 60-Sekunden-
-Grenze. Der Browser ruft deshalb wiederholt auf, fünf Spieler je Anfrage, und zeigt den
-Fortschritt. Was fertig ist, steht in `news` und bleibt — ein Abbruch kostet nur das
-laufende Bündel.
+Der erste Entwurf suchte für **jeden Spieler einzeln und breit**. Bei Kader plus
+Transfermarkt waren das 71 Recherchen für einen Knopfdruck — zu teuer, und die Anfragen
+liefen in Vercels Zeitgrenze (der Nutzer sah `Fehler 504`, bevor irgendetwas gespeichert
+war).
+
+**Sammelmodus** (Vorgabe): Ein Aufruf deckt **zwölf Spieler** ab, und gesucht wird auf
+**Übersichtsseiten** — die Ausfall- und Sperrenlisten von ligainsider, kicker und
+transfermarkt führen hunderte Spieler auf einmal. Drei Suchen beantworten damit die Frage
+für ein ganzes Bündel statt für einen Spieler. Aus 71 Recherchen werden sechs Anfragen.
+
+**Einzelmodus**: die Tiefensuche mit mehr Suchen, breiteren Quellen und höherem Effort —
+nur auf ausdrücklichen Klick („genauer") und immer für genau einen Spieler.
+
+**Welcher Modus gilt, entscheidet die Route**, nicht der Browser: Ein manipulierter Aufruf
+soll sich keinen teureren Lauf aussuchen können, als vorgesehen ist.
+
+Der Browser ruft wiederholt auf und zeigt den Fortschritt. Was fertig ist, steht in `news`
+und bleibt — ein Abbruch kostet nur das laufende Bündel.
+
+**Ein Ausfall reißt den Lauf nicht mehr mit.** Vorher beendete eine Zeitüberschreitung bei
+Spieler 1 alle übrigen 70. Jetzt wird der betroffene Spieler vermerkt und weitergemacht;
+scheitern die ersten drei Versuche ohne einen einzigen Erfolg, bricht der Lauf ab, statt
+70-mal weiter Geld auszugeben.
+
+Fehlermeldungen der API werden **übersetzt, nicht durchgereicht**: „Der API-Schlüssel wird
+abgelehnt" statt eines JSON-Klumpens.
 
 **Auch Spieler ohne Fund bekommen einen Eintrag.** Sonst würden sie bei jedem Lauf erneut
 abgefragt, obwohl die Antwort feststeht. „Nichts Neues in den letzten 30 Tagen" und „Noch

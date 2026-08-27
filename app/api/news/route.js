@@ -1,17 +1,21 @@
 import { initSchema, merkeNews } from "@/lib/db";
 import { pruefeApi, sitzung } from "@/lib/auth";
-import { holeNews, BUENDEL } from "@/lib/news";
+import { holeNews, MODUS } from "@/lib/news";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // Ein Bündel je Aufruf.
 //
-// Die Web-Recherche dauert pro Bündel gut eine halbe Minute — mehrere
-// hintereinander liefen in Vercels 60-Sekunden-Grenze. Der Browser ruft
-// deshalb wiederholt auf und zeigt den Fortschritt. Das hat nebenbei den
-// Vorteil, dass ein Abbruch nur das laufende Bündel kostet: Alles davor
-// steht schon in der Datenbank.
+// Der Browser ruft wiederholt auf und zeigt den Fortschritt. Ein Abbruch
+// kostet damit nur das laufende Bündel — alles davor steht schon in der
+// Datenbank.
+//
+// Zwei Modi: "sammeln" deckt zwölf Spieler über Übersichtsseiten ab und
+// ist der Normalfall; "einzeln" ist die Tiefensuche für genau einen
+// Spieler und läuft nur auf ausdrücklichen Klick. Welcher gilt, entscheidet
+// die Route selbst — der Browser darf sich keinen teureren aussuchen, als
+// hier vorgesehen ist.
 export async function POST(request) {
   const { token } = await sitzung();
   const { searchParams } = new URL(request.url);
@@ -27,7 +31,9 @@ export async function POST(request) {
     return Response.json({ fehler: "Ungültige Anfrage" }, { status: 400 });
   }
 
-  const { schluessel, modell, spieler } = koerper ?? {};
+  const { schluessel, modell, spieler, modus: gewuenscht } = koerper ?? {};
+  // Nur bekannte Modi – sonst bestimmte der Browser, wie teuer ein Lauf wird.
+  const modus = gewuenscht === "einzeln" ? "einzeln" : "sammeln";
   if (!schluessel) {
     return Response.json({ fehler: "Kein API-Schlüssel übergeben" }, { status: 400 });
   }
@@ -37,7 +43,7 @@ export async function POST(request) {
 
   // Der Browser bestimmt die Bündelgröße nicht selbst – sonst käme bei
   // einem Fehler in der Oberfläche eine Anfrage über 200 Spieler heraus.
-  const buendel = spieler.slice(0, BUENDEL).map((s) => ({
+  const buendel = spieler.slice(0, MODUS[modus].buendel).map((s) => ({
     id: String(s.id ?? ""),
     name: String(s.name ?? "").slice(0, 80),
     verein: s.verein ? String(s.verein).slice(0, 60) : null,
@@ -49,7 +55,7 @@ export async function POST(request) {
 
   try {
     await initSchema();
-    const meldungen = await holeNews({ schluessel, modell, spieler: buendel });
+    const meldungen = await holeNews({ schluessel, modell, spieler: buendel, modus });
 
     // Auch Spieler ohne Fund bekommen einen Eintrag. Sonst würden sie bei
     // jedem Lauf erneut abgefragt, obwohl die Antwort feststeht.
@@ -68,9 +74,19 @@ export async function POST(request) {
       mitMeldung: alle.filter((m) => m.text).length,
     });
   } catch (e) {
-    // Der Schlüssel gehört dem Nutzer – die Meldung des Anbieters ist für
-    // ihn die einzige Handhabe ("Guthaben leer", "Schlüssel ungültig").
-    const status = typeof e?.status === "number" && e.status >= 400 && e.status < 500 ? 400 : 502;
-    return Response.json({ fehler: e?.message ?? "Recherche fehlgeschlagen" }, { status });
+    // Der Schlüssel gehört dem Nutzer – er muss verstehen, was zu tun ist.
+    // Die rohe Fehlermeldung des Anbieters ist dafür unbrauchbar: Sie
+    // kommt als JSON-Klumpen und sagt einem Nichtentwickler nichts.
+    const status = typeof e?.status === "number" ? e.status : 0;
+    const text =
+      status === 401 || status === 403
+        ? "Der API-Schlüssel wird abgelehnt. Prüfe ihn unter „Frag die Liga“."
+        : status === 429
+          ? "Anthropic drosselt gerade — kurz warten und nochmal."
+          : status === 400 && /credit|balance/i.test(e?.message ?? "")
+            ? "Das Guthaben des Schlüssels reicht nicht."
+            : (e?.message ?? "Recherche fehlgeschlagen").slice(0, 200);
+
+    return Response.json({ fehler: text }, { status: status >= 400 && status < 500 ? 400 : 502 });
   }
 }
