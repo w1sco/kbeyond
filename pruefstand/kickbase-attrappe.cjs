@@ -94,6 +94,20 @@ function fuerPfad(pfad) {
   const hist = pfad.match(/\/players\/(\d+)\/transferHistory/);
   if (hist) return { it: [] };
 
+  // Marktwert-Historie: nur wenn KB_MW gesetzt ist, und nur unter genau
+  // einem Pfad. So lässt sich beides prüfen — die Suche, die fündig wird,
+  // und die, die aufgibt.
+  const mw = pfad.match(/\/players\/(\d+)\/marketValue$/);
+  if (mw && process.env.KB_MW === "1") {
+    const heute = Date.now();
+    return {
+      it: Array.from({ length: 20 }, (_, i) => ({
+        dt: new Date(heute - (19 - i) * 86400000).toISOString(),
+        mv: 20000000 + i * 250000,
+      })),
+    };
+  }
+
   // Alles andere gibt es nicht – genau wie in echt
   return null;
 }
@@ -114,4 +128,4 @@ globalThis.fetch = async function (eingabe, init) {
   return antwort(daten);
 };
 
-console.log("[Prüfstand] Kickbase-Attrappe aktiv – keine echten Aufrufe");
+console.log(`[Prüfstand] Kickbase-Attrappe aktiv – keine echten Aufrufe (Marktwert-Historie: ${process.env.KB_MW === "1" ? "an" : "aus"})`);

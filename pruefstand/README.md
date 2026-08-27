@@ -46,6 +46,12 @@ node pruefstand/seiten.js 3300
 Ausgabe ist eine Zeile je Seite mit HTTP-Status, Konsolenfehlern und
 horizontalem Überlauf. Rückgabewert ist 1, sobald eine Seite kaputt ist.
 
+## KB_MW
+
+Mit `KB_MW=1` liefert die Attrappe unter genau einem Pfad eine
+Marktwert-Historie. So lassen sich beide Wege prüfen: die Suche, die fündig
+wird, und die, die aufgibt.
+
 ## Was er nicht leistet
 
 Er prüft, ob Seiten **rendern** — nicht, ob die Zahlen stimmen. Dafür sind

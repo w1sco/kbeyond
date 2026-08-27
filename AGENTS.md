@@ -710,6 +710,12 @@ Datum und Wert, statt Feldnamen zu raten — geprüft gegen `dt/mv`, `d/m`, `dat
 `marktwert_geprueft` merkt sich, wen wir schon gefragt haben — sonst würde jeder Lauf
 dieselben Spieler ohne Historie erneut abfragen.
 
+Die Suche nach dem Endpunkt läuft **schrittweise und konvergiert**: vier Kandidaten je
+Lauf, mit Gedächtnis darüber, was schon probiert wurde. Nach drei Läufen ist die Liste
+durch, und dann hört sie endgültig auf. Vorher probierte jeder Lauf alle zehn erneut —
+zehn vergebliche Aufrufe pro Klick, für immer. Im Kommentar stand „nicht weiter probieren",
+im Code nicht.
+
 **Gesperrt wird aber erst, wenn ein funktionierender Endpunkt bekannt ist** (er steht in
 `pool_cache` unter `mw_pfad`). Liefert kein Kandidat etwas, liegt es nicht am Spieler,
 sondern daran, dass wir nicht wissen, wie man fragt — dann wären die Sperren falsch und

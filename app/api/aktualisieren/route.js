@@ -110,7 +110,11 @@ export async function POST(request) {
         stichtag: settings.stichtag,
       });
       if (mw.ohnePfad) {
-        erledigt.push("Marktwert-Historie: kein Endpunkt gefunden");
+        erledigt.push(
+          mw.erschoepft
+            ? "Marktwert-Historie: kein Endpunkt gefunden, Suche beendet"
+            : `Marktwert-Historie: ${mw.geprobt} Kandidaten geprüft, ${mw.restlich} offen`
+        );
       } else if (mw.geholt > 0) {
         erledigt.push(`Marktwerte ${mw.geholt}/${mw.offen}`);
       }
