@@ -36,11 +36,11 @@ export async function POST(request) {
   const { searchParams } = new URL(request.url);
   const leagueId = searchParams.get("league");
 
-  const abgelehnt = await pruefeApi(request, leagueId, token);
-  if (abgelehnt) return abgelehnt;
-
   const zurueck = searchParams.get("zurueck") === "1";
   const ziel = ZIELE.get(searchParams.get("ziel")) ?? "/liga";
+
+  const abgelehnt = await pruefeApi(request, leagueId, token, zurueck ? ziel : null);
+  if (abgelehnt) return abgelehnt;
   const ende = Date.now() + GESAMTBUDGET_MS;
   const rest = () => ende - Date.now();
 

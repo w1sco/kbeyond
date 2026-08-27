@@ -12,7 +12,10 @@ export async function POST(request) {
   const { searchParams } = new URL(request.url);
   const leagueId = searchParams.get("league");
 
-  const abgelehnt = await pruefeApi(request, leagueId, token);
+  const abgelehnt = await pruefeApi(
+    request, leagueId, token,
+    searchParams.get("zurueck") === "1" ? "/liga" : null
+  );
   if (abgelehnt) return abgelehnt;
 
   const zurueck = searchParams.get("zurueck") === "1";
