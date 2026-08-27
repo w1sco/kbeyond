@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getKader, getBesitz } from "@/lib/db";
+import { getBesitz, getKader, getSettings, getTeamwerte, initSchema } from "@/lib/db";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { normalisiereSpieler, findeSpielerListe, findeBild } from "@/lib/format";
 import { holeNamen, benenne } from "@/lib/spielernamen";
+import { berechneKonten } from "@/lib/ledger";
+import { holeAufschlaege } from "@/lib/marktbeobachtung";
+import { werteAus } from "@/lib/aufschlag";
 import Marktliste from "./Marktliste";
 import Hinweis from "../../_ui/Hinweis";
 
@@ -14,7 +17,7 @@ export const dynamic = "force-dynamic";
 // zeigt, wer keinem gehört) geht es hier um das, was gerade angeboten wird —
 // deshalb ein Live-Abruf statt der Datenbank.
 export default async function Transfermarkt({ searchParams }) {
-  const { token } = await sitzung();
+  const { token, nutzer, uid: meineUid, name: meinName } = await sitzung();
 
   const p = await searchParams;
   if (!p.league) redirect("/liga");
@@ -31,6 +34,17 @@ export default async function Transfermarkt({ searchParams }) {
   } catch (e) {
     fehler = e.message;
   }
+
+  // Mein Konto für den Kaufrechner
+  const settings = await getSettings(leagueId, nutzer);
+  const spielerListe = (ranking.us ?? []).filter((m) => m.adm !== true);
+  const konten = await berechneKonten(leagueId, spielerListe, settings);
+  const tw = await getTeamwerte(leagueId);
+  const ich = konten.find(
+    (k) => (meineUid && String(k.id) === meineUid) || (meinName && k.name === meinName)
+  ) ?? null;
+  const meinTeamwert = ich ? tw.map.get(String(ich.id))?.teamwert ?? 0 : 0;
+  const aufLiga = werteAus(await holeAufschlaege(leagueId, settings.stichtag));
 
   const kader = await getKader(leagueId);
   const besitz = await getBesitz(leagueId);
@@ -106,7 +120,12 @@ export default async function Transfermarkt({ searchParams }) {
 
       {angebote.length > 0 && (
         <>
-          <Marktliste angebote={angebote} />
+          <Marktliste
+            angebote={angebote}
+            konto={ich ? ich.konto : null}
+            teamwert={meinTeamwert}
+            ligaAufschlag={aufLiga.relativ}
+          />
 
           <Hinweis kurz="Was die Spalten bedeuten" titel="Transfermarkt">
             <p>

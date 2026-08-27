@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { euro, euroKurz, zeitpunkt } from "@/lib/format";
+import Kaufrechner from "../../_ui/Kaufrechner";
 
 const SPALTEN = [
   { key: "name", label: "Spieler", text: true },
@@ -57,7 +58,8 @@ function Prognose({ p }) {
   }
 }
 
-export default function Freieliste({ spieler }) {
+export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAufschlag = null }) {
+  const [gewaehlt, setGewaehlt] = useState(() => new Set());
   const [sortKey, setSortKey] = useState("marktwert");
   const [absteigend, setAbsteigend] = useState(true);
   const [suche, setSuche] = useState("");
@@ -100,11 +102,32 @@ export default function Freieliste({ spieler }) {
 
   const pfeil = (key) => (key === sortKey ? (absteigend ? " ▼" : " ▲") : "");
 
+  function umschalten(id) {
+    setGewaehlt((alt) => {
+      const neu = new Set(alt);
+      if (neu.has(id)) neu.delete(id);
+      else neu.add(id);
+      return neu;
+    });
+  }
+
+  const gewaehlteSpieler = spieler.filter((s) => gewaehlt.has(String(s.id)));
+
   return (
     <>
+      {konto != null && (
+        <Kaufrechner
+          gewaehlt={gewaehlteSpieler}
+          konto={konto}
+          teamwert={teamwert}
+          ligaAufschlag={ligaAufschlag}
+          aufLeeren={() => setGewaehlt(new Set())}
+        />
+      )}
+
       <input
         className="kb-eingabe kb-eingabe--voll"
-        style={{ margin: "4px 0 12px" }}
+        style={{ margin: "12px 0" }}
         placeholder="Spieler suchen …"
         value={suche}
         onChange={(e) => setSuche(e.target.value)}
@@ -117,6 +140,7 @@ export default function Freieliste({ spieler }) {
           <table className="kb-tabelle kb-tabelle--schmal">
             <thead>
               <tr>
+                {konto != null && <th className="kb-wahlspalte" aria-label="Auswahl" />}
                 {SPALTEN.map((s, i) => (
                   <th
                     key={s.key}
@@ -133,7 +157,26 @@ export default function Freieliste({ spieler }) {
             </thead>
             <tbody>
               {zeilen.map((s, i) => (
-                <tr key={s.id} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
+                <tr
+                  key={s.id}
+                  className={`${konto != null ? "kb-klickzeile " : ""}${
+                    gewaehlt.has(String(s.id))
+                      ? "kb-zeile--gewaehlt"
+                      : i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"
+                  }`}
+                  onClick={konto != null ? () => umschalten(String(s.id)) : undefined}
+                >
+                  {konto != null && (
+                    <td className="kb-wahlspalte">
+                      <input
+                        type="checkbox"
+                        checked={gewaehlt.has(String(s.id))}
+                        onChange={() => umschalten(String(s.id))}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`${s.name} einplanen`}
+                      />
+                    </td>
+                  )}
                   <td className="kb-namensspalte">
                     <span className="kb-spielername">{s.name}</span>
                   </td>

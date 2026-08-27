@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { euro, euroKurz, restzeit } from "@/lib/format";
+import Kaufrechner from "../../_ui/Kaufrechner";
 
 const QUELLEN = [
   { schluessel: "alle", label: "Alle" },
@@ -20,11 +21,21 @@ const SPALTEN = [
   { key: "anbieter", label: "Anbieter", text: true, sek: true },
 ];
 
-export default function Marktliste({ angebote }) {
+export default function Marktliste({ angebote, konto = null, teamwert = 0, ligaAufschlag = null }) {
+  const [gewaehlt, setGewaehlt] = useState(() => new Set());
   const [quelle, setQuelle] = useState("alle");
   const [sortKey, setSortKey] = useState("marktwert");
   const [absteigend, setAbsteigend] = useState(true);
   const [suche, setSuche] = useState("");
+
+  function umschalten(id) {
+    setGewaehlt((alt) => {
+      const neu = new Set(alt);
+      if (neu.has(id)) neu.delete(id);
+      else neu.add(id);
+      return neu;
+    });
+  }
 
   const zeilen = useMemo(() => {
     const s = suche.trim().toLowerCase();
@@ -70,10 +81,12 @@ export default function Marktliste({ angebote }) {
       case "name":
         return (
           <span className="kb-spielerzeile">
-            {a.bild
+            {/* Kein Platzhalterkreis, wenn Kickbase kein Bild liefert –
+                eine leere Scheibe vor jedem Namen sagt nichts aus. */}
+            {a.bild && (
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img className="kb-spielerbild" src={a.bild} alt="" loading="lazy" />
-              : <span className="kb-spielerbild kb-spielerbild--leer" aria-hidden="true" />}
+              <img className="kb-spielerbild" src={a.bild} alt="" loading="lazy" />
+            )}
             <span className="kb-spielername">{a.name}</span>
           </span>
         );
@@ -142,6 +155,16 @@ export default function Marktliste({ angebote }) {
         onChange={(e) => setSuche(e.target.value)}
       />
 
+      {konto != null && (
+        <Kaufrechner
+          gewaehlt={zeilen.filter((a) => gewaehlt.has(String(a.id)))}
+          konto={konto}
+          teamwert={teamwert}
+          ligaAufschlag={ligaAufschlag}
+          aufLeeren={() => setGewaehlt(new Set())}
+        />
+      )}
+
       {zeilen.length === 0 ? (
         <p className="kb-info">Kein Angebot passt.</p>
       ) : (
@@ -149,6 +172,7 @@ export default function Marktliste({ angebote }) {
           <table className="kb-tabelle kb-tabelle--schmal">
             <thead>
               <tr>
+                {konto != null && <th className="kb-wahlspalte" aria-label="Auswahl" />}
                 {SPALTEN.map((s, i) => (
                   <th
                     key={s.key}
@@ -165,7 +189,26 @@ export default function Marktliste({ angebote }) {
             </thead>
             <tbody>
               {zeilen.map((a, i) => (
-                <tr key={a.id} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
+                <tr
+                  key={a.id}
+                  className={`${konto != null ? "kb-klickzeile " : ""}${
+                    gewaehlt.has(String(a.id))
+                      ? "kb-zeile--gewaehlt"
+                      : i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"
+                  }`}
+                  onClick={konto != null ? () => umschalten(String(a.id)) : undefined}
+                >
+                  {konto != null && (
+                    <td className="kb-wahlspalte">
+                      <input
+                        type="checkbox"
+                        checked={gewaehlt.has(String(a.id))}
+                        onChange={() => umschalten(String(a.id))}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`${a.name} einplanen`}
+                      />
+                    </td>
+                  )}
                   {SPALTEN.map((s, k) => (
                     <td
                       key={s.key}

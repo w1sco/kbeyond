@@ -4,7 +4,8 @@ import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKader, getBesitz, getTeamwerte } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { holePoolGecached } from "@/lib/rekonstruktion";
-import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe } from "@/lib/marktbeobachtung";
+import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
+import { werteAus } from "@/lib/aufschlag";
 import { bildeAuftritte, abstaendeAus, schaetzeZyklus, prognostiziere, MINDEST_ABSTAENDE, BASIS_ZYKLUS_TAGE } from "@/lib/rhythmus";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt } from "@/lib/format";
@@ -27,7 +28,7 @@ const SCHWELLEN = [
 ];
 
 export default async function Markt({ searchParams }) {
-  const { token, nutzer } = await sitzung();
+  const { token, nutzer, uid: meineUid, name: meinName } = await sitzung();
 
   const p = await searchParams;
   if (!p.league) redirect("/liga");
@@ -59,6 +60,15 @@ export default async function Markt({ searchParams }) {
     alleAbstaende.push(...abstaendeAus(auftritte));
   }
   const zyklus = schaetzeZyklus(alleAbstaende);
+
+  // Der Kaufrechner rechnet mit meinem Konto – wer "ich" bin, steht im Cookie.
+  const ich = konten.find(
+    (k) => (meineUid && String(k.id) === meineUid) || (meinName && k.name === meinName)
+  ) ?? null;
+  const meinTeamwert = ich ? tw.map.get(String(ich.id))?.teamwert ?? 0 : 0;
+
+  // Der gemessene Liga-Aufschlag als Vorschlag für den Regler
+  const aufLiga = werteAus(await holeAufschlaege(leagueId, settings.stichtag));
 
   // Kaufkraft der Liga: Kontostände plus das erlaubte Minus (Teamwert ÷ 3)
   const summeKonten = konten.reduce((s, k) => s + k.konto, 0);
@@ -275,7 +285,12 @@ export default async function Markt({ searchParams }) {
         ))}
       </div>
 
-      <Freieliste spieler={gefiltert} />
+      <Freieliste
+        spieler={gefiltert}
+        konto={ich ? ich.konto : null}
+        teamwert={meinTeamwert}
+        ligaAufschlag={aufLiga.relativ}
+      />
     </main>
   );
 }

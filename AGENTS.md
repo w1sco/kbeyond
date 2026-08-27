@@ -677,6 +677,23 @@ tat jeder weitere Klick nichts mehr.
 `/marktwert?league=…` probiert alle Kandidaten durch und sagt für jeden, ob sich eine Reihe
 aus Datum und Wert darin findet — erst danach wird implementiert.
 
+### Kaufrechner
+
+Auf `/liga/markt` und `/liga/transfermarkt` lassen sich Spieler anklicken; oben steht
+sofort, was der Kauf mit dem eigenen Konto macht. `app/_ui/Kaufrechner.jsx` ist derselbe
+Baustein für beide Seiten.
+
+Zwei Dinge, die man leicht falsch rechnet:
+
+- **Der Kauf hebt auch das erlaubte Minus.** Ein gekaufter Spieler zählt zum Teamwert, und
+  das Limit ist Teamwert ÷ 3. Wer für 20 Mio kauft, darf danach rund 6,7 Mio tiefer ins
+  Minus als vorher. Ohne diesen Schritt fiele die Rechnung zu pessimistisch aus.
+- **Zum Marktwert bekommt man selten jemanden.** Deshalb ein Regler von 0 bis 50 %
+  Aufschlag. Der auf der Ligaseite gemessene Liga-Schnitt lässt sich per Klick übernehmen.
+
+Maßgeblich ist nicht der Kontostand danach, sondern die **Luft bis zur Grenze**
+(Kontostand + Limit). Sie darf nicht negativ werden.
+
 ### Die Marktseite
 
 `/liga/markt` beantwortet zwei Fragen: welche Spieler gehören niemandem, und könnte die
@@ -702,6 +719,9 @@ Transfer den Namen mitführt. Events gewinnen, weil sie den Namen so schreiben, 
 ihn sieht. Bleibt einer übrig, steht dort `Spieler #4711` statt dreizehnmal „Unbekannt".
 
 ### Bilder und Spielerdaten werden gesucht, nicht geraten
+
+Fehlt ein Bild, steht dort **nichts** — kein Platzhalterkreis. Eine leere Scheibe vor jedem
+Namen sagt nichts aus und stiehlt nur Platz.
 
 Unter welchem Feld Kickbase Bilder ausliefert, ist nicht belegt. `findeBild()` probiert
 bekannte Kandidaten (`pim`, `uim`, `img`, …) und nimmt sonst das erste Feld, dessen Wert
