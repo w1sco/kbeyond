@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getKader, getBesitz, sql } from "@/lib/db";
+import { initSchema, getKader, getBesitz } from "@/lib/db";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { normalisiereSpieler, findeSpielerListe, findeBild } from "@/lib/format";
 import { holeNamen, benenne } from "@/lib/spielernamen";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 // zeigt, wer keinem gehört) geht es hier um das, was gerade angeboten wird —
 // deshalb ein Live-Abruf statt der Datenbank.
 export default async function Transfermarkt({ searchParams }) {
-  const { token, nutzer } = await sitzung();
+  const { token } = await sitzung();
 
   const p = await searchParams;
   if (!p.league) redirect("/liga");
@@ -22,7 +22,6 @@ export default async function Transfermarkt({ searchParams }) {
   await verlangeLiga(leagueId, token);
 
   await initSchema();
-  const settings = await getSettings(leagueId, nutzer);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
 
   let roh = null;

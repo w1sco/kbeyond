@@ -693,6 +693,20 @@ Frag-die-Liga mit drei Anbietern.
 
 Der Nutzer arbeitete bisher über die GitHub-Weboberfläche, deshalb wurden **immer vollständige Dateien** geliefert, nie Ausschnitte. Fast alle Build-Fehler entstanden durch abgeschnittene oder doppelt eingefügte Blöcke beim Copy-Paste.
 
+**`npm run lint` vor jedem Commit.** In `eslint.config.mjs` ist `no-undef` aktiv, und zwar
+aus konkretem Anlass: Eine Textersetzung an einer Import-Zeile griff nicht, die Ligaseite
+benutzte danach fünf Funktionen ohne Import, der Build lief trotzdem durch — JavaScript
+meldet einen unbekannten Bezeichner erst beim Aufruf. Live antwortete die Seite mit einem
+Serverfehler. Die Regel hat anschließend zwei weitere Fundstellen aufgedeckt, von denen
+niemand wusste.
+
+Daraus zwei Regeln für Textersetzungen im Quelltext:
+
+- **Jede Ersetzung einzeln absichern.** Nicht eine von zweien prüfen und annehmen, dass die
+  andere auch gegriffen hat.
+- **Keine gierigen Regex über Zeilengrenzen.** `[^,]+` frisst Zeilenumbrüche und hat sich
+  einmal quer durch eine SQL-Abfrage gefressen. Exakte Zeichenketten sind sicherer.
+
 Bei Unsicherheit über einen Endpoint oder ein Datenformat: **erst eine Diagnose-Seite bauen, die mehrere Kandidaten durchprobiert, dann implementieren.** So sind alle bisherigen Erkenntnisse entstanden. Raten hat in diesem Projekt mehrfach zu Fehlern geführt, die erst durch die Kalibrierung auffielen — oder gar nicht, weil sie nur Gegner betrafen.
 
 Alles auf Deutsch: UI, Variablennamen, Kommentare.

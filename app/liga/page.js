@@ -1,5 +1,3 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getImportStatus, getTeamwerte, getTeamwertTrend, getTeamwertVerlauf, sql } from "@/lib/db";
@@ -88,7 +86,7 @@ export default async function Liga({ searchParams }) {
     );
   }
 
-  const konten = await berechneKonten(leagueId, spieler, settings, treffer.n);
+  const konten = await berechneKonten(leagueId, spieler, settings);
 
   for (const k of konten) {
     const t = tw.map.get(String(k.id));

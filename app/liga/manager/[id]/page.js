@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
@@ -58,7 +57,7 @@ export default async function ManagerSeite({ params, searchParams }) {
   const binIch =
     (meineUid && String(manager.i) === meineUid) || (meinName && manager.n === meinName);
 
-  const konten = await berechneKonten(leagueId, alle, settings, manager.n);
+  const konten = await berechneKonten(leagueId, alle, settings);
   const tw = await getTeamwerte(leagueId);
   const trend = (await getTeamwertTrend(leagueId)).get(String(id)) ?? null;
 

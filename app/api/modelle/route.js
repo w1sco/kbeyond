@@ -1,6 +1,6 @@
 import { holeModelle, ANBIETER } from "@/lib/anbieter";
 import { cookies } from "next/headers";
-import { pruefeApi, nutzerSchluessel } from "@/lib/auth";
+import { pruefeApi } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 

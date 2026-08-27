@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, sql } from "@/lib/db";
+import { initSchema, getSettings, getKader, getBesitz, getTeamwerte } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { holePoolGecached } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt } from "@/lib/marktbeobachtung";
@@ -40,7 +40,7 @@ export default async function Markt({ searchParams }) {
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const manager = (ranking.us ?? []).filter((m) => m.adm !== true);
 
-  const konten = await berechneKonten(leagueId, manager, settings, null);
+  const konten = await berechneKonten(leagueId, manager, settings);
   const tw = await getTeamwerte(leagueId);
   const kader = await getKader(leagueId);
   const besitz = await getBesitz(leagueId);
@@ -91,7 +91,6 @@ export default async function Markt({ searchParams }) {
   const gefiltert = frei.filter((s) => (s.marktwert ?? 0) >= schwelle);
   const summeFrei = gefiltert.reduce((s, x) => s + (x.marktwert ?? 0), 0);
 
-  const nurAusKader = [...kader.besetzt].filter((id) => !besitz.besitzer.has(id)).length;
   const nurAusEvents = [...besitz.besitzer.keys()].filter((id) => !kader.besetzt.has(id)).length;
   const quellenLeer = vergeben.size === 0;
   const verhaeltnis = summeFrei > 0 ? summeKonten / summeFrei : null;
