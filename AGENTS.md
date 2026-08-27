@@ -521,6 +521,7 @@ app/
   login/page.js                    Client-Komponente, Login-Formular → /liga
   liga/page.js                     Hauptseite: Auswahl, Kalibrierung, Status, Datenlücke
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
+  liga/aufschlaege/page.js         Aufschläge über Marktwert, je Herkunft und Zeitraum
   liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
   liga/markt/page.js               Markt: freie Spieler, Kaufkraft der Liga
@@ -778,6 +779,24 @@ Zwei Dinge, die man leicht falsch rechnet:
 
 Maßgeblich ist nicht der Kontostand danach, sondern die **Luft bis zur Grenze**
 (Kontostand + Limit). Sie darf nicht negativ werden.
+
+### Die Tabelle steht oben
+
+Sie ist das Werkzeug, wegen dem man die Seite aufruft — alles andere ist Beleg
+und Beiwerk. Die Reihenfolge auf der Ligaseite ist deshalb: **Tabelle, dann**
+Statusleiste, Kalibrierung, Teamwert-Verlauf, Frag die Liga.
+
+Zwei Dinge bleiben trotzdem darüber, und zwar aus einem Grund:
+
+- Die **Rückmeldung auf einen Klick** („12 neue Events importiert") gehört unter den
+  Knopf, der sie ausgelöst hat. Stünde sie unter der Tabelle, müsste man nach dem
+  Aktualisieren erst scrollen, um zu sehen, ob es geklappt hat.
+- Die **Datenlücken-Warnung** erklärt die `~`-Werte in der Tabelle. Darunter käme
+  sie zu spät.
+
+Die **Aufschläge haben eine eigene Seite** (`/liga/aufschlaege`). Sie bringen zwei
+eigene Filter mit (Herkunft, Zeitraum), belegten damit die URL der Ligaseite und
+schoben die Tabelle nach unten.
 
 ### Aufschläge: Herkunft trennen, Abdeckung zeigen
 

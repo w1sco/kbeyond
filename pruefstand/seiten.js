@@ -8,7 +8,8 @@ const LIGA = "1";
 const SEITEN = [
   ["Ligaauswahl",        "/liga"],
   ["Ligaseite",          `/liga?league=${LIGA}`],
-  ["Ligaseite Aufschlag", `/liga?league=${LIGA}&auf=7&her=alle`],
+  ["Aufschläge",         `/liga/aufschlaege?league=${LIGA}`],
+  ["Aufschläge Filter",  `/liga/aufschlaege?league=${LIGA}&auf=7&her=alle`],
   ["Managerseite",       `/liga/manager/1?league=${LIGA}`],
   ["Managerseite fremd", `/liga/manager/2?league=${LIGA}`],
   ["Freie Spieler",      `/liga/markt?league=${LIGA}`],
