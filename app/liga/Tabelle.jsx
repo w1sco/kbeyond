@@ -2,6 +2,7 @@
 import { Fragment, useState, useMemo } from "react";
 import Link from "next/link";
 import { euro, euroKurz, prozent } from "@/lib/format";
+import { erlaubtesMinus } from "@/lib/gebot";
 
 // Auf schmalen Displays ist nur Platz für den Namen und drei Zahlen.
 // Welche drei, entscheidet die Sortierung: Gesamtwert und Kontostand
@@ -56,7 +57,7 @@ function Geld({ wert }) {
   );
 }
 
-export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
+export default function Tabelle({ konten, meineId, unsicher, leagueId, vortag = {}, vortagDatum = null }) {
   const [sortKey, setSortKey] = useState("gesamtwert");
   const [absteigend, setAbsteigend] = useState(true);
   const [offen, setOffen] = useState(() => new Set());
@@ -84,6 +85,49 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
     });
     return kopie;
   }, [konten, sortKey, absteigend]);
+
+  // ── Platzierungspfeile ────────────────────────────────────────────
+  //
+  // Wie viele Plätze hat ein Manager seit gestern gutgemacht — und zwar in
+  // der Spalte, nach der GERADE sortiert wird. Ein Pfeil am Namen, der sich
+  // auf eine andere Spalte bezöge als die sichtbare Reihenfolge, wäre
+  // irreführend.
+  //
+  // Gespeichert sind nur Teamwert, Konto und Punkte. Alles andere wird
+  // daraus abgeleitet; wofür das nicht geht, gibt es keinen Pfeil.
+  const veraenderung = useMemo(() => {
+    const gestern = Object.entries(vortag);
+    if (gestern.length === 0 || sortKey === "name") return new Map();
+
+    const wertVon = (v) => {
+      const gesamt = v.konto + v.teamwert;
+      switch (sortKey) {
+        case "teamwert": return v.teamwert;
+        case "konto":    return v.konto;
+        case "punkte":   return v.punkte;
+        case "gesamtwert": return gesamt;
+        case "limit":    return erlaubtesMinus(v.teamwert, v.konto);
+        case "maxGebot": return v.konto + erlaubtesMinus(v.teamwert, v.konto);
+        case "quote":    return gesamt !== 0 ? v.konto / gesamt : 0;
+        default: return null;
+      }
+    };
+
+    if (wertVon(gestern[0][1]) === null) return new Map();
+
+    const damals = gestern
+      .map(([id, v]) => ({ id, wert: wertVon(v) }))
+      .sort((a, b) => (absteigend ? b.wert - a.wert : a.wert - b.wert));
+
+    const rangDamals = new Map(damals.map((x, i) => [x.id, i + 1]));
+    const map = new Map();
+    for (const [i, k] of sortiert.entries()) {
+      const alt = rangDamals.get(String(k.id));
+      // Nur wer gestern schon dabei war, kann sich verbessert haben.
+      if (alt != null) map.set(String(k.id), alt - (i + 1));
+    }
+    return map;
+  }, [vortag, sortiert, sortKey, absteigend]);
 
   function klick(key) {
     if (key === sortKey) {
@@ -257,6 +301,18 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
                         {aufgeklappt ? "−" : "+"}
                       </button>
                       <span className="kb-rang">{i + 1}</span>
+                      {(() => {
+                        const d = veraenderung.get(String(k.id));
+                        if (!d) return null;
+                        return (
+                          <span
+                            className={`kb-rangpfeil ${d > 0 ? "kb-plus" : "kb-minus"}`}
+                            title={`${Math.abs(d)} ${Math.abs(d) === 1 ? "Platz" : "Plätze"} ${d > 0 ? "gut" : "schlecht"}gemacht seit ${vortagDatum ?? "dem letzten Stand"}`}
+                          >
+                            {d > 0 ? "▲" : "▼"}{Math.abs(d)}
+                          </span>
+                        );
+                      })()}
                       <Link
                         href={`/liga/manager/${k.id}?league=${leagueId}`}
                         className="kb-managerlink kb-name"

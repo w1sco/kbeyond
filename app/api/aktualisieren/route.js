@@ -1,6 +1,7 @@
-import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDaten, mitternachtDeutsch, sql } from "@/lib/db";
+import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDaten, mitternachtDeutsch, sql, merkeTagesstand, getTeamwerte } from "@/lib/db";
 import { kbFetch } from "@/lib/kickbase";
 import { importiere } from "@/lib/importer";
+import { berechneKonten } from "@/lib/ledger";
 import { ladeTeamwerte } from "@/lib/teamwerte";
 import { ladeKader } from "@/lib/kader";
 import { rekonstruiere, holePool, aktualisierePool } from "@/lib/rekonstruktion";
@@ -174,6 +175,22 @@ export async function POST(request) {
       if (kd.gestoppt) offen.push("Kader");
     } else {
       offen.push("Kader");
+    }
+
+    // Tagesstand festhalten: Teamwert, Kontostand und Punkte je Manager.
+    // Daraus entstehen die Platzierungspfeile auf der Ligaseite. Kostet
+    // keinen einzigen Kickbase-Aufruf – alles steht schon in der Datenbank.
+    try {
+      const konten = await berechneKonten(leagueId, ranking.us ?? [], settings);
+      const tw2 = await getTeamwerte(leagueId);
+      const heute = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date());
+      await merkeTagesstand(
+        leagueId,
+        konten.map((k) => ({ ...k, teamwert: tw2.map.get(String(k.id))?.teamwert ?? 0 })),
+        heute
+      );
+    } catch {
+      // Der Tagesstand ist Beiwerk – der Lauf soll daran nicht scheitern
     }
 
     // 7. Historie – nur solange die Lücke nicht abgearbeitet ist

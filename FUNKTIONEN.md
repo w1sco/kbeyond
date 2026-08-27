@@ -137,6 +137,26 @@ werden, wenn es überhaupt in die Laufzeit der Liga passt.
 
 ---
 
+### Erlaubtes Minus und Max-Gebot
+
+```
+erlaubtes Minus = (Mannschaftswert + Kontostand) × 0,33
+Max-Gebot       = Kontostand + erlaubtes Minus
+```
+
+**Der Kontostand steckt in der Basis mit drin** — nicht nur der Mannschaftswert.
+Eine Rechnung mit `Teamwert ÷ 3` liegt bei jedem Manager daneben, dessen Konto
+nicht bei null steht: im Minus zu hoch, im Plus zu niedrig.
+
+Lesart: Das erlaubte Minus ist der Betrag, den man nach einem angenommenen
+Gebot maximal im Minus stehen darf. Wer bietet, hat danach `Konto − Gebot`; das
+muss über `−erlaubtes Minus` bleiben.
+
+Bei einem Gesamtvermögen unter null bleibt das erlaubte Minus bei null — ein
+negatives „erlaubtes Minus" ergibt keinen Sinn.
+
+---
+
 ## 5. Die Datenlücke schließen
 
 Die Transferhistorie **je Spieler** reicht Jahre zurück und umgeht damit die
@@ -241,11 +261,15 @@ Eine Zeile je Manager, sortierbar nach jeder Spalte:
 | **Teamwert** | Summe der Marktwerte des Kaders |
 | **MW-Trend** | Marktwertbewegung des Kaders bei der letzten Anpassung (siehe 7.4) |
 | **Spieler** | Kadergröße = Käufe − Verkäufe |
-| **Limit** | Teamwert ÷ 3 = das erlaubte Minus |
+| **Limit** | (Teamwert + Kontostand) × 0,33 = das erlaubte Minus |
 | **Anpassungen** | Strafen und manuelle Korrektur gebündelt |
 | **Punkte** | Saisonpunkte |
 
-- Der **Managername führt zur Managerseite**.
+- Der **Managername führt zur Managerseite** — als Schublade von rechts, ohne
+  die Tabelle zu verlassen. Ein direkter Aufruf der Adresse zeigt die volle Seite.
+- **Platzierungspfeile** neben dem Rang: wie viele Plätze seit gestern
+  gutgemacht, **bezogen auf die gerade sortierte Spalte**. Ein Pfeil, der sich
+  auf eine andere Spalte bezöge als die sichtbare Reihenfolge, wäre irreführend.
 - Werte in einer Liga mit Datenlücke werden mit `~` und „ca." gekennzeichnet,
   die eigene Zeile mit „exakt".
 - **Doppelte Anzeigenamen werden markiert** (siehe Fallstricke).
@@ -426,8 +450,8 @@ Aufschlagseite gemessene Liga-Schnitt lässt sich per Klick übernehmen.
 Zwei Dinge, die man leicht falsch rechnet:
 
 1. **Käufe und Verkäufe verschieben das erlaubte Minus.** Ein gekaufter Spieler
-   zählt zum Teamwert, und das Limit ist Teamwert ÷ 3. Wer für 20 Mio kauft,
-   darf danach rund 6,7 Mio tiefer ins Minus.
+   zählt zum Teamwert, und beides — Teamwert und Kontostand — steckt in der
+   Basis des Limits. Ein Kauf hebt den einen und senkt den anderen.
 2. **Maßgeblich ist nicht der Kontostand danach, sondern die Luft bis zur
    Grenze** (Kontostand + Limit). Sie darf nicht negativ werden.
 
@@ -596,7 +620,7 @@ kommen?", „Kann ich mir Spieler Y leisten?").
 Je Nutzer, nicht je Liga (siehe 9):
 
 - **Startbudget** und **Stichtag** der Liga
-- **Punkte-Bonus** je Punkt
+- **Punkte-Bonus** je Punkt (1.000 €)
 - **Login-Bonus an/aus** und ab wann gezählt wird
 - **Erstes Spiel des Spieltags**: Freitag (Vorgabe) / Samstag / Dienstag
 - **Manuelle Korrektur je Manager**, mit Begründung — hier trägt man Strafen
@@ -710,6 +734,23 @@ Sonst würde eine Änderung die Zahlen aller Mitspieler verändern.
 
 ---
 
+## 9a. Herkunft: Region und Sprache
+
+Kickbase stuft einen Zugang nach Herkunft ein. Kommen die Aufrufe aus einer
+fremden Region oder ohne deutsche Spracheinstellung, kann der Account auf
+„international" umspringen — dann fehlen Inhalte, die es nur in der
+Bundesliga-Sicht gibt.
+
+Deshalb: **`Accept-Language: de-DE` an jedem Aufruf** und Betrieb in einer
+**deutschen Region**. Beides kostet nichts und verhindert ein Problem, das man
+sonst nie als Ursache erkennen würde.
+
+**Rechtlicher Rahmen:** Kickbase untersagt in seinen Bedingungen die
+gewerbliche Nutzung und das automatisierte Auslesen von Daten ohne Zustimmung.
+Das gehört sichtbar dorthin, wo sich jemand verbindet.
+
+---
+
 ## 10. Zeitzone
 
 **Alles wird in deutscher Zeit angezeigt und eingegeben**, unabhängig davon, wo
@@ -742,6 +783,7 @@ Ohne Technik, nur die Inhalte:
 | **Importstand** | Wann zuletzt importiert wurde, wie weit, ob vollständig |
 | **Spielerliste** | Alle Bundesligaspieler mit Name, Verein, Position, Marktwert — plus Stand |
 | **Teamwerte** | Je Manager: Teamwert, Kadergröße, Stand |
+| **Tagesstand** | Je Manager und Kalendertag: Teamwert, Kontostand, Punkte — Grundlage der Platzierungspfeile |
 | **Teamwert-Verlauf** | Je Manager ein Eintrag je Änderung — **nur bei echter Änderung fortschreiben**, sonst setzt zweimaliges Aktualisieren den Trend auf null |
 | **Kader** | Je Manager und Spieler: Name, Position, Marktwert, Kaufpreis, Punkte |
 | **Marktwert-Ablesungen** | Je Spieler und Marktwert-Tag ein Wert (eigene Mitschrift, Grundlage des MW-Trends) |
@@ -771,9 +813,9 @@ Einstellung werden.
 wählt der Nutzer sich einmalig aus einer Liste — das ist der zuverlässige
 Rückfall.
 
-**Der Punkte-Bonus (10.000 € je Punkt) ist unverifiziert.** Zur Zeit der
-Entwicklung war die Punktzahl überall 0, weil die Saison noch nicht lief. Nach
-dem ersten Spieltag muss die Kalibrierung erneut geprüft werden.
+**Der Punkte-Bonus beträgt 1.000 € je Punkt.** Lange stand hier 10.000 € — eine
+Annahme aus der Zeit, als die Punktzahl überall 0 war und sich nichts prüfen
+ließ. Ein Faktor 10 auf einen Posten, der mit den Saisonpunkten wächst.
 
 **Kadergröße = Käufe − Verkäufe.** Das von Kickbase gelieferte Feld ist etwas
 anderes (vermutlich die Zahl aller Transfers) und liefert unplausible Werte.

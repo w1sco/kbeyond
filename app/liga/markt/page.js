@@ -3,6 +3,7 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKader, getBesitz, getTeamwerte } from "@/lib/db";
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
+import { erlaubtesMinus } from "@/lib/gebot";
 import { holePool } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
@@ -75,7 +76,7 @@ export default async function Markt({ searchParams }) {
   const summeKonten = konten.reduce((s, k) => s + k.konto, 0);
   const summeLimit = konten.reduce((s, k) => {
     const t = tw.map.get(String(k.id));
-    return s + Math.floor((t?.teamwert ?? 0) / 3);
+    return s + erlaubtesMinus(t?.teamwert ?? 0, k.konto);
   }, 0);
 
   // Ein Spieler gilt als vergeben, wenn ihn ein gespeicherter Kader führt

@@ -18,6 +18,16 @@ export default async function Login({ searchParams }) {
       </p>
 
       <Formular abgelaufen={p.abgelaufen === "1"} />
+
+      {/* Kickbase untersagt gewerbliche Nutzung und Datamining ohne
+          Zustimmung. Das gehört dorthin, wo man sich verbindet — nicht in
+          eine Fußzeile, die niemand liest. */}
+      <p className="kb-info" style={{ marginTop: 16 }}>
+        KBeyond liest Kickbase-Daten nur für dich und verändert dort nichts.
+        Kickbase untersagt in seinen Bedingungen die gewerbliche Nutzung und das
+        automatisierte Auslesen von Daten ohne Zustimmung — nutze das Werkzeug
+        privat und für deine eigenen Ligen.
+      </p>
     </main>
   );
 }

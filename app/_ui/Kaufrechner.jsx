@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { euro, euroKurz, prozent } from "@/lib/format";
+import { erlaubtesMinus } from "@/lib/gebot";
 
 // Was passiert mit meinem Konto, wenn ich diese Spieler kaufe — und wenn ich
 // dafür andere verkaufe?
@@ -46,7 +47,9 @@ export default function Kaufrechner({
     const zusatz = boniAn && boni ? boni.betrag : 0;
     const neuesKonto = konto + zusatz - kosten + erloes;
     const neuerTeamwert = Math.max(0, teamwert + kaufMW - verkaufMW);
-    const neuesLimit = Math.floor(neuerTeamwert / 3);
+    // Der neue Kontostand gehört in die Basis – ein Kauf senkt ihn und
+    // hebt den Teamwert, beides zählt.
+    const neuesLimit = erlaubtesMinus(neuerTeamwert, neuesKonto);
 
     return {
       kaufMW, kosten, verkaufMW, erloes, anzahlRaus: raus.length, zusatz,

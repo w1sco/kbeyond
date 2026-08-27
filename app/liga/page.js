@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTeamwertVerlauf, sql } from "@/lib/db";
+import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTeamwertVerlauf, sql, getVortag } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit, inZeit, MW_UHRZEIT } from "@/lib/format";
 import Tabelle from "./Tabelle";
@@ -9,6 +9,7 @@ import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga, holeLigen } from "@/lib/auth";
 import { tagesraster, tagesreihen } from "@/lib/verlauf";
+import { erlaubtesMinus } from "@/lib/gebot";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,8 @@ export default async function Liga({ searchParams }) {
   const status = await getImportStatus(leagueId);
   const tw = await getTeamwerte(leagueId);
   const trend = await getMwTrend(leagueId);
+  // Der jüngste Stand vor heute – Grundlage der Platzierungspfeile.
+  const vortag = await getVortag(leagueId);
 
   const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
 
@@ -102,7 +105,8 @@ export default async function Liga({ searchParams }) {
     k.trendGestiegen = t2?.gestiegen ?? null;
     k.trendGefallen = t2?.gefallen ?? null;
     k.trendSpieler = t2?.spieler ?? null;
-    k.limit = Math.floor(k.teamwert / 3);
+    // (Teamwert + Konto) × 0,33 – der Kontostand steckt in der Basis.
+    k.limit = erlaubtesMinus(k.teamwert, k.konto);
     k.maxGebot = k.konto + k.limit;
   }
 
@@ -208,6 +212,8 @@ export default async function Liga({ searchParams }) {
           Belege und Beiwerk und stehen darunter. */}
       <Tabelle
         konten={JSON.parse(JSON.stringify(konten))}
+        vortag={Object.fromEntries(vortag.map)}
+        vortagDatum={vortag.tag ? String(vortag.tag) : null}
         meineId={treffer.i}
         unsicher={lueckeStd > 0}
         leagueId={leagueId}

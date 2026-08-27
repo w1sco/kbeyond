@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { euro, euroKurz, prozent, posRang } from "@/lib/format";
+import { erlaubtesMinus } from "@/lib/gebot";
 
 // Kader zum Durchspielen: Spieler anklicken heißt "verkaufen", und oben
 // steht sofort, was das mit Kontostand und Max-Gebot macht.
@@ -50,7 +51,7 @@ export default function Verkaufsrechner({ kader, konto, teamwert, boni = null })
   const basis = konto + zusatz;
   const neuesKonto = basis + erloes;
   const neuerTeamwert = Math.max(0, teamwert - erloes);
-  const neuesLimit = Math.floor(neuerTeamwert / 3);
+  const neuesLimit = erlaubtesMinus(neuerTeamwert, neuesKonto);
   const neuesMaxGebot = neuesKonto + neuesLimit;
   const neuesGesamt = neuesKonto + neuerTeamwert;
 

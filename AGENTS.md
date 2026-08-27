@@ -67,7 +67,15 @@ Auth: `Authorization: Bearer {token}`, Token aus dem Login.
 
 Der `uid`-Parameter am `activitiesFeed` wird ignoriert.
 
-> **Es gibt keinen Endpoint für Kontobewegungen pro Manager.** Das wurde systematisch geprüft. Nicht nochmal suchen.
+> **Es gibt keinen Endpoint für Kontobewegungen pro Manager.** Das wurde systematisch
+> geprüft — mit einer Einschränkung: Ein anderes Werkzeug an derselben API gibt an, eine
+> **paginierte Transferhistorie je Manager** zu benutzen. `/ligamonitor?league=…` probiert
+> die Kandidaten dafür durch, dazu einen Aufstellungs-Endpunkt, die Marktwertkurve und ein
+> Spielerprofil mit Startelf-Wahrscheinlichkeit.
+>
+> **Auch wenn sich das bestätigt, bleibt der Feed nötig:** Strafen und Login-Boni stehen
+> nirgendwo sonst. Eine Transferhistorie ersetzt die Rekonstruktion alter Käufe, nicht den
+> Feed.
 
 ---
 
@@ -268,6 +276,8 @@ marktwert_verlauf(player_id, tag, marktwert)                -- PK (player_id, ta
 marktwert_geprueft(player_id, geprueft, gefunden)           -- wen wir schon gefragt haben
 mw_beobachtung(player_id, tag, marktwert)                   -- PK (player_id, tag)
   eigene Ablesung je Marktwert-Tag (Grenze 22:04), ligaunabhängig
+tagesstand(league_id, manager_id, tag, teamwert, konto, punkte)
+  PK (league_id, manager_id, tag) — Grundlage der Platzierungspfeile
 teamwert_verlauf(league_id, manager_id, teamwert, stand)   -- PK (league_id, manager_id, stand)
   + Index (league_id, manager_id, stand DESC)
 markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, player_id, ablauf)
@@ -767,6 +777,7 @@ lib/
                     holeLigen(), istAbgelaufen() — Zugriffsschutz
   kader.js          ladeKader() — Kader je Manager
   ledger.js         berechneKonten() — das Herzstück
+  gebot.js          erlaubtesMinus(), maxGebot() — die Kickbase-Regel, ohne DB
   loginbonus.js     loginBonus(), tagesBonus(), kommendeLoginBoni() — ohne DB
   schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
@@ -777,6 +788,16 @@ lib/
 ```
 
 ---
+
+## Herkunft: deutsche Region, deutscher Sprachkopf
+
+Kickbase stuft einen Zugang nach Herkunft ein. Kommen die Aufrufe aus einer fremden Region
+oder ohne deutsche Spracheinstellung, kann der Account auf „international" umspringen —
+dann fehlen Inhalte, die es nur in der Bundesliga-Sicht gibt.
+
+Deshalb: `Accept-Language: de-DE` an **jedem** Aufruf (in `kbFetch` und beim Login), und
+`vercel.json` legt die Region auf **Frankfurt** (`fra1`) fest. Beides kostet nichts und
+verhindert ein Problem, das man sonst nie als Ursache erkennen würde.
 
 ## Umgang mit Rate Limits und Timeouts
 
@@ -883,7 +904,7 @@ sind fast immer glatte Beträge — so kamen „227 Tage Login-Bonus" bei einer 
 Laufzeit der Liga passt; sonst stehen dort nur die beiden wahrscheinlichen Ursachen
 (Login-Bonus, alte Strafe) ohne erfundene Genauigkeit.
 
-**Punkte-Bonus (10.000 €/Punkt) ist unverifiziert.** Zur Zeit der Entwicklung war `sp: 0` bei allen, weil die Saison noch nicht lief. Nach dem ersten Spieltag muss die Kalibrierung erneut geprüft werden.
+**Punkte-Bonus: 1.000 € je Punkt.** Lange stand hier 10.000 € — eine Annahme aus der Zeit, als alle bei `sp: 0` standen und sich nichts prüfen ließ. Der Wert ist inzwischen belegt; bestehende Ligen wurden einmalig mitgezogen (nur die, die noch auf dem alten Wert standen).
 
 **Kadergröße:** Kommt aus `dashboard.t`. Der Wert wirkte mit 48 zu hoch für einen Kader — möglicherweise etwas anderes. Falls die Zahl in Klammern unsinnig aussieht, aus `squad` holen.
 
@@ -894,7 +915,7 @@ Laufzeit der Liga passt; sonst stehen dort nur die beiden wahrscheinlichen Ursac
 - **Kontostand** = berechnetes Guthaben (früher „Liquidität" genannt)
 - **Teamwert** = aus `dashboard.tv`, muss separat geladen werden (ein Request je Manager)
 - **Spieler** = Kadergröße aus `dashboard.t`
-- **Limit** = Teamwert ÷ 3 = erlaubtes Minus
+- **Limit** = (Teamwert + Kontostand) × 0,33 = erlaubtes Minus
 - **Max-Gebot** = Kontostand + Limit = höchstes Gebot ohne vorherigen Verkauf
 - **Gesamtwert** = Kontostand + Teamwert = Gesamtvermögen
 - **Liquidität** = Kontostand ÷ Gesamtwert, also der flüssige Anteil des Vermögens.
@@ -952,6 +973,37 @@ genau die Ablesung, aus der der Trend entsteht, fehlte. Bezugspunkt ist jetzt de
 von letzter Mitternacht und letzter Marktwertanpassung. Nebenbei behebt das, dass die in
 `kader` gespeicherten Marktwerte (mit denen der Verkaufsrechner arbeitet) nach 22:04
 veraltet waren.
+
+### Die Gebotsformel steht an einer Stelle
+
+```
+erlaubtes Minus = (Mannschaftswert + Kontostand) × 0,33
+Max-Gebot       = Kontostand + erlaubtes Minus
+```
+
+**Der Kontostand steckt in der Basis mit drin.** Vorher rechnete das Projekt schlicht
+`Teamwert ÷ 3` und lag damit bei jedem Manager daneben, dessen Konto nicht bei null steht —
+im Minus zu hoch, im Plus zu niedrig. Bei 180 Mio Teamwert und 200 Mio Konto sind das
+125,6 Mio statt 60 Mio erlaubtes Minus.
+
+Die Rechnung lag an **sechs Stellen** kopiert vor (Ligaseite, Managerseite, Kauf- und
+Verkaufsrechner, Marktseite, Schnappschuss). Sie steht jetzt in `lib/gebot.js` — reine
+Rechnung ohne Datenbank, elf Fälle durchgerechnet (`pruefstand/gebot.mjs`), darunter die
+Probe aufs Exempel: Wer sein Max-Gebot ausgibt, steht danach genau auf der Grenze.
+
+### Platzierungspfeile
+
+Neben dem Rang steht, wie viele Plätze ein Manager **seit gestern** gutgemacht hat — und
+zwar in der Spalte, nach der **gerade sortiert wird**. Ein Pfeil, der sich auf eine andere
+Spalte bezöge als die sichtbare Reihenfolge, wäre irreführend.
+
+Grundlage ist `tagesstand`: je Manager und Kalendertag Teamwert, berechneter Kontostand und
+Punkte, geschrieben am Ende jedes Aktualisieren-Laufs. Das kostet **keinen einzigen
+Kickbase-Aufruf** — alles steht schon in der Datenbank.
+
+Verglichen wird gegen den **jüngsten Stand vor heute**, nicht stur gegen gestern: Wer zwei
+Tage nicht aktualisiert hat, soll trotzdem einen Vergleich bekommen. Wer gestern noch nicht
+dabei war, bekommt keinen Pfeil.
 
 ### Kaderprofil auf der Managerseite
 

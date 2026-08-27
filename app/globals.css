@@ -994,6 +994,15 @@ th.kb-namensspalte { z-index: 3; }
   margin-left: auto;
 }
 
+/* Platzierungspfeil neben dem Rang – klein, damit er den Namen nicht
+   überstrahlt. */
+.kb-rangpfeil {
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
 /* Off-Canvas: die Managerseite als Schublade über der Ligatabelle. */
 .kb-schublade-huelle {
   position: fixed;

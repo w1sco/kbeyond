@@ -10,6 +10,7 @@ import { werteAus } from "@/lib/aufschlag";
 import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
 import Aufstellung from "./Aufstellung";
+import { erlaubtesMinus } from "@/lib/gebot";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
   // Käufe − Verkäufe, nicht dashboard.t (das zählt alle Transfers).
   // Ist der Kader live abrufbar, gewinnt dessen echte Länge.
   const kaderGerechnet = k.anzKauf - k.anzVerkauf;
-  const limit = Math.floor(teamwert / 3);
+  const limit = erlaubtesMinus(teamwert, k.konto);
   const maxGebot = k.konto + limit;
   const gesamtwert = k.konto + teamwert;
   const quote = teamwert > 0 ? k.konto / gesamtwert : null;
