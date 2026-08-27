@@ -62,3 +62,17 @@ INSERT INTO markt_beobachtung (league_id, player_id, ablauf, gesehen, marktwert)
 
 INSERT INTO rekon_log (league_id, position, fertig, letzter, gefunden)
 VALUES ('1', 0, TRUE, NOW() - '1 day'::interval, 0);
+
+-- Marktwert-Mitschrift: zwei Marktwert-Tage, damit der MW-Trend rechnen kann.
+-- Mit Ecken: 203 steht nur an einem Tag drin (zählt also nicht mit), und
+-- 206 hat einen unveränderten Wert (Trend genau 0).
+INSERT INTO mw_beobachtung (player_id, tag, marktwert) VALUES
+ ('201', (NOW() - '1 day'::interval)::date, 32700000),
+ ('201', NOW()::date,                       32200000),   -- -500 Tsd
+ ('202', (NOW() - '1 day'::interval)::date, 21500000),
+ ('202', NOW()::date,                       21900000),   -- +400 Tsd
+ ('203', NOW()::date,                       12500000),   -- nur ein Tag → zählt nicht
+ ('204', (NOW() - '1 day'::interval)::date, 44900000),
+ ('204', NOW()::date,                       44200000),   -- -700 Tsd
+ ('206', (NOW() - '1 day'::interval)::date, 15100000),
+ ('206', NOW()::date,                       15100000);   -- ±0

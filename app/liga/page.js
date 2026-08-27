@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getImportStatus, getTeamwerte, getTeamwertTrend, getTeamwertVerlauf, sql } from "@/lib/db";
+import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTeamwertVerlauf, sql } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
-import { euro, zeitpunkt, vorZeit, inZeit } from "@/lib/format";
+import { euro, zeitpunkt, vorZeit, inZeit, MW_UHRZEIT } from "@/lib/format";
 import Tabelle from "./Tabelle";
 import Frag from "./Frag";
 import Verlauf from "./Verlauf";
@@ -57,7 +57,7 @@ export default async function Liga({ searchParams }) {
   const me = await kbFetch(`/v4/leagues/${leagueId}/me`, token);
   const status = await getImportStatus(leagueId);
   const tw = await getTeamwerte(leagueId);
-  const trend = await getTeamwertTrend(leagueId);
+  const trend = await getMwTrend(leagueId);
 
   const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
 
@@ -94,9 +94,14 @@ export default async function Liga({ searchParams }) {
     // Kadergröße = Käufe − Verkäufe. dashboard.t ist NICHT die Kadergröße,
     // sondern die Zahl aller Transfers – daher die unplausiblen 48.
     k.kaderGroesse = k.anzKauf - k.anzVerkauf;
-    const t2 = trend.get(String(k.id));
+    // Trend = Summe der Marktwert-Bewegungen des eigenen Kaders bei der
+    // letzten Anpassung. Kein Transfer kann darin landen.
+    const t2 = trend.map.get(String(k.id));
     k.trend = t2?.trend ?? null;
-    k.trendSeit = t2?.standVorher ?? null;
+    k.trendAnteil = t2?.anteil ?? null;
+    k.trendGestiegen = t2?.gestiegen ?? null;
+    k.trendGefallen = t2?.gefallen ?? null;
+    k.trendSpieler = t2?.spieler ?? null;
     k.limit = Math.floor(k.teamwert / 3);
     k.maxGebot = k.konto + k.limit;
   }
@@ -223,15 +228,25 @@ export default async function Liga({ searchParams }) {
             <strong>Anpassungen</strong> — Strafen und manuelle Korrektur zusammen.
           </p>
           <p>
-            <strong>Trend</strong> — um wie viel sich der Teamwert seit dem vorherigen
-            gespeicherten Stand verändert hat. Kickbase passt die Marktwerte täglich an;
-            der Trend zeigt also im Normalfall die Bewegung des letzten Tages. Steht er auf
-            „–“, gibt es erst einen Stand — nach der nächsten Aktualisierung ist er da.
+            <strong>MW-Trend</strong> — wie viel die Spieler des Kaders bei der letzten
+            Marktwertanpassung zusammen gewonnen oder verloren haben. Kickbase passt die
+            Marktwerte täglich um <strong>{MW_UHRZEIT} Uhr</strong> an; die Zahl sagt
+            also, ob die eigenen Leute gerade eher steigen oder fallen.
           </p>
           <p>
-            Achtung beim Trend: <strong>Käufe und Verkäufe zählen mit hinein.</strong> Wer
-            im Zeitraum einen Spieler für 20 Mio gekauft hat, steht dort mit +20 Mio, ohne
-            dass ein Marktwert gestiegen wäre.
+            <strong>Transfers zählen nicht mit.</strong> Gerechnet wird je Spieler sein
+            Marktwert heute minus sein Marktwert gestern — ein Kaufpreis kommt darin
+            nirgends vor. Wer für 20 Mio kauft, steht deshalb nicht mit +20 Mio da,
+            sondern nur mit der Bewegung, die der Spieler selbst gemacht hat.
+          </p>
+          <p>
+            Gezählt wird nur, wer an <strong>beiden</strong> Tagen einen abgelesenen Wert
+            hat. Die Werte stammen aus der eigenen Mitschrift beim Aktualisieren — nach
+            der ersten Aktualisierung steht der Trend deshalb auf „–“, ab der zweiten
+            am nächsten Marktwert-Tag ist er da. Die aufgeklappte Detailzeile zeigt
+            zusätzlich, wie viele Spieler gestiegen und wie viele gefallen sind: Eine
+            Summe nahe null kann Stillstand bedeuten oder ein Aufheben von Gewinnen und
+            Verlusten.
           </p>
           <p>
             Spaltenüberschrift antippen sortiert, nochmal für die Gegenrichtung. Auf dem

@@ -14,7 +14,7 @@ const SPALTEN = [
   { key: "konto",        label: "Kontostand",  kurz: "Konto" },
   { key: "quote",        label: "Liquidität",  kurz: "Liquid.", sek: true },
   { key: "teamwert",     label: "Teamwert",    kurz: "Team",    sek: true },
-  { key: "trend",        label: "Trend",       kurz: "Trend",   sek: true },
+  { key: "trend",        label: "MW-Trend",    kurz: "MW",      sek: true },
   { key: "kaderGroesse", label: "Spieler",     kurz: "Spieler", sek: true },
   { key: "limit",        label: "Limit (⅓)",   kurz: "Limit",   sek: true },
   { key: "anpassungen",  label: "Anpassungen", kurz: "Anpass.", sek: true },
@@ -26,6 +26,10 @@ const SPALTEN = [
 const EXTRA = [
   { key: "strafen",   label: "davon Strafen" },
   { key: "korrektur", label: "davon Korrektur" },
+  // Wie viele Spieler in welche Richtung – eine Summe nahe null kann aus
+  // Stillstand kommen oder daraus, dass sich Gewinne und Verluste aufheben.
+  { key: "trendVerteilung", label: "MW-Trend: Spieler" },
+  { key: "trendAnteil",     label: "MW-Trend: relativ" },
 ];
 
 const DETAIL = [...SPALTEN, ...EXTRA];
@@ -133,6 +137,22 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId }) {
         return (
           <span className={k.trend < 0 ? "kb-minus" : "kb-plus"}>
             {k.trend > 0 ? "+" : ""}<Geld wert={k.trend} />
+          </span>
+        );
+      case "trendVerteilung":
+        if (k.trendSpieler == null) return <span className="kb-gedaempft">–</span>;
+        return (
+          <span>
+            <span className="kb-plus">{k.trendGestiegen} ↑</span>{" · "}
+            <span className="kb-minus">{k.trendGefallen} ↓</span>
+            <span className="kb-leise"> von {k.trendSpieler}</span>
+          </span>
+        );
+      case "trendAnteil":
+        if (k.trendAnteil == null) return <span className="kb-gedaempft">–</span>;
+        return (
+          <span className={k.trendAnteil < 0 ? "kb-minus" : "kb-plus"}>
+            {k.trendAnteil > 0 ? "+" : ""}{prozent(k.trendAnteil)}
           </span>
         );
       case "kaderGroesse":

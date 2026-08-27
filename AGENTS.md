@@ -241,6 +241,8 @@ pool_cache(id PK, daten JSONB)                        -- 'bundesliga', 24h TTL
 teamwerte(league_id, manager_id, teamwert, spieler, stand)  -- PK (league_id, manager_id)
 marktwert_verlauf(player_id, tag, marktwert)                -- PK (player_id, tag), ligaunabhängig
 marktwert_geprueft(player_id, geprueft, gefunden)           -- wen wir schon gefragt haben
+mw_beobachtung(player_id, tag, marktwert)                   -- PK (player_id, tag)
+  eigene Ablesung je Marktwert-Tag (Grenze 22:04), ligaunabhängig
 teamwert_verlauf(league_id, manager_id, teamwert, stand)   -- PK (league_id, manager_id, stand)
   + Index (league_id, manager_id, stand DESC)
 markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, player_id, ablauf)
@@ -615,6 +617,7 @@ lib/
   schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
   format.js         euro, euroKurz, prozent, zeitpunkt, vorZeit, restzeit, position,
+                    mwTag, letztesMwUpdate — Marktwert-Tag ab 22:04,
                     inZeit, normalisiereSpieler, findeSpielerListe, findeBild
 ```
 
@@ -741,17 +744,59 @@ Laufzeit der Liga passt; sonst stehen dort nur die beiden wahrscheinlichen Ursac
 - **Gesamtwert** = Kontostand + Teamwert = Gesamtvermögen
 - **Liquidität** = Kontostand ÷ Gesamtwert, also der flüssige Anteil des Vermögens.
   Ohne geladenen Teamwert nicht aussagekräftig, steht dann auf „–".
-- **Trend** = Veränderung des Teamwerts gegenüber dem vorherigen gespeicherten Stand.
-  Kickbase passt die Marktwerte täglich an, der Trend zeigt also im Normalfall die Bewegung
-  des letzten Tages. **Käufe und Verkäufe zählen mit hinein** — wer für 20 Mio kauft, steht
-  mit +20 Mio da, ohne dass ein Marktwert gestiegen wäre. Eine Bereinigung um die Transfers
-  des Zeitraums wäre möglich, hätte aber einen eigenen Fehler: gehandelt wird zum
-  Angebotspreis, nicht zum Marktwert.
+- **MW-Trend** = wie viel die Spieler des Kaders bei der letzten Marktwertanpassung
+  zusammen gewonnen oder verloren haben. Siehe eigenen Abschnitt unten.
 - **Anpassungen** = Strafen + manuelle Korrektur gebündelt. Die Aufschlüsselung steht in
   der aufgeklappten Detailzeile und auf der Managerseite.
 
 Werte von Managern in einer Liga mit Datenlücke werden mit `~` und `ca.` gekennzeichnet,
 die eigene Zeile mit `exakt`.
+
+### Der MW-Trend rechnet Spieler, nicht Teamwerte
+
+Kickbase passt die Marktwerte **täglich um 22:04 deutscher Zeit** an. Die Frage dahinter
+ist: Steigen oder fallen die eigenen Leute gerade?
+
+Der frühere Trend verglich zwei gespeicherte **Teamwerte** — und damit rechneten Käufe und
+Verkäufe voll mit hinein. Wer für 20 Mio kaufte, stand mit +20 Mio da, ohne dass sich ein
+Marktwert bewegt hätte. Das machte die Spalte wertlos.
+
+Gerechnet wird jetzt **je Spieler**: sein Marktwert am jüngsten Marktwert-Tag minus sein
+Marktwert am Tag davor, aufsummiert über den aktuellen Kader. Ein Kaufpreis kommt in dieser
+Rechnung nirgends vor, ein Transfer kann also nicht hineinregnen.
+
+#### Der Marktwert-Tag beginnt um 22:04, nicht um Mitternacht
+
+Ein um 10:00 abgelesener Marktwert stammt aus der Anpassung des Vorabends und gehört damit
+zum Tag davor. `mwTag()` in `lib/format.js` bildet das ab. Ohne diese Verschiebung lägen die
+Ablesungen **eines** Tages auf zwei Seiten der Grenze und die Differenz wäre mal 0 und mal
+die doppelte Bewegung. Dreizehn Fälle durchgerechnet (`pruefstand/mwtag.mjs`), beide
+Zeitumstellungen eingeschlossen.
+
+#### Die Werte kommen aus der eigenen Mitschrift
+
+`kader` wird bei jedem Laden überschrieben und trägt keine Historie. Deshalb schreibt
+`ladeKader()` die Marktwerte zusätzlich nach `mw_beobachtung` — ein Eintrag je Spieler und
+Marktwert-Tag, zweimal am Tag ablesen überschreibt denselben Eintrag.
+
+**Getrennt von `marktwert_verlauf`, obwohl die Form dieselbe ist.** Dort stehen Kalendertage
+aus Kickbases Historie, hier Marktwert-Tage aus eigenen Ablesungen. In einer Tabelle
+vermischt lägen die Einträge um bis zu einen Tag versetzt, und der Aufschlag griffe auf den
+falschen Bezugswert.
+
+Gezählt wird nur, wer an **beiden** Tagen einen Wert hat. Nach der ersten Aktualisierung
+steht der Trend deshalb auf „–“; ab der zweiten am nächsten Marktwert-Tag ist er da. Die
+Detailzeile zeigt zusätzlich, wie viele Spieler gestiegen und wie viele gefallen sind —
+eine Summe nahe null kann Stillstand sein oder ein Aufheben von Gewinnen und Verlusten.
+
+#### Frische richtet sich jetzt auch nach 22:04
+
+`werBrauchtNeueDaten()` hielt einen Stand für aktuell, solange er nach der letzten
+Mitternacht lag. Wer abends nach 22:04 aktualisierte, bekam damit keine neuen Daten — und
+genau die Ablesung, aus der der Trend entsteht, fehlte. Bezugspunkt ist jetzt der spätere
+von letzter Mitternacht und letzter Marktwertanpassung. Nebenbei behebt das, dass die in
+`kader` gespeicherten Marktwerte (mit denen der Verkaufsrechner arbeitet) nach 22:04
+veraltet waren.
 
 ### Kaderprofil auf der Managerseite
 
