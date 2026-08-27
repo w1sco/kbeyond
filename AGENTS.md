@@ -559,8 +559,27 @@ Die Bremse macht drei Dinge:
    sofort ab. Das ist der wichtigste Punkt: Vorher machte jeder Lader für sich weiter und
    hat die Drosselung damit verlängert.
 
-Dazu wird nur noch geholt, was gebraucht wird: Teamwerte höchstens alle 6 Stunden, Kader
-alle 12 (mit `?voll=1` übergehbar), Marktwert-Historien höchstens 10 Spieler je Lauf. Der
+### Nur holen, was sich geändert hat
+
+Kein Zeitfenster, sondern nachsehen. Ein erster Versuch mit „Teamwerte alle 6 Stunden, Kader
+alle 12" war **falsch**: Hatte jemand vor einer Stunde gekauft, wäre sein Kader bis zu zwölf
+Stunden veraltet gewesen.
+
+`werBrauchtNeueDaten()` prüft je Manager, ob überhaupt etwas Neues zu holen ist. Beide
+Datensätze ändern sich aus genau zwei Gründen:
+
+| Grund | Wirkung |
+|---|---|
+| Ein **Transfer** | Ändert Zusammensetzung des Kaders und den Teamwert — aber nur bei dem einen Manager. Der Feed sagt, wer es war. |
+| Die **tägliche Marktwertanpassung** | Danach sind Teamwert *und* die in `kader` gespeicherten Marktwerte je Spieler veraltet. Letztere sind wichtig: mit ihnen rechnet der Verkaufsrechner. |
+
+Neu geholt wird also, wenn es keinen Stand gibt, der Stand von vor der letzten Mitternacht
+(deutscher Zeit) ist, oder seither ein Transfer dieses Managers lief. Sonst nichts.
+
+In der Praxis: Der erste Klick am Tag holt alles, jeder weitere kostet nur noch die Manager,
+die seitdem gehandelt haben. Es fehlt dabei nie etwas. `?voll=1` erzwingt einen Vollabruf.
+
+Dazu: Marktwert-Historien höchstens 10 Spieler je Lauf. Der
 Endpunkt für die Historie wird **einmal mit einem Spieler sondiert** statt für jeden
 Spieler blind durchprobiert — das allein waren bis zu 250 Anfragen pro Lauf.
 
