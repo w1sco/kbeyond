@@ -173,34 +173,35 @@ export async function POST(request) {
         `Kader ${kd.geladen}/${kd.gesamt}` + (gruende.length ? ` (${gruende.join(", ")})` : "")
       );
 
-      // Die echte Aufstellung: erst der eigene Endpunkt, der sie belegt
-      // liefert; nur wenn der schweigt, zählt die Felderkennung aus dem
-      // Kader. Ein Fehlschlag bleibt hier nicht stumm.
-      if (kd.geladen > 0) {
-        let auf = { manager: 0, spieler: 0, pfad: null };
-        try {
-          auf = await ladeAufstellungen(leagueId, token, noetig.kader, { frist: ende - 3_000 });
-        } catch (e) {
-          if (e.gedrosselt) throw e;
-        }
-
-        if (auf.manager > 0) {
-          erledigt.push(
-            `Aufstellung ${auf.manager} Manager` +
-              (auf.pfad === "ligaweit" ? " (nur die eigene)" : "")
-          );
-        } else if (kd.mitAufstellung > 0) {
-          erledigt.push(
-            `Aufstellung ${kd.mitAufstellung}/${kd.geladen} aus dem Kader` +
-              (kd.erkanntAn ? ` über ${kd.erkanntAn}` : "")
-          );
-        } else {
-          erledigt.push("Aufstellung nicht erkennbar — siehe /aufstellung");
-        }
-      }
-      if (kd.gestoppt) offen.push("Kader");
     } else {
       offen.push("Kader");
+    }
+
+    // 7. Die echte Aufstellung.
+    //
+    // Eigener Schritt, nicht am Kader hängend: Eine Aufstellung ändert
+    // sich, wenn der Manager sie ändert — unabhängig von Transfers und
+    // Marktwertanpassung. Vorher hing sie im Kader-Zweig und wurde
+    // deshalb übersprungen, sobald die Kader schon aktuell waren. Genau
+    // dann stand überall "keine Aufstellung erkennbar".
+    if (rest() > 3_000) {
+      let auf = { manager: 0, spieler: 0, pfad: null };
+      try {
+        auf = await ladeAufstellungen(leagueId, token, ids, { frist: ende - 3_000 });
+      } catch (e) {
+        if (e.gedrosselt) throw e;
+      }
+
+      if (auf.manager > 0) {
+        erledigt.push(
+          `Aufstellung ${auf.manager} Manager` +
+            (auf.pfad === "ligaweit" ? " (nur die eigene — Kickbase gibt fremde nicht heraus)" : "")
+        );
+      } else {
+        erledigt.push("Aufstellung nicht abrufbar — siehe /aufstellung");
+      }
+    } else {
+      offen.push("Aufstellung");
     }
 
     // Tagesstand festhalten: Teamwert, Kontostand und Punkte je Manager.

@@ -1062,6 +1062,12 @@ Felderkennung. Gefunden über die Diagnoseseite `/aufstellung`; die drei Variant
 Zwei Antwortformen werden bedient: Stehen genau elf Einträge da, ist die Liste selbst die
 Aufstellung; sonst zählt `lo` von 1 bis 11.
 
+**Die Aufstellung ist ein eigener Schritt im Aktualisieren-Lauf**, nicht an den Kader
+gehängt. Sie ändert sich, wenn der Manager sie ändert — unabhängig von Transfers und
+Marktwertanpassung. Zuerst hing sie im Kader-Zweig und wurde deshalb übersprungen, sobald
+die Kader schon aktuell waren: Genau dann stand überall „keine Aufstellung erkennbar",
+obwohl der Endpunkt einwandfrei antwortet.
+
 **Für wen der Endpunkt antwortet, muss man nicht wissen.** Die zurückgegebenen Spieler-IDs
 werden dem Manager zugeordnet, in dessen gespeichertem Kader sie stehen — wer die Spieler
 hat, hat die Aufstellung. Ob es eine Fassung je Manager gibt, entscheidet der erste

@@ -152,8 +152,12 @@ export default function Aufstellung({ kader }) {
 
       {echte.length === 0 && (
         <p className="kb-info">
-          Für diesen Manager ist keine Aufstellung erkennbar — Kickbase kennzeichnet sie
-          nicht in allen Fällen. Wähle die Elf selbst oder nimm den Vorschlag.
+          Für diesen Manager liegt keine Aufstellung vor. Zwei mögliche Gründe:{" "}
+          <strong>„Alles aktualisieren&ldquo; lief noch nicht</strong>, seit es diese
+          Funktion gibt — dann holt ein Klick sie nach. Oder Kickbase gibt die
+          Aufstellung <strong>fremder</strong> Manager nicht heraus; die Zeile unter dem
+          Aktualisieren-Knopf sagt, welcher Fall vorliegt. Bis dahin: Elf selbst wählen
+          oder den Vorschlag nehmen.
         </p>
       )}
 
