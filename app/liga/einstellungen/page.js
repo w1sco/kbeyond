@@ -6,7 +6,7 @@ import { initSchema, getSettings, getKorrekturen, sql } from "@/lib/db";
 import { euro, fuerEingabe, fuerTag, ausEingabe } from "@/lib/format";
 import { sitzung, verlangeLiga, istMitglied } from "@/lib/auth";
 import { SPIELTAGE, spieltagWahl } from "@/lib/loginbonus";
-import { nurMitspieler } from "@/lib/manager";
+import { nurMitspieler, adminModus, ADMIN_MODI } from "@/lib/manager";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +34,7 @@ async function speichern(formData) {
       login_aktiv  = ${formData.get("login_aktiv") === "on"},
       login_start  = ${formData.get("login_start") || null},
       spieltag_start = ${spieltagWahl(formData.get("spieltag_start")).schluessel},
+      admin_zeigen   = ${adminModus(formData.get("admin_zeigen"))},
       notiz        = ${formData.get("notiz") || null}
     WHERE league_id = ${leagueId} AND user_id = ${nutzer}`;
 
@@ -133,6 +134,24 @@ export default async function Einstellungen({ searchParams }) {
               Zählung ab<small className="kb-feld-hinweis">leer = ab Stichtag</small>
             </span>
             <input name="login_start" type="date" defaultValue={fuerTag(settings.login_start)} className="kb-eingabe" />
+          </label>
+
+          <label className="kb-feld">
+            <span className="kb-feld-name">
+              Liga-Admin
+              <small className="kb-feld-hinweis">
+                spielt er mit, gehört er in die Tabelle
+              </small>
+            </span>
+            <select
+              name="admin_zeigen"
+              defaultValue={adminModus(settings.admin_zeigen)}
+              className="kb-eingabe"
+            >
+              {ADMIN_MODI.map((m) => (
+                <option key={m.schluessel} value={m.schluessel}>{m.label}</option>
+              ))}
+            </select>
           </label>
 
           {/* Bis zum Anpfiff kommen noch Gutschriften – eine je Mitternacht.

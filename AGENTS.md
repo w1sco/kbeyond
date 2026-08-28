@@ -267,7 +267,7 @@ events(id PK, league_id, type, dt, buyer, seller, price, player_id, player_name,
   IDs: Feed = Kickbase-Event-ID, Rekonstruktion = rk_{liga}_{spieler}_{ts}
 
 liga_settings(league_id PK, stichtag, startbudget, punkte_bonus, login_aktiv,
-              login_start, spieltag_start, notiz)
+              login_start, spieltag_start, admin_zeigen, notiz)
 korrektur(league_id, manager, betrag, grund)          -- PK (league_id, manager)
 import_log(league_id PK, letzter_lauf, neue_events, gesamt, offset_pos, komplett)
 rekon_log(league_id PK, position, fertig, letzter, gefunden)
@@ -909,7 +909,13 @@ Teamwert allein reicht nicht — nach einem Liga-Reset steht er bei allen auf nu
 einem Admin liefert die Rangliste ihn offenbar nicht immer.
 
 Die Regel stand an **neun Stellen** kopiert (`m.adm !== true`). Sie liegt jetzt in
-`lib/manager.js`, 16 Fälle durchgerechnet (`pruefstand/manager.mjs`).
+`lib/manager.js`, 19 Fälle durchgerechnet (`pruefstand/manager.mjs`).
+
+**Und sie ist einstellbar.** Die Automatik kann daneben liegen — was Kickbase in der
+Rangliste über einen Admin ausgibt, ist nicht verlässlich, und seine Transfers können außer
+Reichweite des Feed-Fensters liegen. Unter Einstellungen gibt es deshalb *automatisch*
+(Vorgabe), *immer als Manager zeigen* und *immer ausblenden*. Die Einstellung sticht die
+Automatik in beide Richtungen.
 
 **Selbstzuordnung:** Erst über `kb_uid` (aus dem Login, Feldname unsicher), dann über `kb_name`. Schlägt beides fehl, wählt der Nutzer sich einmalig aus einer Liste — das ist der zuverlässige Fallback.
 

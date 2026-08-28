@@ -10,7 +10,7 @@ import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga, holeLigen } from "@/lib/auth";
 import { tagesraster, tagesreihen } from "@/lib/verlauf";
 import { erlaubtesMinus } from "@/lib/gebot";
-import { nurMitspieler } from "@/lib/manager";
+import { nurMitspieler, adminModus } from "@/lib/manager";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +71,8 @@ export default async function Liga({ searchParams }) {
       .map((z) => String(z.manager_id))
   );
   const gehandelt = await getAktiveManager(leagueId);
-  const spieler = nurMitspieler(ranking.us, { ids: mitKader, namen: gehandelt });
+  const spieler = nurMitspieler(ranking.us, { ids: mitKader, namen: gehandelt },
+    adminModus(settings.admin_zeigen));
 
   const treffer =
     (meineUid && spieler.find((m) => String(m.i) === meineUid)) ||

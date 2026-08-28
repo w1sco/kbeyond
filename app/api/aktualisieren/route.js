@@ -9,7 +9,7 @@ import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { ergaenzeMarktwerte } from "@/lib/marktwerte";
 import { pruefeApi, sitzung } from "@/lib/auth";
 import { bremseZuruecksetzen } from "@/lib/kickbase";
-import { nurMitspieler } from "@/lib/manager";
+import { nurMitspieler, adminModus } from "@/lib/manager";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -66,7 +66,8 @@ export async function POST(request) {
         .map((z) => String(z.manager_id))
     );
     const gehandelt = await getAktiveManager(leagueId);
-    const mitspieler = nurMitspieler(ranking.us, { ids: mitKader, namen: gehandelt });
+    const mitspieler = nurMitspieler(ranking.us, { ids: mitKader, namen: gehandelt },
+      adminModus(settings.admin_zeigen));
     const ids = mitspieler.map((m) => m.i);
 
     // 1. Feed – die Geldbewegungen. Alles andere ist Beiwerk.

@@ -46,5 +46,14 @@ pruefe("beide Mengen zusammen",
   nurMitspieler(liga, { ids: new Set(["9"]), namen: new Set() }).map((m) => m.n),
   ["Anna", "Bert", "Admin"]);
 
+// Der Modus aus den Einstellungen sticht die Automatik.
+console.log("\nEinstellung schlaegt Automatik:");
+pruefe("immer zeigen holt den Admin rein",
+  nurMitspieler(liga, null, "immer").map((m) => m.n), ["Anna", "Bert", "Admin"]);
+pruefe("nie blendet ihn aus, auch wenn er spielt",
+  nurMitspieler(ligaMitAdmin, null, "nie").map((m) => m.n), ["Anna", "Bert"]);
+pruefe("auto bleibt die Automatik",
+  nurMitspieler(ligaMitAdmin, null, "auto").map((m) => m.n), ["Anna", "Bert", "Admin"]);
+
 console.log(fehler ? `\n${fehler} Fall/Fälle falsch` : "\nAlle Fälle richtig.");
 process.exit(fehler ? 1 : 0);
