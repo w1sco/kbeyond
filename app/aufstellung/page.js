@@ -4,7 +4,7 @@ import { sitzung, verlangeLiga } from "@/lib/auth";
 import { findeSpielerListe } from "@/lib/format";
 import { findeAufstellung, felderAnalyse, elfAus, schluesselBaum } from "@/lib/aufstellung";
 import { DiagnoseKopf, LigaFehlt, Rohdaten } from "../_diagnose/Endpunkte";
-import { nurMitspieler } from "@/lib/manager";
+import { holeMitspieler } from "@/lib/mitspieler";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -68,7 +68,7 @@ export default async function AufstellungDiagnose({ searchParams }) {
   let manager = [];
   try {
     const rang = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
-    manager = nurMitspieler(rang.us);
+    manager = await holeMitspieler(leagueId, rang);
   } catch {
     // dann eben ohne
   }

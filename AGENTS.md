@@ -778,7 +778,9 @@ lib/
   news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
                     holeLigen(), istAbgelaufen() — Zugriffsschutz
-  kader.js          ladeKader() — Kader je Manager
+  kader.js          ladeKader(), ladeAufstellungen() — Kader und Startelf
+  manager.js        spieltMit(), nurMitspieler(), ADMIN_MODI — ohne DB
+  mitspieler.js     holeMitspieler() — die Managerliste für ALLE Seiten
   ledger.js         berechneKonten() — das Herzstück
   gebot.js          erlaubtesMinus(), maxGebot() — die Kickbase-Regel, ohne DB
   aufstellung.js    findeAufstellung(), felderAnalyse() — Startelf erkennen, ohne DB
@@ -909,7 +911,14 @@ Teamwert allein reicht nicht — nach einem Liga-Reset steht er bei allen auf nu
 einem Admin liefert die Rangliste ihn offenbar nicht immer.
 
 Die Regel stand an **neun Stellen** kopiert (`m.adm !== true`). Sie liegt jetzt in
-`lib/manager.js`, 19 Fälle durchgerechnet (`pruefstand/manager.mjs`).
+`lib/manager.js` (reine Rechnung, 19 Fälle durchgerechnet), und was sie an Daten braucht —
+wer einen Kader hat, wer gehandelt hat, welcher Modus eingestellt ist — holt
+`holeMitspieler()` in `lib/mitspieler.js`.
+
+**Jede Seite muss diese eine Funktion benutzen.** Ein erster Anlauf hat nur die Ligaseite
+und den Aktualisieren-Lauf vollständig umgestellt, die übrigen sieben Aufrufstellen
+bekamen die Regel ohne diese Daten. Ergebnis: Ein mitspielender Admin stand in der
+Tabelle, aber seine Managerseite meldete „Manager nicht gefunden".
 
 **Und sie ist einstellbar.** Die Automatik kann daneben liegen — was Kickbase in der
 Rangliste über einen Admin ausgibt, ist nicht verlässlich, und seine Transfers können außer

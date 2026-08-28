@@ -3,7 +3,7 @@ import { pruefeApi } from "@/lib/auth";
 import { initSchema } from "@/lib/db";
 import { kbFetch } from "@/lib/kickbase";
 import { ladeTeamwerte } from "@/lib/teamwerte";
-import { nurMitspieler } from "@/lib/manager";
+import { holeMitspieler } from "@/lib/mitspieler";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export async function POST(request) {
   try {
     await initSchema();
     const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
-    const ids = nurMitspieler(ranking.us).map((m) => m.i);
+    const ids = (await holeMitspieler(leagueId, ranking)).map((m) => m.i);
 
     const e = await ladeTeamwerte(leagueId, ids, token);
 
