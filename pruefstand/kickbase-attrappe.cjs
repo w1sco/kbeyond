@@ -151,7 +151,15 @@ function fuerPfad(pfad) {
       // Auf 18 Spieler auffüllen – erst bei mehr als elf greift die
       // Felderkennung überhaupt. Kodiert wie vermutet: 1..11 Startelf,
       // 12..18 Bank.
-      return { it: eigene.map((s, i) => ({ ...s, lineup_order: i + 1 })) };
+      // Wie live: `lo` null-basiert für die Aufgestellten, Bank ohne Feld.
+      // Mit KB_ZEHN=1 sind es zehn statt elf.
+      const wieViele = process.env.KB_ZEHN === "1" ? 10 : 11;
+      return {
+        it: eigene.map((s, i) => ({
+          pi: String(s.i), pn: s.n, pos: s.pos, mv: s.mv,
+          ...(i < wieViele ? { lo: i } : {}),
+        })),
+      };
     }
     return { it: eigene };
   }

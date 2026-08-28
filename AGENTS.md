@@ -1060,85 +1060,38 @@ Solange die Schublade offen ist, wird das Scrollen der Seite darunter gesperrt.
 
 Vorbelegt ist die **echte Aufstellung aus Kickbase**.
 
-#### Es gibt einen eigenen Endpunkt — belegt, nicht geraten
+#### Sie steht im Kader — Feld `lo`, null-basiert
+
+An echten Daten nachgewiesen: `/v4/leagues/{id}/managers/{uid}/squad` liefert je Spieler
+ein Feld **`lo`** — die Position in der Aufstellung, **ab 0**. Wer auf der Bank sitzt, hat
+das Feld **gar nicht**.
+
+Ein echter Kader (14 Spieler, 10 aufgestellt):
 
 ```
-/v4/leagues/{id}/lineup
-→ { it: [ { i, n, ap, lo, st, lst, mdst, tid, pos, os } ] }
+Schwäbe   pos 1 (Torwart)   lo 0
+Makengo   pos 2             lo 1
+…                           lo 2…9
+Topp, Vozar, Friedrich, Nandja   (kein lo → Bank)
 ```
 
-`lo` ist die Position in der Aufstellung. **Das ist die Quelle**, und sie schlägt jede
-Felderkennung. Gefunden über die Diagnoseseite `/aufstellung`; die drei Varianten
-`/managers/{uid}/lineup`, `/lineup/{uid}` und `/teamcenter` antworteten nicht.
+Damit muss **nichts geraten werden**: Wer `lo` hat, ist aufgestellt. Das deckt auch die
+Fälle ab, an denen jede Erkennung über „genau elf" scheitern musste — sieben Aufgestellte,
+zehn, gar keiner. 19 Fälle durchgerechnet (`pruefstand/startelf.mjs`), darunter der echte
+Kader oben.
 
-**Elf ist die Obergrenze, nicht die Regel.** Wer seine Aufstellung nicht fertig gemacht
-hat, steht mit zehn oder weniger da. Eine Erkennung, die auf „genau elf" besteht, liefert
-dann gar nichts.
+> **Der Weg dahin war teuer.** Vorher stand hier eine Erkennung, die im Kader ein Feld
+> suchte, das eine passende Zahl Spieler auszeichnet. Sie lieferte plausibel aussehenden
+> Unsinn: Weil der gespeicherte Kader nach Marktwert sortiert ist, traf ein zufällig
+> passendes Feld reihenweise die teuersten Spieler — Aufstellungen mit zwei Torhütern und
+> „die teuerste Elf". **Nicht wieder raten.** Eine falsche Aufstellung ist schlimmer als
+> keine, denn nach ihr trifft jemand Entscheidungen.
 
-Beim **Endpunkt** ist das unkritisch — er liefert die Aufstellung, dort wird gelesen und
-nicht bewiesen. Bei der **Felderkennung** ist die Zahl dagegen der ganze Beweis: Je weiter
-man sie öffnet, desto eher passt ein beliebiges Feld zufällig. Dort gilt deshalb eine
-Untergrenze von **sieben** — weniger ist unrealistisch, und ein Fehlalarm wäre schlimmer
-als eine fehlende Anzeige.
+Der Endpunkt `/v4/leagues/{id}/lineup` liefert nur die **eigene** Aufstellung und ignoriert
+jede `uid` — er wird nicht mehr benutzt.
 
-Fällt **mehr als eine Gruppe** in den erlaubten Bereich (bei 18 Spielern sind elf
-Aufgestellte und sieben auf der Bank beide „höchstens elf"), entscheidet die Position: Wer
-aufgestellt ist, hat die kleinste. Gibt es kein Positionsfeld, gewinnt die größere Gruppe.
-
-Die Startelf wird auf drei Wegen gesucht, der erste passende gewinnt:
-ein **Statusfeld** (`lst`, `st`, …), bei dem ein Wert genau elfmal vorkommt; die **Position
-`lo`**; oder eine Liste, die schon genau elf Einträge hat.
-
-**Der Zahlenbereich von `lo` wird abgelesen, nicht geraten.** Gezählt wird die lückenlose
-Folge ab dem kleinsten Wert, höchstens elf lang — bricht sie vorher ab, sind eben nur so
-viele aufgestellt. Fest auf 1–11 zu filtern hat
-einen Ersatzspieler hereingelassen und den mit `lo: 0` verworfen — bei einer Aufstellung
-ist das typischerweise der Torwart. Gezählt werden jetzt elf aufeinanderfolgende Positionen
-**ab dem kleinsten vorkommenden Wert**, also 0–10 oder 1–11.
-
-**Ein Endpunkt, der die `uid` ignoriert, wird erkannt.** Kommt bei jedem Manager dieselbe
-Elf zurück, sähe das sonst nach 17 Erfolgen aus, obwohl nur ein einziger Manager Daten
-bekommt. Der Lauf vergleicht die Elfen und schreibt dann ausdrücklich „Kickbase gibt fremde
-Aufstellungen nicht heraus".
-
-**Die Aufstellung ist ein eigener Schritt im Aktualisieren-Lauf**, nicht an den Kader
-gehängt. Sie ändert sich, wenn der Manager sie ändert — unabhängig von Transfers und
-Marktwertanpassung. Zuerst hing sie im Kader-Zweig und wurde deshalb übersprungen, sobald
-die Kader schon aktuell waren: Genau dann stand überall „keine Aufstellung erkennbar",
-obwohl der Endpunkt einwandfrei antwortet.
-
-**Für wen der Endpunkt antwortet, muss man nicht wissen.** Die zurückgegebenen Spieler-IDs
-werden dem Manager zugeordnet, in dessen gespeichertem Kader sie stehen — wer die Spieler
-hat, hat die Aufstellung. Ob es eine Fassung je Manager gibt, entscheidet der erste
-Versuch: Greift eine Variante mit `uid`, wird jede Aufstellung einzeln geholt; sonst gibt
-es genau einen Abruf.
-
-#### Die Felderkennung bleibt als Rückfall
-
-Schweigt der Endpunkt, wird im Kader gesucht: ein Feld, das **genau elf** Spieler
-auszeichnet, in drei Mustern.
-
-| Muster | Form | Beispiel |
-|---|---|---|
-| **Reihenfolge** | 1–11 für die Startelf, danach die Bank | `lineup_order: 1…18` |
-| **Wahrheitswert** | genau elf `true` | `inLineup: true/false` |
-| **Status-Code** | wenige Werte, einer kommt genau elfmal vor | `lineup_status: 1/2/0` |
-
-**Die erste Fassung kannte nur eine Mischform** und verlangte, dass alle übrigen Spieler
-„leer, false oder 0" sind. Damit scheiterte sie an den beiden wahrscheinlichsten Formen:
-Eine durchnummerierte Bank (12–18) ist nicht „aus", und ein Status 2 für die Bank zählte
-fälschlich als markiert — 18 Treffer statt 11, also verworfen.
-
-Felder, deren Bedeutung wir kennen (Position, ID, Marktwert, Preis, Punkte, Name), sind
-**gesperrt**. 23 Fälle durchgerechnet (`pruefstand/aufstellung.mjs`).
-
-Der Aktualisieren-Lauf meldet, **woher** die Aufstellung kommt („Aufstellung 3 Manager"
-oder „… aus dem Kader über `lineup_order`") oder dass nichts erkennbar war.
-`/aufstellung?league=…` beantwortet die eigentliche Frage: **Kommen fremde Aufstellungen
-durch?** Ein Endpunkt, der *antwortet*, beweist nämlich nichts — `/lineup?uid=…` antwortet
-für jeden Manager und liefert trotzdem immer die eigene Elf. Die Seite ruft deshalb jeden
-Kandidaten für **zwei verschiedene Gegner** auf und vergleicht; entscheidend ist die Spalte
-„verschieden". Dazu die Rohdaten und je Feld, was auffällt.
+**Nebenbei gefunden:** Der Kader nennt den Spielernamen unter **`pn`**. Der Feldname fehlte
+in `normalisiereSpieler`, deshalb stand dort früher „Unbekannt".
 
 Ein Knopf **„Echte Aufstellung"** holt sie zurück, und die Leiste sagt, woran man ist:
 „wie in Kickbase aufgestellt" oder „geändert".

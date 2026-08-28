@@ -170,11 +170,16 @@ export async function POST(request) {
       else if (mw.gestoppt) offen.push("Marktwerte");
     }
 
+    // Wie viele Aufstellungen schon beim Kaderladen mitkamen – der
+    // Zähler wird unten für die Meldung gebraucht.
+    let ausKader = 0;
+
     // 6. Kader – Grundlage für Markt und Verkaufsrechner
     if (noetig.kader.length === 0) {
       erledigt.push("Kader aktuell");
     } else if (rest() > MINDESTZEIT_MS) {
       const kd = await ladeKader(leagueId, noetig.kader, token, { frist: ende - 4_000 });
+      ausKader = kd.mitAufstellung ?? 0;
       // Sagen, WARUM etwas fehlt – "1/2" allein lässt einen raten
       const gruende = [];
       if (kd.leer > 0) {
@@ -198,32 +203,24 @@ export async function POST(request) {
       offen.push("Kader");
     }
 
-    // 7. Die echte Aufstellung.
+    // 7. Die Aufstellung der übrigen Manager.
     //
-    // Eigener Schritt, nicht am Kader hängend: Eine Aufstellung ändert
-    // sich, wenn der Manager sie ändert — unabhängig von Transfers und
-    // Marktwertanpassung. Vorher hing sie im Kader-Zweig und wurde
-    // deshalb übersprungen, sobald die Kader schon aktuell waren. Genau
-    // dann stand überall "keine Aufstellung erkennbar".
-    if (rest() > 3_000) {
-      let auf = { manager: 0, spieler: 0, pfad: null };
+    // Sie steht im Kader (Feld `lo`), und den holt Schritt 6 ohnehin —
+    // aber nur für Manager, bei denen sich etwas geändert hat. Eine
+    // Aufstellung ändert sich unabhängig von Transfers und
+    // Marktwertanpassung, deshalb hier ein Abruf für die übrigen.
+    const offeneAufstellung = ids.filter((i) => !noetig.kader.includes(i));
+    if (rest() > 4_000 && offeneAufstellung.length > 0) {
+      let auf = { manager: 0, gestoppt: false };
       try {
-        auf = await ladeAufstellungen(leagueId, token, ids, { frist: ende - 3_000 });
+        auf = await ladeAufstellungen(leagueId, token, offeneAufstellung, { frist: ende - 3_000 });
       } catch (e) {
         if (e.gedrosselt) throw e;
       }
-
-      if (auf.manager > 0) {
-        erledigt.push(
-          `Aufstellung ${auf.manager} Manager` +
-            (auf.art ? ` über ${auf.art}` : "") +
-            (auf.eigenstaendig ? "" : " — Kickbase gibt fremde Aufstellungen nicht heraus")
-        );
-      } else {
-        erledigt.push("Aufstellung nicht abrufbar — siehe /aufstellung");
-      }
+      if (auf.gestoppt) offen.push("Aufstellung");
+      erledigt.push(`Aufstellung ${auf.manager + ausKader}/${ids.length} Manager`);
     } else {
-      offen.push("Aufstellung");
+      erledigt.push(`Aufstellung ${ausKader}/${ids.length} Manager`);
     }
 
     // Tagesstand festhalten: Teamwert, Kontostand und Punkte je Manager.
