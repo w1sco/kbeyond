@@ -1105,69 +1105,127 @@ th.kb-namensspalte { z-index: 3; }
   .kb-schublade { width: 100%; border-left: 0; }
 }
 
-/* Der Platz: vier Reihen von Sturm oben bis Tor unten – so, wie man eine
-   Aufstellung liest. Kein Bild, nur ein Verlauf und Linien: ein echtes
-   Spielfeldbild bräuchte Grafiken und trüge nichts zur Aussage bei. */
+/* Der Platz.
+   Ein gezeichnetes Spielfeld statt vier grauer Bänder: Außenlinie,
+   Mittellinie und -kreis, beide Straf- und Torräume. Als SVG, nicht als
+   Bilddatei — skaliert sauber und braucht keine Assets.
+   Das Seitenverhältnis ist fest, sonst würde der Mittelkreis zur Ellipse. */
 .kb-platz {
-  display: grid;
-  gap: 10px;
-  padding: 14px 12px;
+  position: relative;
+  aspect-ratio: 3 / 4;
+  max-width: 460px;
+  margin: 0 auto;
   border-radius: var(--kb-radius);
+  overflow: hidden;
   background:
     repeating-linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0.06) 0 28px,
-      rgba(255, 255, 255, 0) 28px 56px
+      rgba(255, 255, 255, 0.045) 0 8%,
+      rgba(255, 255, 255, 0) 8% 16%
     ),
-    linear-gradient(to bottom, #2f7d4f, #276a43);
-  border: 1px solid #1f5334;
+    linear-gradient(to bottom, #2f8a52, #24713f);
 }
+
+.kb-platz-linien {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 1.5;
+}
+
+.kb-platz-linien .kb-platz-punkt {
+  fill: rgba(255, 255, 255, 0.55);
+  stroke: none;
+}
+
+/* Vier Reihen über dem Platz: Sturm oben, Tor unten. Der Torwart bekommt
+   etwas weniger Höhe, damit er im Strafraum steht und nicht davor. */
+.kb-platz-reihen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  /* Fünf Spuren, die erste bleibt leer: So steht der Sturm VOR dem
+     Strafraum und nicht darin, und der Torwart landet in seinem.
+     Nicht über padding lösen — prozentuale Innenabstände rechnen in CSS
+     gegen die BREITE, auch oben und unten. Genau daran ist der erste
+     Versuch gescheitert. */
+  grid-template-rows: 0.45fr 1fr 1fr 1fr 0.9fr;
+  padding: 0 6px;
+}
+
+.kb-platzreihe:nth-child(1) { grid-row: 2; }
+.kb-platzreihe:nth-child(2) { grid-row: 3; }
+.kb-platzreihe:nth-child(3) { grid-row: 4; }
+.kb-platzreihe:nth-child(4) { grid-row: 5; }
 
 .kb-platzreihe {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 46px;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
 }
 
-.kb-platzmarke {
-  flex: none;
-  width: 84px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.kb-platzspieler {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: 1;
-}
-
-.kb-platzleer {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.kb-trikot {
+/* Ein Spieler: weißer Punkt, Name darunter. */
+.kb-spielerpunkt {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  padding: 5px 9px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--kb-text);
+  gap: 3px;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 2px;
+  border: 0;
+  background: none;
   cursor: pointer;
   font: inherit;
-  line-height: 1.2;
 }
 
-.kb-trikotname { font-size: 13px; font-weight: 600; }
-.kb-trikotwert { font-size: 11px; color: var(--kb-text-leise); }
+.kb-punktkreis {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.kb-punktname {
+  max-width: 9ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.kb-platz-leer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Die Formation im Klartext unter dem Platz. */
+.kb-formation {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--kb-text-leise);
+}
+
+@media (max-width: 400px) {
+  .kb-punktkreis { width: 22px; height: 22px; }
+  .kb-punktname { font-size: 10px; max-width: 7ch; }
+  .kb-platz-reihen { padding: 8px 4px; }
+}
 
 /* Auswahl darunter, nach Position gruppiert */
 .kb-kaderwahl { display: grid; gap: 10px; margin-top: 14px; }
@@ -1192,10 +1250,7 @@ th.kb-namensspalte { z-index: 3; }
 
 .kb-chip:disabled { opacity: 0.45; cursor: not-allowed; }
 
-@media (max-width: 640px) {
-  .kb-platzreihe { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .kb-platzmarke { width: auto; }
-}
+
 
 /* News: eine Zeile je Spieler, Text darunter statt daneben – auf dem
    Handy bliebe für zwei Spalten kein Platz. */

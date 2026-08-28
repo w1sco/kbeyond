@@ -1185,8 +1185,24 @@ Richtung um; die Position kennt nur eine sinnvolle Reihenfolge. Umgedreht finge 
 beim Sturm an — so liest niemand einen Kader. Deshalb trägt diese Spalte auch keinen
 Richtungspfeil.
 
-Der Platz ist **kein Bild**, sondern vier Reihen mit Verlauf und Linien. Eine echte
-Spielfeldgrafik bräuchte Assets und trüge zur Aussage nichts bei.
+Der Platz ist ein **gezeichnetes Spielfeld**: Außenlinie, Mittellinie und -kreis, beide
+Straf- und Torräume, dazu Rasenstreifen. Als **inline-SVG**, nicht als Bilddatei — das
+skaliert sauber und braucht keine Assets. Vorher waren es vier graue Bänder mit
+Reihenbeschriftung; das war ablesbar, aber niemand hat darin eine Aufstellung gesehen.
+
+Das **Seitenverhältnis ist fest** (3:4), sonst würde der Mittelkreis zur Ellipse.
+
+Die vier Reihen liegen als Raster darüber, mit einer **leeren ersten Spur**: So steht der
+Sturm vor dem Strafraum und nicht darin, der Torwart in seinem. Gemessen sitzen die Reihen
+bei 22 / 45 / 68 / 90 %.
+
+> **Nicht über `padding` lösen.** Prozentuale Innenabstände rechnen in CSS gegen die
+> **Breite** — auch oben und unten. Genau daran ist der erste Versuch gescheitert: Auf dem
+> Handy landete der Sturm mitten im Strafraum.
+
+> **CSS-Änderungen brauchen im Prüfstand einen Neustart des Dev-Servers.** Der Dateiwächter
+> bekommt Schreibvorgänge, die die Datei ersetzen, nicht mit — der Browser bekam zweimal
+> das alte Stylesheet, und die Messung sah nach einem Fehler im Code aus.
 
 **Die Auswahl wird nicht gespeichert.** Ein Wiederherstellen aus dem `localStorage` müsste
 beim ersten Rendern greifen — dann steht auf dem Server etwas anderes als im Browser und

@@ -127,33 +127,65 @@ export default function Aufstellung({ kader }) {
 
       {/* Der Platz: Sturm oben, Tor unten – so, wie man eine Aufstellung
           liest. Leere Reihen bleiben sichtbar, damit man sieht, was fehlt. */}
+      {/* Ein richtiger Platz: Außenlinie, Mittellinie und -kreis, beide
+          Straf- und Torräume. Gezeichnet als SVG — keine Bilddatei, aber
+          auch keine vier grauen Bänder mehr. Die Spieler liegen als
+          Reihen darüber, Sturm oben, Tor unten. */}
       <div className="kb-platz">
-        {REIHEN.map((r) => {
-          const drauf = elf.filter((s) => kurz(s.position) === r.kurz);
-          return (
-            <div key={r.kurz} className="kb-platzreihe">
-              <span className="kb-platzmarke">{r.titel}</span>
-              <div className="kb-platzspieler">
-                {drauf.length === 0 ? (
-                  <span className="kb-platzleer">niemand aufgestellt</span>
-                ) : (
-                  drauf.map((s) => (
-                    <button
-                      key={s.id}
-                      className="kb-trikot"
-                      onClick={() => umschalten(String(s.id))}
-                      title="Aus der Aufstellung nehmen"
-                    >
-                      <span className="kb-trikotname">{s.name}</span>
-                      <span className="kb-trikotwert">{euroKurz(s.marktwert)}</span>
-                    </button>
-                  ))
-                )}
+        <svg
+          className="kb-platz-linien"
+          viewBox="0 0 300 400"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <rect x="10" y="10" width="280" height="380" rx="3" />
+          <line x1="10" y1="200" x2="290" y2="200" />
+          <circle cx="150" cy="200" r="42" />
+          <circle className="kb-platz-punkt" cx="150" cy="200" r="2.5" />
+
+          {/* oben */}
+          <rect x="62" y="10" width="176" height="66" />
+          <rect x="107" y="10" width="86" height="26" />
+          <circle className="kb-platz-punkt" cx="150" cy="54" r="2.5" />
+
+          {/* unten */}
+          <rect x="62" y="324" width="176" height="66" />
+          <rect x="107" y="364" width="86" height="26" />
+          <circle className="kb-platz-punkt" cx="150" cy="346" r="2.5" />
+        </svg>
+
+        <div className="kb-platz-reihen">
+          {REIHEN.map((r) => {
+            const drauf = elf.filter((s) => kurz(s.position) === r.kurz);
+            return (
+              <div key={r.kurz} className="kb-platzreihe" data-reihe={r.titel}>
+                {drauf.map((s) => (
+                  <button
+                    key={s.id}
+                    className="kb-spielerpunkt"
+                    onClick={() => umschalten(String(s.id))}
+                    title={`${s.name} · ${euroKurz(s.marktwert)} — aus der Aufstellung nehmen`}
+                  >
+                    <span className="kb-punktkreis" aria-hidden="true" />
+                    <span className="kb-punktname">{s.name}</span>
+                  </button>
+                ))}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {elf.length === 0 && (
+          <p className="kb-platz-leer">Noch niemand aufgestellt</p>
+        )}
       </div>
+
+      <p className="kb-formation">
+        Aufstellung · {elf.length} {elf.length === 1 ? "Spieler" : "Spieler"} ·{" "}
+        {REIHEN.slice().reverse()
+          .map((r) => `${aufbau[r.kurz]} ${r.kurz}`)
+          .join(" – ")}
+      </p>
 
       {echte.length === 0 && (
         <p className="kb-info">
