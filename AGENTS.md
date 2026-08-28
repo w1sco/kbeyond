@@ -1082,6 +1082,22 @@ nicht zuklappt.
 
 Solange die Schublade offen ist, wird das Scrollen der Seite darunter gesperrt.
 
+### Die Spieler-ID heißt `pi`, nicht `i`
+
+`normalisiereSpieler` las die ID über `i` und erst danach über `pi`. Das ging überall
+gut, wo `i` die Spieler-ID ist — bei einem **Marktangebot** führt `i` aber die ID des
+Angebots. Gespeichert wurde damit eine Angebots-ID, die zu keinem Kaderspieler passt.
+
+Folgen: Der „Markt“-Hinweis am Spieler erschien nie, und der Marktwert zum
+Angebotszeitpunkt fand seinen Spieler nicht — die Aufschläge blieben lückenhaft.
+
+**`pi` wird jetzt zuerst gelesen.** Es ist eindeutig die Spieler-ID; `i` bedeutet je nach
+Liste etwas anderes. Die Attrappe im Prüfstand führt in Marktangeboten deshalb bewusst
+**beide** Felder — `i` als Angebots-ID, `pi` als Spieler-ID —, damit ein Rückfall
+auffliegt.
+
+`/ligamonitor` zeigt ein Marktangebot im Rohzustand, falls sich das noch einmal stellt.
+
 ### Zwei Zeichen je Spieler in der Kaderliste
 
 Hinter jedem Spielernamen auf der Managerseite steht, ob er in der Aufstellung ist

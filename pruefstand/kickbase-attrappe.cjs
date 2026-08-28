@@ -26,10 +26,17 @@ const MANAGER = [
   },
 ];
 
+// Marktangebote. `i` ist hier bewusst die ID des ANGEBOTS und `pi` die
+// des Spielers — genau die Falle, in die das Projekt getappt ist: Wer `i`
+// speichert, findet den Spieler nie im Kader wieder.
+//
+// Der Kader eines Managers enthält 201–206; 201 und 204 stehen hier am
+// Markt, damit der „Markt"-Hinweis am Spieler geprüft wird.
 const MARKT = [
-  { i: "101", fn: "Harry",  ln: "Kane",    mv: 68800000, prc: 68800000, exs: 42000, pos: 4, ap: 216, tp: 648, mvt: 1 },
-  { i: "102", fn: "Angelo", ln: "Stiller", mv: 36600000, prc: 36600000, exs: 38000, pos: 3, ap: 119, tp: 357, mvt: 0 },
-  { i: "103", fn: "Patrik", ln: "Schick",  mv: 29400000, prc: 29400000, exs: 12000, pos: 4, ap: 103, tp: 309, mvt: 2 },
+  { i: "ang-1", pi: "101", fn: "Harry",  ln: "Kane",    mv: 68800000, prc: 68800000, exs: 42000, pos: 4, ap: 216, tp: 648, mvt: 1 },
+  { i: "ang-2", pi: "102", fn: "Angelo", ln: "Stiller", mv: 36600000, prc: 36600000, exs: 38000, pos: 3, ap: 119, tp: 357, mvt: 0 },
+  { i: "ang-3", pi: "201", fn: "Jonathan", ln: "Tah",   mv: 32200000, prc: 32200000, exs: 25000, pos: 2, ap: 96, tp: 288, mvt: 1 },
+  { i: "ang-4", pi: "204", fn: "Ermedin", ln: "Demirovic", mv: 44200000, prc: 44200000, exs: 12000, pos: 4, ap: 133, tp: 401, mvt: 2 },
 ];
 
 const KADER = {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { sitzung, verlangeLiga } from "@/lib/auth";
-import { DiagnoseKopf, LigaFehlt, probiere, Ergebnisse } from "../_diagnose/Endpunkte";
+import { DiagnoseKopf, LigaFehlt, probiere, Ergebnisse, Rohdaten } from "../_diagnose/Endpunkte";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +110,18 @@ export default async function Ligamonitor({ searchParams }) {
     });
   }
 
+  // Ein Marktangebot roh. Grund: Der Kader nennt die Spieler-ID `pi`,
+  // und wenn ein Angebot unter `i` etwas anderes führt (die ID des
+  // Angebots), passen Markt und Kader nie zusammen — dann fehlt der
+  // „Markt"-Hinweis am Spieler, und die Aufschläge bleiben lückenhaft.
+  let marktRoh = null;
+  try {
+    const markt = await kbFetch(`/v4/leagues/${leagueId}/market`, token);
+    marktRoh = (markt.it ?? markt.items ?? markt.players ?? [])[0] ?? null;
+  } catch {
+    // Beiwerk
+  }
+
   const ergebnisse = [];
   for (const g of gruppen) {
     ergebnisse.push({ gruppe: g, treffer: await probiere(g.pfade, token) });
@@ -136,6 +148,18 @@ export default async function Ligamonitor({ searchParams }) {
         Andere IDs prüfen: <code>?league={leagueId}&uid=…&pid=…</code> ·{" "}
         <Link href={`/liga?league=${leagueId}`}>zurück</Link>
       </p>
+
+      <section style={{ marginTop: 18 }}>
+        <h2 className="kb-abschnitt-titel">
+          0 · Ein Marktangebot im Rohzustand
+          <span className="kb-leise"> welches Feld trägt die Spieler-ID?</span>
+        </h2>
+        <p className="kb-info">
+          Der Kader nennt die Spieler-ID <code>pi</code>. Führt ein Angebot unter{" "}
+          <code>i</code> etwas anderes, passen Markt und Kader nicht zusammen.
+        </p>
+        {marktRoh ? <Rohdaten daten={marktRoh} /> : <p className="kb-info">Kein Angebot abrufbar.</p>}
+      </section>
 
       {ergebnisse.map((e) => (
         <section key={e.gruppe.titel} style={{ marginTop: 18 }}>
