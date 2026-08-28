@@ -566,6 +566,28 @@ th.kb-namensspalte { z-index: 3; }
 .kb-punkt--elf  { color: var(--kb-gut); }
 .kb-punkt--bank { color: var(--kb-text-schwach); }
 
+/* Blättern zwischen Managern. Die Namen der Nachbarn stehen dran – ein
+   nacktes Pfeilpaar sagt nicht, wohin es geht. */
+.kb-blaettern {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.kb-blaettern-knopf {
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-blaettern-knopf:disabled { opacity: 0.4; cursor: default; }
+
+@media (max-width: 640px) {
+  .kb-blaettern { width: 100%; }
+  .kb-blaettern-knopf { flex: 1; max-width: none; }
+}
+
 .kb-marke--markt {
   margin-left: 5px;
   padding: 1px 5px;

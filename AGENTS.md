@@ -1098,6 +1098,26 @@ auffliegt.
 
 `/ligamonitor` zeigt ein Marktangebot im Rohzustand, falls sich das noch einmal stellt.
 
+### Zwischen Managern blättern
+
+Auf der Managerseite geht es mit **Pfeil links/rechts** und auf dem Handy per
+**Wischen** zum vorigen oder nächsten Manager — in der Reihenfolge der Ligatabelle in
+ihrer Grundsortierung (Gesamtwert absteigend), also der, aus der man kommt.
+
+Dazu zwei Knöpfe mit den **Namen der Nachbarn**. Tastatur und Wischgeste sind
+unsichtbar, und was man nicht sieht, findet man nicht; außerdem sind die Knöpfe der
+einzige Weg für alle, die weder das eine noch das andere benutzen.
+
+Zwei Fallen, beide abgedeckt:
+
+- **In einem Eingabefeld darf die Pfeiltaste nicht blättern.** Wer einen Regler oder
+  ein Ankreuzfeld bedient, erwartet keinen Seitenwechsel.
+- **Ein Wischer muss deutlich waagerecht sein** (mindestens 60 px und doppelt so weit
+  wie senkrecht), sonst kippt jedes Scrollen die Seite um.
+
+In der Schublade bleibt beim Blättern die Schublade offen und die Tabelle darunter
+stehen — es wird nur der Inhalt getauscht.
+
 ### Zwei Zeichen je Spieler in der Kaderliste
 
 Hinter jedem Spielernamen auf der Managerseite steht, ob er in der Aufstellung ist

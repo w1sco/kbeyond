@@ -10,6 +10,7 @@ import { werteAus } from "@/lib/aufschlag";
 import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe, restzeit } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
 import Aufstellung from "./Aufstellung";
+import Blaettern from "./Blaettern";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holeMitspieler } from "@/lib/mitspieler";
 
@@ -67,6 +68,20 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
   const tw = await getTeamwerte(leagueId);
   const mw = await getMwTrend(leagueId);
   const trend = mw.map.get(String(id)) ?? null;
+
+  // Nachbarn zum Blättern: dieselbe Reihenfolge wie die Ligatabelle in
+  // ihrer Grundsortierung — Gesamtwert absteigend. Wer von dort kommt,
+  // blättert damit in der Reihenfolge weiter, die er gesehen hat.
+  const reihenfolge = konten
+    .map((x) => ({
+      id: String(x.id),
+      name: x.name,
+      gesamt: x.konto + (tw.map.get(String(x.id))?.teamwert ?? 0),
+    }))
+    .sort((a, b) => b.gesamt - a.gesamt);
+  const stelle = reihenfolge.findIndex((x) => x.id === String(id));
+  const vorher = stelle > 0 ? reihenfolge[stelle - 1] : null;
+  const nachher = stelle >= 0 && stelle < reihenfolge.length - 1 ? reihenfolge[stelle + 1] : null;
 
   const k = konten.find((x) => String(x.id) === String(id));
   const t = tw.map.get(String(id));
@@ -209,6 +224,11 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
           </p>
         </div>
         <div className="kb-aktionen">
+          <Blaettern
+            leagueId={leagueId}
+            vorher={vorher ? { id: vorher.id, name: vorher.name } : null}
+            nachher={nachher ? { id: nachher.id, name: nachher.name } : null}
+          />
           <Link href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Korrektur eintragen</Link>
         </div>
       </header>
