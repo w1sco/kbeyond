@@ -897,7 +897,18 @@ Winterzeit gelesen. Für einen Stichtag ohne Belang.
 
 ## Bekannte Eigenheiten
 
-**Manager werden über Anzeigenamen identifiziert, nicht über IDs.** Der Feed liefert `byr: "Lamlo"`, keine ID. Bei Namensänderung bricht die Zuordnung. Doppelte Namen werden in der UI markiert.
+**Manager werden über Anzeigenamen identifiziert, nicht über IDs.** Der Feed liefert
+`byr: "Lamlo"`, keine ID. Bei Namensänderung bricht die Zuordnung, und **doppelte Namen
+teilen sich zwangsläufig dieselben Transfers**. Beide Zeilen tragen deshalb in der Tabelle
+die Marke „Name doppelt" — dort, wo sie nebeneinander liegen, nicht nur auf der
+Managerseite.
+
+**Ein Admin mit dem Namen eines Mitspielers darf dessen Transfers nicht erben.** Genau das
+passierte: In einer Liga gibt es einen mitspielenden Fabinho und einen Admin gleichen
+Namens; der Admin galt über den Feed als aktiv und tauchte mit dem Kontostand des anderen
+auf. Bei einem doppelten Namen ist das Feld kein Beleg, sondern eine Verwechslung — dann
+zählt für den Admin nur, was eindeutig an seiner ID hängt (eigener Kader, Teamwert,
+Punkte).
 
 **Der Liga-Admin ist nicht automatisch ein Manager.** In manchen Ligen verwaltet er nur
 und hat keine Mannschaft — dann verwässert er die Tabelle mit Nullwerten und der

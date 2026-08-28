@@ -321,6 +321,19 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId, vortag = 
                       </Link>
                       {binIch && <span className="kb-marke kb-marke--exakt">exakt</span>}
                       {!binIch && unsicher && <span className="kb-marke kb-marke--circa">ca.</span>}
+                      {/* Der Feed führt Manager nur über den Namen. Kommt ein
+                          Name doppelt vor, teilen sich beide zwangsläufig
+                          dieselben Transfers — das muss dort stehen, wo die
+                          Zeilen nebeneinander liegen, nicht nur auf der
+                          Managerseite. */}
+                      {k.mehrdeutig && (
+                        <span
+                          className="kb-marke kb-marke--warn"
+                          title="Dieser Name kommt in der Liga mehrfach vor. Transfers lassen sich dann nicht eindeutig zuordnen — beide Zeilen zeigen dieselben Beträge."
+                        >
+                          Name doppelt
+                        </span>
+                      )}
                     </td>
                     {SPALTEN.map((s) => (
                       <td key={s.key} className={spaltenKlasse(s.key) || undefined}>

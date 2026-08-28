@@ -17,7 +17,11 @@ const MANAGER = [
   // Der Admin. Mit KB_ADMIN_SPIELT=1 hat er eine Mannschaft und muss dann
   // überall als normaler Manager auftauchen.
   {
-    i: 9, n: "Der Admin", sp: 0, spl: 4, adm: true,
+    i: 9,
+    // Mit KB_ADMIN_DOPPELT=1 heißt der Admin wie ein Mitspieler – er darf
+    // dessen Transfers dann nicht erben.
+    n: process.env.KB_ADMIN_DOPPELT === "1" ? "PetzS" : "Der Admin",
+    sp: 0, spl: 4, adm: true,
     tv: process.env.KB_ADMIN_SPIELT === "1" ? 142000000 : 0,
   },
 ];

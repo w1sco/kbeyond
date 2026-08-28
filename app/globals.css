@@ -553,6 +553,7 @@ th.kb-namensspalte { z-index: 3; }
 
 .kb-marke--exakt { color: var(--kb-gut); }
 .kb-marke--circa { color: #ea580c; }
+.kb-marke--warn  { color: var(--kb-schlecht); }
 
 /* Schmale Nebentabellen (Kader, Transfers): weniger Mindestbreite, sie
    scrollen auf dem Handy lieber waagerecht als Spalten zu verstecken. */

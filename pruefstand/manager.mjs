@@ -46,6 +46,25 @@ pruefe("beide Mengen zusammen",
   nurMitspieler(liga, { ids: new Set(["9"]), namen: new Set() }).map((m) => m.n),
   ["Anna", "Bert", "Admin"]);
 
+// Namensdoppel: Der Admin darf die Transfers eines gleichnamigen
+// Mitspielers nicht erben.
+console.log("\nZwei Manager mit demselben Namen:");
+const doppelt = [
+  { i: "1", n: "Fabinho", tv: 150e6 },
+  { i: "2", n: "Anna", tv: 140e6 },
+  { i: "9", n: "Fabinho", adm: true, tv: 0, sp: 0 },
+];
+pruefe("Admin erbt die Transfers NICHT",
+  nurMitspieler(doppelt, { namen: new Set(["Fabinho"]) }).map((m) => m.i), ["1", "2"]);
+pruefe("eindeutiger Name zaehlt weiterhin",
+  nurMitspieler(liga, { namen: new Set(["Admin"]) }).map((m) => m.n), ["Anna", "Bert", "Admin"]);
+pruefe("eigener Kader zaehlt auch bei doppeltem Namen",
+  nurMitspieler(doppelt, { ids: new Set(["9"]), namen: new Set(["Fabinho"]) }).map((m) => m.i),
+  ["1", "2", "9"]);
+pruefe("eigener Teamwert zaehlt auch bei doppeltem Namen",
+  nurMitspieler([...doppelt.slice(0, 2), { i: "9", n: "Fabinho", adm: true, tv: 90e6 }],
+    { namen: new Set(["Fabinho"]) }).map((m) => m.i), ["1", "2", "9"]);
+
 // Der Modus aus den Einstellungen sticht die Automatik.
 console.log("\nEinstellung schlaegt Automatik:");
 pruefe("immer zeigen holt den Admin rein",
