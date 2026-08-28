@@ -10,6 +10,7 @@ import { holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
 import Marktliste from "./Marktliste";
 import Hinweis from "../../_ui/Hinweis";
+import { nurMitspieler } from "@/lib/manager";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function Transfermarkt({ searchParams }) {
 
   // Mein Konto für den Kaufrechner
   const settings = await getSettings(leagueId, nutzer);
-  const spielerListe = (ranking.us ?? []).filter((m) => m.adm !== true);
+  const spielerListe = nurMitspieler(ranking.us);
   const konten = await berechneKonten(leagueId, spielerListe, settings);
   const tw = await getTeamwerte(leagueId);
   const ich = konten.find(

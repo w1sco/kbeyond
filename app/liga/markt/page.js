@@ -12,6 +12,7 @@ import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt } from "@/lib/format";
 import Freieliste from "./Freieliste";
 import Hinweis from "../../_ui/Hinweis";
+import { nurMitspieler } from "@/lib/manager";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function Markt({ searchParams }) {
 
   const settings = await getSettings(leagueId, nutzer);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
-  const manager = (ranking.us ?? []).filter((m) => m.adm !== true);
+  const manager = nurMitspieler(ranking.us);
 
   const konten = await berechneKonten(leagueId, manager, settings);
   const tw = await getTeamwerte(leagueId);

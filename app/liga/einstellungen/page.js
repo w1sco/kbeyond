@@ -6,6 +6,7 @@ import { initSchema, getSettings, getKorrekturen, sql } from "@/lib/db";
 import { euro, fuerEingabe, fuerTag, ausEingabe } from "@/lib/format";
 import { sitzung, verlangeLiga, istMitglied } from "@/lib/auth";
 import { SPIELTAGE, spieltagWahl } from "@/lib/loginbonus";
+import { nurMitspieler } from "@/lib/manager";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,7 @@ export default async function Einstellungen({ searchParams }) {
   await initSchema();
   const settings = await getSettings(leagueId, nutzer);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
-  const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
+  const spieler = nurMitspieler(ranking.us);
 
   const korrekturen = await getKorrekturen(leagueId, nutzer);
 

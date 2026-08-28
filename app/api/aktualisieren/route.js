@@ -1,4 +1,4 @@
-import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDaten, mitternachtDeutsch, sql, merkeTagesstand, getTeamwerte } from "@/lib/db";
+import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDaten, mitternachtDeutsch, sql, merkeTagesstand, getTeamwerte, getAktiveManager } from "@/lib/db";
 import { kbFetch } from "@/lib/kickbase";
 import { importiere } from "@/lib/importer";
 import { berechneKonten } from "@/lib/ledger";
@@ -9,6 +9,7 @@ import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { ergaenzeMarktwerte } from "@/lib/marktwerte";
 import { pruefeApi, sitzung } from "@/lib/auth";
 import { bremseZuruecksetzen } from "@/lib/kickbase";
+import { nurMitspieler } from "@/lib/manager";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -56,10 +57,16 @@ export async function POST(request) {
     await initSchema();
     const settings = await getSettings(leagueId, nutzer);
     const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
-    // Der Liga-Admin spielt nicht mit und hat keinen Kader. Er muss aus
-    // ALLEN Listen raus – sonst fragt der Lauf seinen Kader ab und meldet
-    // ihn als „ohne auswertbare Liste".
-    const mitspieler = (ranking.us ?? []).filter((m) => m.adm !== true);
+    // Der Liga-Admin ist nicht automatisch ein Manager: In manchen Ligen
+    // verwaltet er nur, in anderen spielt er mit. Ausgeblendet wird er
+    // deshalb nur, wenn er wirklich keine Mannschaft hat — sonst fragt der
+    // Lauf einen Kader ab, den es nicht gibt.
+    const mitKader = new Set(
+      (await sql`SELECT DISTINCT manager_id FROM kader WHERE league_id = ${leagueId}`)
+        .map((z) => String(z.manager_id))
+    );
+    const gehandelt = await getAktiveManager(leagueId);
+    const mitspieler = nurMitspieler(ranking.us, { ids: mitKader, namen: gehandelt });
     const ids = mitspieler.map((m) => m.i);
 
     // 1. Feed – die Geldbewegungen. Alles andere ist Beiwerk.

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { findeSpielerListe } from "@/lib/format";
-import { findeAufstellung, felderAnalyse, elfAus } from "@/lib/aufstellung";
+import { findeAufstellung, felderAnalyse, elfAus, schluesselBaum } from "@/lib/aufstellung";
 import { DiagnoseKopf, LigaFehlt, Rohdaten } from "../_diagnose/Endpunkte";
+import { nurMitspieler } from "@/lib/manager";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -17,18 +18,36 @@ export const maxDuration = 60;
 // eigene. Deshalb wird hier nicht nur gefragt, ob etwas kommt, sondern
 // **ob für zwei verschiedene Manager Verschiedenes kommt**.
 const KANDIDATEN = (liga, uid) => [
+  // Parametervarianten am belegten Endpunkt
   `/v4/leagues/${liga}/lineup?uid=${uid}`,
   `/v4/leagues/${liga}/lineup?u=${uid}`,
   `/v4/leagues/${liga}/lineup?userId=${uid}`,
   `/v4/leagues/${liga}/lineup?managerId=${uid}`,
+  `/v4/leagues/${liga}/lineup?user=${uid}`,
   `/v4/leagues/${liga}/lineup/${uid}`,
+
+  // Der Weg über den Manager
   `/v4/leagues/${liga}/managers/${uid}/lineup`,
-  `/v4/leagues/${liga}/managers/${uid}/teamcenter`,
+  `/v4/leagues/${liga}/managers/${uid}/lineup/current`,
   `/v4/leagues/${liga}/managers/${uid}/team`,
+  `/v4/leagues/${liga}/managers/${uid}/teamcenter`,
   `/v4/leagues/${liga}/managers/${uid}/matchday`,
+  `/v4/leagues/${liga}/managers/${uid}/matchdays`,
   `/v4/leagues/${liga}/managers/${uid}/performance`,
   `/v4/leagues/${liga}/managers/${uid}/dashboard`,
+  `/v4/leagues/${liga}/managers/${uid}/squad?lineup=1`,
+
+  // Andere Schreibweisen für „Nutzer"
+  `/v4/leagues/${liga}/users/${uid}/lineup`,
+  `/v4/leagues/${liga}/user/${uid}/lineup`,
+  `/v4/leagues/${liga}/teams/${uid}/lineup`,
   `/v4/leagues/${liga}/teamcenter/${uid}`,
+  `/v4/leagues/${liga}/teamcenter?uid=${uid}`,
+
+  // Spieltagsbezogen — in der App hängt die Aufstellung am Spieltag
+  `/v4/leagues/${liga}/matchday`,
+  `/v4/leagues/${liga}/matchdays`,
+  `/v4/leagues/${liga}/managers/${uid}/season`,
 ];
 
 // Kurzform einer Elf, um zwei Antworten zu vergleichen.
@@ -49,7 +68,7 @@ export default async function AufstellungDiagnose({ searchParams }) {
   let manager = [];
   try {
     const rang = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
-    manager = (rang.us ?? []).filter((m) => m.adm !== true);
+    manager = nurMitspieler(rang.us);
   } catch {
     // dann eben ohne
   }
@@ -89,6 +108,7 @@ export default async function AufstellungDiagnose({ searchParams }) {
         }
       }
 
+      const baum = daten ? schluesselBaum(daten) : [];
       ergebnisse.push({
         pfad: vorlage.replace(String(a.i), "{uid}"),
         fehler,
@@ -96,6 +116,9 @@ export default async function AufstellungDiagnose({ searchParams }) {
         eigene: fpA != null && fpA === meine,
         verschieden: fpA != null && fpB != null && fpA !== fpB,
         verglichen: fpA != null && fpB != null,
+        // Auch wenn elfAus nichts herausholt: Steht in der Antwort
+        // überhaupt etwas, das nach Aufstellung aussieht?
+        verdaechtig: baum.filter((x) => x.verdaechtig).map((x) => x.pfad).slice(0, 6),
         daten,
       });
     }
@@ -148,6 +171,7 @@ export default async function AufstellungDiagnose({ searchParams }) {
                   <th>Antwort</th>
                   <th>Elf</th>
                   <th>verschieden</th>
+                  <th>verdächtige Felder</th>
                 </tr>
               </thead>
               <tbody>
@@ -163,6 +187,9 @@ export default async function AufstellungDiagnose({ searchParams }) {
                     </td>
                     <td className={r.verschieden ? "kb-plus" : "kb-gedaempft"}>
                       {!r.verglichen ? "–" : r.verschieden ? "ja" : "nein"}
+                    </td>
+                    <td className="kb-leise">
+                      {r.verdaechtig?.length ? r.verdaechtig.join(", ").slice(0, 70) : "–"}
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTeamwertVerlauf, sql, getVortag } from "@/lib/db";
+import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTeamwertVerlauf, sql, getVortag, getAktiveManager } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit, inZeit, MW_UHRZEIT } from "@/lib/format";
 import Tabelle from "./Tabelle";
@@ -10,6 +10,7 @@ import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga, holeLigen } from "@/lib/auth";
 import { tagesraster, tagesreihen } from "@/lib/verlauf";
 import { erlaubtesMinus } from "@/lib/gebot";
+import { nurMitspieler } from "@/lib/manager";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,15 @@ export default async function Liga({ searchParams }) {
   // Der jüngste Stand vor heute – Grundlage der Platzierungspfeile.
   const vortag = await getVortag(leagueId);
 
-  const spieler = (ranking.us ?? []).filter((m) => m.adm !== true);
+  // Wer einen gespeicherten Kader hat, spielt mit — auch ein Admin. Das
+  // fängt den Fall ab, den Teamwert und Punkte nicht abdecken: direkt nach
+  // einem Liga-Reset steht beides bei allen auf null.
+  const mitKader = new Set(
+    (await sql`SELECT DISTINCT manager_id FROM kader WHERE league_id = ${leagueId}`)
+      .map((z) => String(z.manager_id))
+  );
+  const gehandelt = await getAktiveManager(leagueId);
+  const spieler = nurMitspieler(ranking.us, { ids: mitKader, namen: gehandelt });
 
   const treffer =
     (meineUid && spieler.find((m) => String(m.i) === meineUid)) ||

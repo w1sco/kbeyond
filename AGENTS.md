@@ -897,10 +897,19 @@ Winterzeit gelesen. Für einen Stichtag ohne Belang.
 
 **Manager werden über Anzeigenamen identifiziert, nicht über IDs.** Der Feed liefert `byr: "Lamlo"`, keine ID. Bei Namensänderung bricht die Zuordnung. Doppelte Namen werden in der UI markiert.
 
-**Der Liga-Admin wird gefiltert** (`m.adm !== true`), weil er in der Beispielliga nicht
-mitspielt. **Und zwar aus jeder Liste** — er stand zunächst nur nicht in `ids`, wurde aber
-weiter an `werBrauchtNeueDaten` gereicht. Dadurch fragte der Lauf seinen Kader ab, den es
-nicht gibt, und meldete ihn als „ohne auswertbare Liste". Sobald das Tool an fremde Ligen geht, sollte das eine Einstellung werden — in anderen Ligen kann der Admin durchaus Manager sein.
+**Der Liga-Admin ist nicht automatisch ein Manager.** In manchen Ligen verwaltet er nur
+und hat keine Mannschaft — dann verwässert er die Tabelle mit Nullwerten und der
+Aktualisieren-Lauf verlangt einen Kader, den es nicht gibt. In anderen Ligen spielt er ganz
+normal mit, und dann **muss** er überall auftauchen.
+
+Unterschieden wird deshalb nicht an der Rolle, sondern daran, ob er wirklich spielt. Das
+verlässlichste Kennzeichen sind **Transfers**: Wer im Feed als Käufer oder Verkäufer
+auftaucht, ist ein Manager. Dazu kommen ein gespeicherter Kader, Teamwert und Punkte.
+Teamwert allein reicht nicht — nach einem Liga-Reset steht er bei allen auf null, und bei
+einem Admin liefert die Rangliste ihn offenbar nicht immer.
+
+Die Regel stand an **neun Stellen** kopiert (`m.adm !== true`). Sie liegt jetzt in
+`lib/manager.js`, 16 Fälle durchgerechnet (`pruefstand/manager.mjs`).
 
 **Selbstzuordnung:** Erst über `kb_uid` (aus dem Login, Feldname unsicher), dann über `kb_name`. Schlägt beides fehl, wählt der Nutzer sich einmalig aus einer Liste — das ist der zuverlässige Fallback.
 
@@ -1307,7 +1316,6 @@ Frag-die-Liga mit drei Anbietern.
    der Posten trägt nichts bei — die Annahme 10.000 €/Punkt ist weiter unbewiesen.
 2. **Dunkelmodus.** Alle Seiten laufen über Tokens, es fehlt nur ein zweiter Block mit den
    Dunkelwerten in `globals.css`.
-3. **Admin-Filter zur Einstellung machen.** `m.adm !== true` ist hart verdrahtet.
 4. **`markt/page.js` (der alte Transfermarkt) überarbeiten** — nicht zu verwechseln mit
    `/liga/markt`.
 5. **Bietrechner:** wer kann bei welchem Spieler mitbieten — alle Zahlen dafür stehen bereit.

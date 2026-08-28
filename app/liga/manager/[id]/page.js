@@ -11,6 +11,7 @@ import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerLi
 import Verkaufsrechner from "./Verkaufsrechner";
 import Aufstellung from "./Aufstellung";
 import { erlaubtesMinus } from "@/lib/gebot";
+import { nurMitspieler } from "@/lib/manager";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
 
   const settings = await getSettings(leagueId, nutzer);
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
-  const alle = (ranking.us ?? []).filter((m) => m.adm !== true);
+  const alle = nurMitspieler(ranking.us);
   const manager = alle.find((m) => String(m.i) === String(id));
 
   if (!manager) {

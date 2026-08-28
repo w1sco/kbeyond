@@ -14,7 +14,12 @@ const MANAGER = [
   { i: 1, n: "W1zco",     sp: 0, tv: 180000000, spl: 1 },
   { i: 2, n: "yannick15", sp: 0, tv: 165000000, spl: 2 },
   { i: 3, n: "PetzS",     sp: 0, tv: 150000000, spl: 3 },
-  { i: 9, n: "Der Admin", sp: 0, tv: 0,         spl: 4, adm: true },
+  // Der Admin. Mit KB_ADMIN_SPIELT=1 hat er eine Mannschaft und muss dann
+  // überall als normaler Manager auftauchen.
+  {
+    i: 9, n: "Der Admin", sp: 0, spl: 4, adm: true,
+    tv: process.env.KB_ADMIN_SPIELT === "1" ? 142000000 : 0,
+  },
 ];
 
 const MARKT = [
