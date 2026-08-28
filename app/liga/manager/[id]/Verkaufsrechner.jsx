@@ -9,7 +9,7 @@ import { erlaubtesMinus } from "@/lib/gebot";
 // Gerechnet wird mit dem Marktwert. Beim Verkauf an Kickbase ist das der
 // tatsächliche Erlös; verkauft man an einen Mitspieler, kann dessen Gebot
 // darüber liegen — dann ist die Rechnung hier die vorsichtige Variante.
-export default function Verkaufsrechner({ kader, konto, teamwert, boni = null }) {
+export default function Verkaufsrechner({ kader, konto, teamwert, boni = null, amMarkt = {} }) {
   const [gewaehlt, setGewaehlt] = useState(() => new Set());
   // Bis zum Anpfiff kommen noch Login-Gutschriften. Die sind sicher und
   // deshalb vorbelegt – wer nur mit dem Ist-Stand planen will, hakt aus.
@@ -225,6 +225,23 @@ export default function Verkaufsrechner({ kader, konto, teamwert, boni = null })
                       aria-label={`${s.name} verkaufen`}
                     />
                     {" "}<span className="kb-spielername">{s.name}</span>
+                    {/* Zwei kleine Zeichen sagen das Wichtigste: steht er in
+                        der Aufstellung, und steht er gerade am Markt? */}
+                    <span
+                      className={`kb-punkt ${s.aufgestellt ? "kb-punkt--elf" : "kb-punkt--bank"}`}
+                      title={s.aufgestellt ? "In der Aufstellung" : "Nicht aufgestellt"}
+                      aria-label={s.aufgestellt ? "aufgestellt" : "nicht aufgestellt"}
+                    >
+                      {s.aufgestellt ? "●" : "○"}
+                    </span>
+                    {amMarkt[String(s.id)] && (
+                      <span
+                        className="kb-marke kb-marke--markt"
+                        title={`Steht am Transfermarkt, noch ${amMarkt[String(s.id)]}`}
+                      >
+                        Markt
+                      </span>
+                    )}
                   </td>
                   <td>{s.position ?? "–"}</td>
                   <td>

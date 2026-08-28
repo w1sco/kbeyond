@@ -5,9 +5,9 @@ import { initSchema, getSettings, getTeamwerte, getMwTrend, getKader, sql } from
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { holeNamen, benenne } from "@/lib/spielernamen";
-import { holeAufschlaege } from "@/lib/marktbeobachtung";
+import { holeAufschlaege, aktuellAmMarkt } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
-import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe } from "@/lib/format";
+import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe, restzeit } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
 import Aufstellung from "./Aufstellung";
 import { erlaubtesMinus } from "@/lib/gebot";
@@ -180,6 +180,11 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
   // Bis zum ersten Spiel des Spieltags kommen noch Login-Gutschriften dazu,
   // eine je Mitternacht. Der Bonus wird für alle Manager gleich gerechnet —
   // im Feed ist nur der eigene sichtbar.
+  // Wer aus diesem Kader gerade am Transfermarkt steht. Kommt aus der
+  // eigenen Mitschrift, kostet also keinen Kickbase-Aufruf; abgelaufene
+  // Angebote fallen dabei von selbst heraus.
+  const amMarkt = await aktuellAmMarkt(leagueId);
+
   const boni = kommendeLoginBoni({
     referenz: settings.login_start ?? settings.stichtag,
     spieltagStart: settings.spieltag_start,
@@ -377,7 +382,15 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
               Verkauf an Kickbase ist das der Erlös, bei einem Mitspieler kann dessen Gebot
               darüber liegen.
             </p>
-            <Verkaufsrechner kader={kader} konto={k.konto} teamwert={teamwert} boni={boni} />
+            <Verkaufsrechner
+              kader={kader}
+              konto={k.konto}
+              teamwert={teamwert}
+              boni={boni}
+              amMarkt={Object.fromEntries(
+                [...amMarkt].map(([id, bis]) => [id, restzeit((bis - Date.now()) / 1000)])
+              )}
+            />
           </>
         )}
       </section>

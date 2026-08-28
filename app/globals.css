@@ -555,6 +555,27 @@ th.kb-namensspalte { z-index: 3; }
 .kb-marke--circa { color: #ea580c; }
 .kb-marke--warn  { color: var(--kb-schlecht); }
 
+/* Aufstellung und Markt als kleine Zeichen in der Kaderliste. Ein Punkt
+   sagt genug – ein zweites Wort je Zeile würde die Namen erdrücken. */
+.kb-punkt {
+  margin-left: 6px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.kb-punkt--elf  { color: var(--kb-gut); }
+.kb-punkt--bank { color: var(--kb-text-schwach); }
+
+.kb-marke--markt {
+  margin-left: 5px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--kb-akzent-weich);
+  color: var(--kb-akzent);
+  font-size: 10px;
+  font-weight: 600;
+}
+
 /* Schmale Nebentabellen (Kader, Transfers): weniger Mindestbreite, sie
    scrollen auf dem Handy lieber waagerecht als Spalten zu verstecken. */
 .kb-tabelle--schmal { min-width: 560px; }
