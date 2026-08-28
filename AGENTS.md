@@ -1082,6 +1082,20 @@ nicht zuklappt.
 
 Solange die Schublade offen ist, wird das Scrollen der Seite darunter gesperrt.
 
+### Zwei Zeichen je Spieler in der Kaderliste
+
+Hinter jedem Spielernamen auf der Managerseite steht, ob er in der Aufstellung ist
+(`●` gefüllt / `○` hohl) und ob er gerade am Transfermarkt angeboten wird (Chip
+„Markt“, Restzeit im Tooltip).
+
+Beides kostet **keinen Kickbase-Aufruf**: Die Aufstellung steht im gespeicherten Kader,
+der Marktstand in der eigenen Mitschrift (`markt_beobachtung`) — abgelaufene Angebote
+fallen dort von selbst heraus.
+
+Die **Restzeit wird auf dem Server formatiert**, nicht im Browser. Ein `Date.now()` beim
+Rendern ist unrein und liefe beim Hydrieren auseinander; der Linter fängt das inzwischen
+als Fehler ab.
+
 ### Wahrscheinliche Aufstellung
 
 Vorbelegt ist die **echte Aufstellung aus Kickbase**.
