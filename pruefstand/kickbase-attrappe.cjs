@@ -69,6 +69,21 @@ const VEREINSKADER = {
   ],
 };
 
+// Spieltagspunkte eines Managers – dieselbe Zahl im Live-Endpunkt wie im
+// Kader, sonst ließe sich die Summenprobe nicht prüfen.
+function spieltagsPunkte(uid) {
+  const i = MANAGER.findIndex((m) => String(m.i) === String(uid));
+  return i < 0 ? 0 : 80 - i * 17;
+}
+
+// Die Punkte auf elf Spieler verteilen, so dass die Summe genau stimmt.
+function verteile(summe, anzahl) {
+  const basis = Math.floor(summe / anzahl);
+  const raus = Array(anzahl).fill(basis);
+  raus[0] += summe - basis * anzahl;
+  return raus;
+}
+
 function antwort(daten, status = 200) {
   return new Response(JSON.stringify(daten), {
     status,
@@ -167,7 +182,7 @@ function fuerPfad(pfad) {
         ranking: {
           players: MANAGER.filter((m) => !m.adm || process.env.KB_ADMIN_SPIELT === "1")
             .map((m, i) => ({
-              u: String(m.i), unm: m.n, mdp: 80 - i * 17, tv: m.tv,
+              u: String(m.i), unm: m.n, mdp: spieltagsPunkte(m.i), tv: m.tv,
               // `lp` wie in echt: eine Liste **blanker Spieler-IDs** – die
               // Aufstellung, ohne Punkte. So liefert Kickbase es
               // tatsächlich, an echten Daten abgelesen.
@@ -200,9 +215,21 @@ function fuerPfad(pfad) {
       // Wie live: `lo` null-basiert für die Aufgestellten, Bank ohne Feld.
       // Mit KB_ZEHN=1 sind es zehn statt elf.
       const wieViele = process.env.KB_ZEHN === "1" ? 10 : 11;
+      // Mit KB_MDP_IM_KADER=1 traegt der Kader die Spieltagspunkte je
+      // Spieler. Ihre Summe ueber die Elf ergibt genau die Zahl, die der
+      // Live-Endpunkt fuer den Manager meldet — die Probe, mit der sich
+      // das richtige Feld beweisen laesst.
+      const punkte =
+        process.env.KB_MDP_IM_KADER === "1"
+          ? verteile(spieltagsPunkte(squad[1]), wieViele)
+          : null;
       return {
         it: eigene.map((s, i) => ({
           pi: String(s.i), pn: s.n, pos: s.pos, mv: s.mv,
+          // `p` sind Saisonpunkte – bewusst daneben, damit sich zeigt,
+          // dass die Probe das falsche Feld aussortiert.
+          p: 1000 + i,
+          ...(punkte && i < wieViele ? { mdp: punkte[i] } : {}),
           ...(i < wieViele ? { lo: i } : {}),
         })),
       };

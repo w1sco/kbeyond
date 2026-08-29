@@ -152,3 +152,13 @@ vorher=$(grep -c "^\[KB\]" dev.log)
 curl -s -o /dev/null -b "kb_token=pruef" "http://localhost:3300/liga/live?league=1"
 echo $(( $(grep -c "^\[KB\]" dev.log) - vorher ))
 ```
+
+## KB_MDP_IM_KADER
+
+`KB_MDP_IM_KADER=1` legt in den Kader ein Feld `mdp` je Spieler, dessen Summe
+über die Elf **genau** die Spieltagspunkte ergibt, die der Live-Endpunkt für
+diesen Manager meldet. Daneben steht `p` mit Saisonpunkten als Ablenkung.
+
+Damit lässt sich der ganze Weg prüfen: Endpunkt suchen → Punktefeld über die
+Summe beweisen → holen → speichern → anzeigen. Das falsche Feld muss dabei
+durchfallen.

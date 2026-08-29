@@ -1,6 +1,7 @@
 // Findet die Live-Punkte-Suche das Richtige — und schweigt sie, wenn nichts da ist?
 import {
-  findePunkte, besterFund, sammleTreffer, spielerImEintrag, idListeImEintrag, LIVE_PFADE,
+  findePunkte, besterFund, sammleTreffer, spielerImEintrag, idListeImEintrag,
+  feldMitSumme, LIVE_PFADE,
 } from "../lib/live.js";
 
 let ok = 0, fehler = 0;
@@ -201,6 +202,42 @@ pruefe("längste Liste gewinnt", idListeImEintrag({ t: [3, 7], lp: [11, 22, 33] 
 pruefe("keine Liste", idListeImEintrag({ mdp: 5 }), []);
 pruefe("gemischte Liste zählt nicht", idListeImEintrag({ x: [1, { a: 2 }] }), []);
 pruefe("Wiederholungen sind keine IDs", idListeImEintrag({ x: [5, 5, 5] }), []);
+
+// ── Die Summenprobe ────────────────────────────────────────────────
+//
+// Der harte Beweis: Ein Feld ist das richtige, wenn seine Summe über die
+// Elf genau die Spieltagspunkte des Managers ergibt. Dieselbe Idee wie
+// die Kalibrierung des Kontostands.
+const kader = { it: [
+  { pi: "a", mdp: 30, p: 1200, mv: 9000000 },
+  { pi: "b", mdp: 25, p: 1100, mv: 8000000 },
+  { pi: "c", mdp: 25, p: 1300, mv: 7000000 },
+  { pi: "z", mdp: 99, p: 1400, mv: 6000000 },   // Bank, zählt nicht mit
+] };
+const elf = ["a", "b", "c"];
+
+const s1 = feldMitSumme(kader, elf, 80);
+pruefe("richtiges Feld bewiesen", s1.treffer?.feld, "mdp");
+pruefe("Summe stimmt", s1.treffer?.summe, 80);
+pruefe("nur die Elf gezählt", s1.gefunden, 3);
+
+// Saisonpunkte sind es nicht — sie summieren auf etwas anderes
+pruefe("Saisonpunkte fallen durch", feldMitSumme(kader, elf, 3600).treffer?.feld, "p");
+
+// Passt nichts, kommt nichts – aber die geprüften Felder werden genannt
+const s2 = feldMitSumme(kader, elf, 12345);
+pruefe("kein Treffer", s2.treffer, null);
+pruefe("aber Felder genannt", s2.geprueft.length > 0, true);
+// Sortiert nach Nähe zum Sollwert: 3600 liegt näher an 12345 als 24 Mio.
+pruefe("nächster Wert zuerst", s2.geprueft[0].summe, 3600);
+
+// Eine Summe von 0 gilt nicht als Beweis – vor dem Anpfiff ist alles 0
+// und jedes leere Feld wuerde "passen".
+pruefe("null beweist nichts", feldMitSumme(kader, elf, 0).treffer, null);
+
+// Unbekannte Spieler
+pruefe("niemand gefunden", feldMitSumme(kader, ["x", "y"], 80).treffer, null);
+pruefe("leere Antwort", feldMitSumme({}, elf, 80).gefunden, 0);
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

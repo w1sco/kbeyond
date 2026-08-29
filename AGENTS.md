@@ -546,9 +546,33 @@ Form (Array aus mindestens zwei eindeutigen Zahlen), nicht am Namen `lp`. Namen 
 Positionen steuern Kader, Pool und Events bei; das kostet keinen Aufruf.
 
 Zweitens: **Die Einzelpunkte stehen nicht in dieser Antwort.** Sie brauchen einen
-zweiten Endpunkt, und welcher das ist, ist noch nicht belegt. `sucheSpielerPunkte()`
-probiert Kandidaten durch — mit den **echten IDs aus `lp`** als Anker, deshalb erst
-nach dem ersten Fund und nur auf Klick.
+zweiten Endpunkt.
+
+#### Bewiesen wird über die Summe, nicht über den Feldnamen
+
+Der erste Anlauf suchte nach einer Liste mit mindestens zwei bekannten Spieler-IDs.
+Für einen Endpunkt, der **einen** Spieler beschreibt, konnte das nie zutreffen — ein
+Denkfehler.
+
+Es gibt aber eine harte Prüfgröße, dieselbe Idee wie die Kalibrierung des
+Kontostands: **Die Summe der Elf muss `mdp` ergeben.** `feldMitSumme()` probiert
+jedes numerische Feld der Kaderantwort durch und nimmt das, dessen Summe über die
+elf Spieler genau die Spieltagspunkte des Managers trifft. Ein Feld, das nur so
+heißt, fällt durch; die Saisonpunkte fallen durch; der Marktwert fällt durch.
+
+Eine Summe von **0 gilt nicht als Beweis** — vor dem Anpfiff steht alles auf 0 und
+jedes leere Feld würde „passen".
+
+Passt nichts, werden die geprüften Felder mit ihren Summen genannt, nach Nähe zum
+Sollwert sortiert. Auch das sagt etwas: Man sieht, ob man knapp daneben liegt oder
+im falschen Endpunkt sucht.
+
+#### Geholt wird auf Klick, gelesen aus der Datenbank
+
+Der bewiesene Pfad steht in `pool_cache` unter `live_pfad` (`spielerPfad`,
+`spielerFeld`). Ihn abzufragen kostet **einen Aufruf je Manager** — das läuft
+deshalb nur auf Knopfdruck. Die geholten Punkte liegen unter `live_punkte_{liga}`;
+der Seitenaufruf liest sie von dort und kostet nichts.
 
 Angezeigt wird immer **Kickbases eigene Managersumme**, nicht die Summe der
 Spieler. Weichen beide ab, sagt die Zeile das — der Unterschied ist eine

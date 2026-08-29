@@ -3,7 +3,10 @@ import { pruefeApi, sitzung } from "@/lib/auth";
 import { initSchema } from "@/lib/db";
 import { kbFetch } from "@/lib/kickbase";
 import { holeMitspieler } from "@/lib/mitspieler";
-import { sucheLivePfad, sucheSpielerPunkte, holeLivestand } from "@/lib/liveabruf";
+import {
+  sucheLivePfad, sucheSpielerPunkte, holeLivestand, holeSpielerPunkte,
+  speichereSpielerPunkte, bekannterLivePfad,
+} from "@/lib/liveabruf";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -28,6 +31,29 @@ export async function POST(request) {
     const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
     const ids = (await holeMitspieler(leagueId, ranking)).map((m) => String(m.i));
 
+    // Zweiter Modus: die Einzelpunkte über den bereits bewiesenen Pfad
+    // holen. Ein Aufruf je Manager — deshalb nur auf Klick.
+    if (searchParams.get("punkte") === "1") {
+      const merk = await bekannterLivePfad();
+      const stand = await holeLivestand(leagueId, token, ids, new Map());
+      const geholt = merk?.spielerPfad
+        ? await holeSpielerPunkte(leagueId, token, ids, stand?.aufstellung ?? new Map())
+        : null;
+      if (geholt?.size) await speichereSpielerPunkte(leagueId, geholt);
+
+      const text = geholt?.size
+        ? `Einzelpunkte geholt: ${[...geholt.values()].reduce((n, m) => n + m.size, 0)} Spieler bei ${geholt.size} Managern`
+        : merk?.spielerPfad
+          ? "Einzelpunkte: der gemerkte Pfad liefert gerade nichts"
+          : "Einzelpunkte: erst den Endpunkt suchen";
+
+      if (zurueck) {
+        const params = new URLSearchParams({ league: leagueId, live: text });
+        return Response.redirect(new URL(`/liga/live?${params}`, request.url), 303);
+      }
+      return Response.json({ text });
+    }
+
     const e = await sucheLivePfad(leagueId, token, ids, uid);
 
     // Ist der Manager-Endpunkt gefunden, gleich weitersuchen: Er liefert
@@ -36,9 +62,22 @@ export async function POST(request) {
     let spieler = null;
     if (e.gefunden) {
       const stand = await holeLivestand(leagueId, token, ids, new Map());
-      const ausAufstellung = [...(stand?.aufstellung?.values() ?? [])].flat();
-      if (!stand?.spieler?.size && ausAufstellung.length) {
-        spieler = await sucheSpielerPunkte(leagueId, token, uid, ausAufstellung);
+      if (!stand?.spieler?.size) {
+        // Geprüft wird an **einem** Manager, dessen Spieltagssumme wir
+        // kennen: Ein Feld, dessen Summe über seine Elf genau diese Zahl
+        // ergibt, ist bewiesen. Das kostet einen Aufruf je Kandidat.
+        const kandidat =
+          [...(stand?.aufstellung ?? new Map())].find(
+            ([mid, elf]) => elf.length > 0 && Number(stand.punkte.get(mid)) > 0
+          ) ?? null;
+        if (kandidat) {
+          const [mid, elf] = kandidat;
+          spieler = await sucheSpielerPunkte(
+            leagueId, token, mid, elf, Number(stand.punkte.get(mid))
+          );
+        } else {
+          spieler = { gefunden: null, versucht: [], grund: "keine Elf in der Antwort" };
+        }
       }
     }
 
@@ -52,8 +91,12 @@ export async function POST(request) {
       if (spieler) {
         teile.push(
           spieler.gefunden
-            ? `Einzelpunkte: ${spieler.gefunden.pfad} (Feld ${spieler.gefunden.punkteFeld}, ${spieler.gefunden.spieler} Spieler)`
-            : `Einzelpunkte: kein Kandidat liefert welche (${spieler.versucht.length} probiert)`
+            ? `Einzelpunkte gefunden: ${spieler.gefunden.pfad}, Feld ${spieler.gefunden.feld} — Summe der Elf ${spieler.gefunden.summe} = ${spieler.gefunden.soll}`
+            : `Einzelpunkte: kein Feld summiert auf die Spieltagspunkte (${spieler.versucht.length} Kandidaten). Nächste Werte: ` +
+              (spieler.versucht
+                .flatMap((v) => (v.geprueft ?? []).slice(0, 3).map((g) => `${g.feld}=${g.summe}`))
+                .slice(0, 6)
+                .join(", ") || spieler.grund || "nichts gefunden")
         );
       }
       const params = new URLSearchParams({ league: leagueId, live: teile.join(" · ") });

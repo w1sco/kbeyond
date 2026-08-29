@@ -4,7 +4,9 @@ import { verlangeLiga, sitzung } from "@/lib/auth";
 import { initSchema, getKader, getSettings } from "@/lib/db";
 import { holeMitspieler } from "@/lib/mitspieler";
 import { holeNamen } from "@/lib/spielernamen";
-import { holeLivestand, bekannterLivePfad } from "@/lib/liveabruf";
+import {
+  holeLivestand, bekannterLivePfad, gespeicherteSpielerPunkte,
+} from "@/lib/liveabruf";
 import { zeitpunkt, posRang, normalisiereSpieler } from "@/lib/format";
 import Hinweis from "@/app/_ui/Hinweis";
 import Auffrischen from "./Auffrischen";
@@ -45,12 +47,19 @@ export default async function Live({ searchParams }) {
   // keinen Kickbase-Aufruf — Pool und Events stehen in der Datenbank.
   const namen = live?.aufstellung?.size ? await holeNamen(leagueId) : new Map();
 
+  // Einzelpunkte aus dem letzten Hol-Lauf. Sie stehen in der Datenbank und
+  // kosten hier nichts; geholt werden sie nur auf Klick.
+  const gespeichert = live && !live.spieler?.size
+    ? await gespeicherteSpielerPunkte(leagueId)
+    : null;
+
   const zeilen = manager
     .map((m) => {
       const id = String(m.i);
       const kaderListe = kader.proManager.get(id) ?? [];
       const nachId = new Map(kaderListe.map((s) => [String(s.id), s]));
-      const proSpieler = live?.spieler?.get(id) ?? null;
+      const proSpieler =
+        live?.spieler?.get(id) ?? gespeichert?.proManager?.get(id) ?? null;
 
       // Die Spieler kommen aus der **Live-Antwort**, nicht aus dem Kader:
       // Kickbase weiß am besten, wer heute für diesen Manager punktet.
@@ -133,7 +142,9 @@ export default async function Live({ searchParams }) {
   const schnitt = mitWerten.length
     ? Math.round(mitWerten.reduce((s, z) => s + z.punkte, 0) / mitWerten.length)
     : null;
-  const jeSpieler = (live?.spieler?.size ?? 0) > 0;
+  const jeSpieler =
+    (live?.spieler?.size ?? 0) > 0 || (gespeichert?.proManager?.size ?? 0) > 0;
+  const pfadBekannt = Boolean(merkzettel?.spielerPfad);
 
   // Bester Spieler der ganzen Liga — die Frage, die man am Spieltag als
   // Erstes stellt.
@@ -225,16 +236,21 @@ export default async function Live({ searchParams }) {
             </Hinweis>
           )}
 
-          {!jeSpieler && (
+          {(!jeSpieler || pfadBekannt) && (
             <form
               method="POST"
-              action={`/api/live?league=${leagueId}&zurueck=1`}
+              action={`/api/live?league=${leagueId}&zurueck=1${pfadBekannt ? "&punkte=1" : ""}`}
               style={{ marginBottom: 12 }}
             >
               <button className="kb-btn kb-btn--klein" type="submit">
-                Nach Einzelpunkten suchen
+                {pfadBekannt ? "Einzelpunkte holen" : "Nach Einzelpunkten suchen"}
               </button>
-              <span className="kb-leise"> · probiert einige Endpunkte durch, rund 15 Aufrufe</span>
+              <span className="kb-leise">
+                {pfadBekannt
+                  ? ` · ein Aufruf je Manager (${zeilen.length})`
+                  : " · probiert einige Endpunkte durch, wenige Aufrufe"}
+                {gespeichert?.stand ? ` · zuletzt ${zeitpunkt(gespeichert.stand)}` : ""}
+              </span>
             </form>
           )}
 
