@@ -4,7 +4,7 @@ import { verlangeLiga, sitzung } from "@/lib/auth";
 import { initSchema, getKader, getSettings } from "@/lib/db";
 import { holeMitspieler } from "@/lib/mitspieler";
 import { holeLivestand, bekannterLivePfad } from "@/lib/liveabruf";
-import { zeitpunkt, posRang } from "@/lib/format";
+import { zeitpunkt, posRang, normalisiereSpieler } from "@/lib/format";
 import Hinweis from "@/app/_ui/Hinweis";
 import Auffrischen from "./Auffrischen";
 
@@ -43,32 +43,59 @@ export default async function Live({ searchParams }) {
   const zeilen = manager
     .map((m) => {
       const id = String(m.i);
-      const alle = kader.proManager.get(id) ?? [];
-      const elf = alle.filter((s) => s.aufgestellt);
-      const bank = alle.filter((s) => !s.aufgestellt);
+      const kaderListe = kader.proManager.get(id) ?? [];
+      const nachId = new Map(kaderListe.map((s) => [String(s.id), s]));
       const proSpieler = live?.spieler?.get(id) ?? null;
 
-      const punkteVon = (s) => (proSpieler?.has(s.id) ? proSpieler.get(s.id) : null);
-      const summe = (liste) => {
-        const werte = liste.map(punkteVon).filter((n) => n != null);
-        return werte.length ? werte.reduce((a, b) => a + b, 0) : null;
-      };
+      // Die Spieler kommen aus der **Live-Antwort**, nicht aus dem Kader:
+      // Kickbase weiß am besten, wer heute für diesen Manager punktet.
+      // Name und Position steuert der gespeicherte Kader bei; kennt er den
+      // Spieler nicht (frisch gekauft, Kader noch nicht aktualisiert),
+      // stehen sie in der Antwort selbst.
+      const spieler = proSpieler
+        ? [...proSpieler].map(([spielerId, eintrag]) => {
+            const bekannt = nachId.get(spielerId);
+            const ausAntwort = eintrag.roh ? normalisiereSpieler(eintrag.roh) : null;
+            return {
+              id: spielerId,
+              name: bekannt?.name ?? ausAntwort?.name ?? `Spieler #${spielerId}`,
+              position: bekannt?.position ?? ausAntwort?.position ?? null,
+              // Aufgestellt laut gespeichertem Kader. Wer dort gar nicht
+              // steht, bekommt kein Zeichen — nicht "auf der Bank".
+              aufgestellt: bekannt ? bekannt.aufgestellt : null,
+              punkte: eintrag.punkte,
+            };
+          })
+        : // Ohne Einzelpunkte wenigstens die gespeicherte Elf zeigen.
+          kaderListe
+            .filter((s) => s.aufgestellt)
+            .map((s) => ({ ...s, id: String(s.id), punkte: null, aufgestellt: true }));
 
-      // Kickbases eigene Zahl gewinnt. Die Summe der Elf ist nur Ersatz,
-      // wenn der Endpunkt für diesen Manager nichts meldet.
+      spieler.sort(
+        (a, b) =>
+          (b.punkte ?? -1) - (a.punkte ?? -1) ||
+          posRang(a.position) - posRang(b.position) ||
+          a.name.localeCompare(b.name, "de")
+      );
+
+      // Kickbases eigene Zahl gewinnt. Die Summe der Spieler ist nur
+      // Ersatz, wenn der Endpunkt für diesen Manager nichts meldet.
       const gemeldet = live?.punkte?.get(id);
+      const ausSpielern = proSpieler
+        ? [...proSpieler.values()].reduce((sum, e) => sum + e.punkte, 0)
+        : null;
 
       return {
         id,
         name: m.n,
-        punkte: gemeldet ?? summe(elf),
-        elf: elf
-          .map((s) => ({ ...s, live: punkteVon(s) }))
-          .sort(
-            (a, b) => (b.live ?? -1) - (a.live ?? -1) || posRang(a.position) - posRang(b.position)
-          ),
-        bankPunkte: summe(bank),
-        aufgestellt: elf.length,
+        punkte: gemeldet ?? ausSpielern,
+        spieler,
+        // Wie viele Spieler die Antwort für ihn führt – nicht dasselbe wie
+        // die Kadergröße, und genau deshalb einen eigenen Wert wert.
+        gezaehlt: proSpieler?.size ?? null,
+        ausSpielern,
+        gemeldet: gemeldet ?? null,
+        aufgestellt: kaderListe.filter((s) => s.aufgestellt).length,
         saison: Number(m.sp ?? 0),
       };
     })
@@ -85,6 +112,13 @@ export default async function Live({ searchParams }) {
     ? Math.round(mitWerten.reduce((s, z) => s + z.punkte, 0) / mitWerten.length)
     : null;
   const jeSpieler = (live?.spieler?.size ?? 0) > 0;
+
+  // Bester Spieler der ganzen Liga — die Frage, die man am Spieltag als
+  // Erstes stellt.
+  const besterSpieler = zeilen
+    .flatMap((z) => z.spieler.map((s) => ({ ...s, manager: z.name })))
+    .filter((s) => s.punkte != null)
+    .sort((a, b) => b.punkte - a.punkte)[0] ?? null;
 
   return (
     <main className="kb-seite">
@@ -144,6 +178,13 @@ export default async function Live({ searchParams }) {
               <span className="kb-label">Mit Live-Wert</span>
               <strong>{mitWerten.length} von {zeilen.length}</strong>
             </div>
+            {besterSpieler && (
+              <div>
+                <span className="kb-label">Bester Spieler</span>
+                <strong>{besterSpieler.name} · {besterSpieler.punkte}</strong>
+                <span className="kb-leise kb-unterzeile">{besterSpieler.manager}</span>
+              </div>
+            )}
           </div>
 
           {!jeSpieler && (
@@ -152,10 +193,13 @@ export default async function Live({ searchParams }) {
               titel="Nur Managersummen, keine Einzelspieler"
               kurz="Der Endpunkt meldet Punkte je Manager, aber keine je Spieler."
             >
-              In der Antwort findet sich keine Liste, in der die Spieler-IDs aus den
-              gespeicherten Kadern mit Punkten stehen. Die Aufklappzeile zeigt deshalb die
-              Aufstellung ohne Einzelpunkte. Welche Felder die Antwort tatsächlich führt,
-              steht auf <Link href={`/livepunkte?league=${leagueId}`}>der Diagnoseseite</Link>.
+              Gesucht wurde auf zwei Wegen: im Eintrag jedes Managers nach einer Liste
+              mit Spieler-IDs und Punkten, und in der ganzen Antwort nach den Spieler-IDs
+              aus den gespeicherten Kadern. Beides bleibt leer — die Antwort führt die
+              Punkte offenbar nur je Manager. Die Aufklappzeile zeigt deshalb die
+              gespeicherte Aufstellung ohne Einzelpunkte. Welche Felder die Antwort
+              tatsächlich trägt, steht auf{" "}
+              <Link href={`/livepunkte?league=${leagueId}`}>der Diagnoseseite</Link>.
             </Hinweis>
           )}
 
@@ -167,8 +211,7 @@ export default async function Live({ searchParams }) {
                   <th className="kb-namensspalte">Manager</th>
                   <th>Live</th>
                   <th>Rückstand</th>
-                  <th className="kb-sek">Elf</th>
-                  <th className="kb-sek">Bank</th>
+                  <th className="kb-sek">Spieler</th>
                   <th className="kb-sek">Saison</th>
                 </tr>
               </thead>
@@ -189,16 +232,35 @@ export default async function Live({ searchParams }) {
                             )}
                           </summary>
                           <ul className="kb-elfliste">
-                            {z.elf.length === 0 && (
-                              <li className="kb-leise">Keine Aufstellung gespeichert</li>
+                            {z.spieler.length === 0 && (
+                              <li className="kb-leise">Keine Spieler gemeldet</li>
                             )}
-                            {z.elf.map((s) => (
+                            {z.spieler.map((s) => (
                               <li key={s.id}>
-                                <span className="kb-leise">{s.position}</span> {s.name}
-                                {s.live != null && <strong>{s.live}</strong>}
+                                {/* ● aufgestellt, ○ nicht – wie auf der
+                                    Managerseite. Wen der gespeicherte
+                                    Kader nicht kennt, bekommt kein
+                                    Zeichen statt eines geratenen. */}
+                                <span className="kb-leise" title={
+                                  s.aufgestellt === null
+                                    ? "nicht im gespeicherten Kader"
+                                    : s.aufgestellt ? "aufgestellt" : "Bank"
+                                }>
+                                  {s.aufgestellt === null ? "·" : s.aufgestellt ? "●" : "○"}
+                                </span>
+                                <span className="kb-leise">{s.position ?? "?"}</span>
+                                <span className="kb-livename">{s.name}</span>
+                                {s.punkte != null && <strong>{s.punkte}</strong>}
                               </li>
                             ))}
                           </ul>
+                          {z.gemeldet != null && z.ausSpielern != null &&
+                           z.gemeldet !== z.ausSpielern && (
+                            <p className="kb-leise">
+                              Summe der Spieler: {z.ausSpielern} — Kickbase meldet {z.gemeldet}.
+                              Angezeigt wird Kickbases Zahl.
+                            </p>
+                          )}
                           <Link href={`/liga/manager/${z.id}?league=${leagueId}`}>
                             → Managerseite
                           </Link>
@@ -212,8 +274,7 @@ export default async function Live({ searchParams }) {
                             ? "—"
                             : `−${fuehrend - z.punkte}`}
                       </td>
-                      <td className="kb-sek">{z.aufgestellt}</td>
-                      <td className="kb-sek kb-leise">{z.bankPunkte ?? "–"}</td>
+                      <td className="kb-sek">{z.gezaehlt ?? z.aufgestellt}</td>
                       <td className="kb-sek kb-leise">{z.saison}</td>
                     </tr>
                   );

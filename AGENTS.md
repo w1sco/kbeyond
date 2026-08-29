@@ -488,6 +488,32 @@ Zwei Regeln, die den Fund erst brauchbar machen:
 - **Zwei Treffer sind das Minimum.** Eine Liste, in der genau eine bekannte ID
   vorkommt, ist Zufall — und ein zufälliges Feldpaar verdirbt alle anderen.
 
+### Die Einzelpunkte stehen im Eintrag des Managers
+
+Erst wurden sie über die Spieler-IDs aus dem **gespeicherten Kader** gesucht.
+Das trägt nur, solange beide Seiten dieselben IDs führen — ist der Kader einen
+Transfer alt oder schneidet Kickbase die IDs anders, bleibt die Spalte leer,
+obwohl die Zahlen in der Antwort stehen.
+
+Verlässlicher ist der Eintrag des Managers selbst: Was darin als Liste von
+Einträgen mit ID und Punktzahl steht, sind seine Spieler. `spielerImEintrag()`
+braucht unseren Kader dafür **gar nicht**; der steuert nur Name, Position und
+das Aufstellungszeichen bei. Kennt er einen Spieler nicht, kommen Name und
+Position aus der Antwort — und das Zeichen entfällt, statt „Bank" zu raten.
+
+Der stärkste Hinweis auf das richtige Feld ist der **Name der Managersumme**:
+Kickbase benennt beide Ebenen gleich (`mdp` über `mdp`). Deshalb gewinnt ein
+Feld, das genauso heißt, gegen jeden anderen Kandidaten — und nur ein solches
+Feld darf auch dann zählen, wenn alle Werte gleich sind. Vor dem Anpfiff stehen
+alle Spieler auf 0; das ist echt und keine zufällige Nullspalte.
+
+Der Weg über den Kader bleibt als **zweiter** Versuch, falls eine Antwort die
+Spieler nicht beim Manager führt, sondern in einer eigenen Liste.
+
+Angezeigt wird immer **Kickbases eigene Managersumme**, nicht die Summe der
+Spieler. Weichen beide ab, sagt die Zeile das — der Unterschied ist eine
+Information (Bank, noch nicht gewertete Spiele), kein Fehler zum Verstecken.
+
 ### Die Spielerlisten hängen je Manager einzeln im Baum
 
 `players[0].pl`, `players[1].pl`, … — jede ist ein eigener Fund.

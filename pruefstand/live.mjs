@@ -1,5 +1,5 @@
 // Findet die Live-Punkte-Suche das Richtige — und schweigt sie, wenn nichts da ist?
-import { findePunkte, besterFund, sammleTreffer, LIVE_PFADE } from "../lib/live.js";
+import { findePunkte, besterFund, sammleTreffer, spielerImEintrag, LIVE_PFADE } from "../lib/live.js";
 
 let ok = 0, fehler = 0;
 const pruefe = (name, ist, soll) => {
@@ -103,6 +103,49 @@ const rein = sammleTreffer(gemischt, ["x","y","z","q"]);
 pruefe("nur ein Feldpaar", [...(rein?.treffer ?? [])].map(([k]) => k).sort(), ["x","y"]);
 
 pruefe("sammleTreffer ohne Fund", sammleTreffer({}, IDS), null);
+
+// ── Die Spieler im Eintrag des Managers ────────────────────────────
+
+// 16) Der Normalfall: Liste beim Manager, gleiches Punktefeld wie oben
+const eintrag = { u: "111", mdp: 80, tv: 180000000, pl: [
+  { pi: "a", pn: "Neuer", mdp: 17, mv: 9000000 },
+  { pi: "b", pn: "Tah",   mdp: 20, mv: 12000000 },
+] };
+const e16 = spielerImEintrag(eintrag, "mdp");
+pruefe("Spieler im Eintrag", e16?.spieler.map((s) => [s.id, s.punkte]), [["a",17],["b",20]]);
+pruefe("Punktefeld übernommen", e16?.punkteFeld, "mdp");
+
+// 17) Der Marktwert darf nicht als Punktzahl durchgehen
+pruefe("nicht der Marktwert", e16?.spieler.every((s) => s.punkte < 100), true);
+
+// 18) Vor dem Anpfiff stehen alle auf 0 – das ist echt, wenn das Feld so
+//     heißt wie die Managersumme.
+const vorher = { u: "111", mdp: 0, pl: [ { pi: "a", mdp: 0 }, { pi: "b", mdp: 0 } ] };
+pruefe("alle 0 im gleichen Feld zählt", spielerImEintrag(vorher, "mdp")?.spieler.length, 2);
+
+// 19) Eine Nullspalte unter anderem Namen zählt nicht
+const nullspalte = { u: "111", mdp: 0, pl: [ { pi: "a", x: 0, mdp: 3 }, { pi: "b", x: 0, mdp: 5 } ] };
+pruefe("Nullspalte verliert", spielerImEintrag(nullspalte, "mdp")?.punkteFeld, "mdp");
+
+// 20) Tiefer verschachtelt
+const tiefEin = { u: "111", mdp: 80, t: { lineup: { it: [
+  { i: "a", p: 5 }, { i: "b", p: 9 },
+] } } };
+pruefe("tief verschachtelt", spielerImEintrag(tiefEin, "mdp")?.spieler.length, 2);
+
+// 21) Nichts Passendes → nichts
+pruefe("kein Spielerarray", spielerImEintrag({ u: "111", mdp: 80 }, "mdp"), null);
+pruefe("kein Objekt", spielerImEintrag(null, "mdp"), null);
+pruefe("Einzelspieler zählt nicht", spielerImEintrag({ pl: [ { pi: "a", mdp: 3 } ] }, "mdp"), null);
+
+// 22) Die Rohdaten kommen mit – daraus holt die Seite Name und Position,
+//     wenn der gespeicherte Kader den Spieler nicht kennt.
+pruefe("Rohdaten dabei", e16?.spieler[0].roh.pn, "Neuer");
+
+// 23) Einträge werden mitgeführt, damit man in sie hineingreifen kann
+const mitEintraegen = besterFund(
+  { us: [ { i: "111", p: 42, pl: [] }, { i: "222", p: 17, pl: [] } ] }, IDS);
+pruefe("Einträge mitgeführt", mitEintraegen?.eintraege?.get("111")?.p, 42);
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

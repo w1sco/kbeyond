@@ -168,7 +168,12 @@ function fuerPfad(pfad) {
           players: MANAGER.filter((m) => !m.adm || process.env.KB_ADMIN_SPIELT === "1")
             .map((m, i) => ({
               u: String(m.i), unm: m.n, mdp: 80 - i * 17, tv: m.tv,
-              pl: spieler(m.i, 20 - i * 4),
+              // Mit KB_LIVE_NUR_SUMMEN=1 fehlen die Spielerlisten. Die
+              // Seite muss das dann sagen und die gespeicherte Elf ohne
+              // Einzelpunkte zeigen – nicht einfach leer bleiben.
+              ...(process.env.KB_LIVE_NUR_SUMMEN === "1"
+                ? {}
+                : { pl: spieler(m.i, 20 - i * 4) }),
             })),
         },
       },

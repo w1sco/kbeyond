@@ -113,7 +113,11 @@ verschachtelt (`d.ranking.players`), mit `u` als Manager-ID, `mdp` als
 Punktefeld und einem Marktwert direkt daneben. Keiner dieser Namen steht im
 Code: Wer Feldnamen rät statt zu suchen, fällt hier durch.
 
-Ohne das Flag antwortet der Endpunkt mit 404 — der Normalfall zwischen zwei
+`KB_LIVE_NUR_SUMMEN=1` lässt die Spielerlisten weg: Der Endpunkt meldet dann
+nur Punkte je Manager. Die Seite muss das **sagen** und trotzdem die
+gespeicherte Elf zeigen — ohne Einzelpunkte, aber nicht leer.
+
+Ohne `KB_LIVE` antwortet der Endpunkt mit 404 — der Normalfall zwischen zwei
 Spieltagen. Die Live-Seite muss das dann **sagen** und darf keine Tabelle
 voller Nullen zeigen.
 

@@ -1592,19 +1592,41 @@ th.kb-namensspalte { z-index: 3; }
   font-weight: 400;
 }
 
+/* Die aufgeklappte Liste bestimmt die Breite der Namensspalte. Ohne
+   Deckel wächst sie mit dem längsten Namen, schiebt die Zahlenspalten aus
+   dem Bild und die Einzelpunkte werden auf dem Handy abgeschnitten. */
+.kb-elfliste { max-width: 300px; }
+
 .kb-elfliste li {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
   align-items: baseline;
   gap: 6px;
   padding: 2px 0;
   white-space: nowrap;
 }
 
-/* Die Punktzahl rechts, damit die Spalte trotz verschieden langer Namen
-   eine Kante hat. */
-.kb-elfliste li > strong { margin-left: auto; }
+/* Der Name gibt nach, nicht die Punktzahl: `1fr` plus `min-width: 0`,
+   sonst wächst ein Grid-Feld immer bis zu seinem Inhalt. */
+.kb-livename {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Beim Aufklappen wächst die Namensspalte. Die Zahlen sollen dann oben
    neben dem Namen stehen bleiben und nicht in die Mitte der Aufstellung
    rutschen. */
 .kb-livetabelle td { vertical-align: top; }
+
+/* Zweite Zeile unter einer Kennzahl (etwa der Manager des besten
+   Spielers). `kb-label` bringt Versalien mit – hier soll es nur eine
+   leise Zeile darunter sein. */
+.kb-unterzeile { display: block; }
+
+@media (max-width: 640px) {
+  /* Auf dem Handy bleibt neben Rang, Live und Rückstand weniger Platz. */
+  .kb-elfliste,
+  .kb-elfauf > p { max-width: calc(100vw - 150px); }
+  .kb-elfauf > p { white-space: normal; }
+}

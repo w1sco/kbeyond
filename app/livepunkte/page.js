@@ -104,6 +104,14 @@ export default async function Livepunkte({ searchParams }) {
                   ))}
                 </tbody>
               </table></div>
+              <p className="kb-leise">
+                {f.spieler
+                  ? `Einzelpunkte je Spieler: ${f.spieler.spieler.length} im Eintrag des ersten Managers, Feld ${f.spieler.punkteFeld} — Probe: ${f.spieler.spieler
+                      .slice(0, 3)
+                      .map((s) => `${s.id}: ${s.punkte}`)
+                      .join(" · ")}`
+                  : "Keine Spielerliste im Eintrag eines Managers — die Live-Seite kann für diesen Endpunkt nur Managersummen zeigen."}
+              </p>
             </div>
           ))
         )}
