@@ -147,5 +147,36 @@ const mitEintraegen = besterFund(
   { us: [ { i: "111", p: 42, pl: [] }, { i: "222", p: 17, pl: [] } ] }, IDS);
 pruefe("Einträge mitgeführt", mitEintraegen?.eintraege?.get("111")?.p, 42);
 
+// 24) Ein unbekannter Name fürs ID-Feld darf die Liste nicht durchfallen
+//     lassen. Eine ID erkennt man daran, dass sie je Eintrag verschieden
+//     ist — nicht daran, wie sie heißt.
+const fremdeId = { u: "111", mdp: 80, pl: [
+  { playerId: "a", pn: "Neuer", mdp: 17 },
+  { playerId: "b", pn: "Tah",   mdp: 20 },
+] };
+const e24 = spielerImEintrag(fremdeId, "mdp");
+pruefe("unbekanntes ID-Feld", e24?.idFeld, "playerId");
+pruefe("Punkte trotzdem da", e24?.spieler.map((s) => s.punkte), [17, 20]);
+
+// 25) Bekannte Namen gewinnen, wenn beides eindeutig ist
+const beide = { pl: [
+  { pi: "a", slot: "1", mdp: 5 }, { pi: "b", slot: "2", mdp: 9 },
+] };
+pruefe("bekannter Name gewinnt", spielerImEintrag(beide, "mdp")?.idFeld, "pi");
+
+// 26) Aber eine beliebige Zahl wird NICHT zur Punktzahl. Das Punktefeld
+//     bleibt am Namen verankert — eine falsche Zahl ist schlimmer als keine.
+const nurUnsinn = { pl: [
+  { pid: "a", hoehe: 180, gewicht: 75 },
+  { pid: "b", hoehe: 175, gewicht: 70 },
+] };
+pruefe("keine erfundenen Punkte", spielerImEintrag(nurUnsinn, "mdp"), null);
+
+// 27) Tiefer als vier Ebenen wird auch noch gefunden
+const sehrTief = { a: { b: { c: { d: { pl: [
+  { pi: "x", mdp: 3 }, { pi: "y", mdp: 8 },
+] } } } } };
+pruefe("sechs Ebenen tief", spielerImEintrag(sehrTief, "mdp")?.spieler.length, 2);
+
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

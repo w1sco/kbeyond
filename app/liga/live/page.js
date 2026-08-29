@@ -203,6 +203,22 @@ export default async function Live({ searchParams }) {
             </Hinweis>
           )}
 
+          {!jeSpieler && live?.probe && (
+            <details className="kb-karte">
+              <summary>
+                Woran liegt es? — ein Managereintrag im Rohzustand
+              </summary>
+              <p className="kb-leise">
+                Das ist die Antwort, die gerade vorliegt. Sie kostet keinen
+                zusätzlichen Aufruf. Daran lässt sich ablesen, unter welchem Feld die
+                Einzelpunkte stehen — oder ob sie gar nicht mitkommen.
+              </p>
+              <pre className="kb-roh">
+                {JSON.stringify(live.probe, null, 2).slice(0, 4000)}
+              </pre>
+            </details>
+          )}
+
           <div className="kb-tabellenrahmen">
             <table className="kb-tabelle kb-livetabelle">
               <thead>

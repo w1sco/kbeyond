@@ -510,6 +510,21 @@ alle Spieler auf 0; das ist echt und keine zufällige Nullspalte.
 Der Weg über den Kader bleibt als **zweiter** Versuch, falls eine Antwort die
 Spieler nicht beim Manager führt, sondern in einer eigenen Liste.
 
+**Das ID-Feld wird nicht am Namen erkannt.** Erst galten nur `pi`, `i` und `id`.
+Heißt es anders (`pid`, `playerId`, …), fiel die ganze Liste durch und die
+Einzelpunkte blieben leer, obwohl sie in der Antwort standen. Eine ID erkennt man
+aber an ihrer Eigenschaft: **je Eintrag verschieden**. Bekannte Namen gewinnen,
+alles andere kommt danach.
+
+**Das Punktefeld bleibt dagegen am Namen verankert** — es zählt nur ein Feld, das
+so heißt wie die Managersumme oder nach Punkten klingt. Sonst würde jede Zahl im
+Eintrag (Größe, Gewicht, Trikotnummer) zur Punktzahl, und eine falsche Zahl ist
+hier schlimmer als gar keine: Danach entscheidet jemand.
+
+**Findet sich nichts, zeigt die Seite einen Managereintrag im Rohzustand.** Die
+Antwort liegt ohnehin vor — das kostet keinen zusätzlichen Aufruf und beantwortet
+die Frage, woran es liegt, ohne die Diagnoseseite mit ihren vierzehn Aufrufen.
+
 Angezeigt wird immer **Kickbases eigene Managersumme**, nicht die Summe der
 Spieler. Weichen beide ab, sagt die Zeile das — der Unterschied ist eine
 Information (Bank, noch nicht gewertete Spiele), kein Fehler zum Verstecken.
