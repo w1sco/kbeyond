@@ -105,3 +105,20 @@ PetzS"), nicht nur zählen — sonst weiß man nicht, wo man nachsehen soll.
 Er prüft, ob Seiten **rendern** — nicht, ob die Zahlen stimmen. Dafür sind
 die einzelnen Durchrechnungen da (Rhythmus, Aufschlag, Verlauf), die ohne
 Datenbank auskommen.
+
+## KB_LIVE
+
+`KB_LIVE=1` lässt **einen** der Live-Kandidaten antworten — bewusst
+verschachtelt (`d.ranking.players`), mit `u` als Manager-ID, `mdp` als
+Punktefeld und einem Marktwert direkt daneben. Keiner dieser Namen steht im
+Code: Wer Feldnamen rät statt zu suchen, fällt hier durch.
+
+Ohne das Flag antwortet der Endpunkt mit 404 — der Normalfall zwischen zwei
+Spieltagen. Die Live-Seite muss das dann **sagen** und darf keine Tabelle
+voller Nullen zeigen.
+
+```bash
+# Endpunkt einmal suchen lassen (sonst steht die Seite auf "noch nicht bestimmt")
+curl -s --noproxy '*' -X POST -b "kb_token=pruef" -H "Origin: http://localhost:3300" \
+  "http://localhost:3300/api/live?league=1"
+```

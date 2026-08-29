@@ -462,6 +462,77 @@ In der Anweisung steht ausdrücklich, dass ein Spieler ohne Meldung ein gültige
 ist. Eine erfundene Verletzungsmeldung wäre hier deutlich schädlicher als eine leere Zeile
 — danach würde jemand verkaufen.
 
+## Live-Punkte am Spieltag
+
+`/liga/live` zeigt während eines Spieltags, was die Elf jedes Managers gerade
+holt — Managersumme, Rückstand auf den Führenden, und aufgeklappt die
+Aufstellung mit den Einzelpunkten.
+
+### Der Endpunkt wird gesucht, nicht geraten
+
+Wo Kickbase die Live-Punkte ausliefert, ist **nicht belegt**. Geraten wird
+deshalb nicht: Wir kennen die **Manager-IDs dieser Liga**, und das genügt als
+Anker. `findePunkte()` durchsucht die Antwort nach einer Liste, deren Einträge
+genau diese IDs tragen, und nimmt daneben ein Feld, dessen Werte wie Punkte
+aussehen. Findet sich nichts, kommt nichts zurück.
+
+Das ist derselbe Weg wie bei `findeWertreihe()` und `findeSpielerListe()` — und
+er trägt: In der Attrappe heißt das ID-Feld `u` und das Punktefeld `mdp`, beide
+verschachtelt unter `d.ranking.players`, mit einem Marktwert direkt daneben.
+Kein einziger dieser Namen steht im Code.
+
+Zwei Regeln, die den Fund erst brauchbar machen:
+
+- **Ein Feld, in dem überall dasselbe steht, ist kein Punktestand.** Sonst
+  gewinnt vor dem Anpfiff irgendeine Nullspalte.
+- **Zwei Treffer sind das Minimum.** Eine Liste, in der genau eine bekannte ID
+  vorkommt, ist Zufall — und ein zufälliges Feldpaar verdirbt alle anderen.
+
+### Die Spielerlisten hängen je Manager einzeln im Baum
+
+`players[0].pl`, `players[1].pl`, … — jede ist ein eigener Fund.
+`sammleTreffer()` führt alle Funde **desselben Feldpaars** zusammen. Der erste
+Anlauf nahm nur den besten und zeigte damit die Elf eines einzigen Managers,
+während alle anderen als „keine Daten" dastanden.
+
+Aus demselben Grund läuft die Suche über **alle** Einträge einer Liste. Eine
+Abkürzung auf die ersten drei sah in der Attrappe richtig aus und hätte ab dem
+vierten Manager nichts mehr gefunden.
+
+### Gesucht wird auf Klick, gelesen wird mit einem Aufruf
+
+Die Suche kostet bis zu elf Anfragen. Sie läuft deshalb **nur über
+`/api/live` per POST**, nie beim Rendern — genau der Fehler, der beim
+Spielerpool schon einmal 19 Anfragen in einen Seitenaufruf gelegt hat.
+
+Der gefundene Pfad steht in `pool_cache` unter `live_pfad`. Danach kostet ein
+Seitenaufruf einen Aufruf. Kader und Aufstellung kommen aus der Datenbank und
+kosten nichts.
+
+**Automatisch aufgefrischt wird nur auf Wunsch**, höchstens einmal je Minute
+und mit sichtbarem Countdown. Vorbelegt ist aus.
+
+### Zwischen zwei Spieltagen sieht das anders aus
+
+Dann antwortet der Endpunkt nicht oder trägt die IDs nicht mehr. Die Seite sagt
+das (`liefert gerade keine Punkte`), statt eine Tabelle voller Nullen zu zeigen
+— eine Null ist hier nicht von „kein Spieltag" zu unterscheiden.
+
+Aus demselben Grund ist die Suche nur **während** eines Spieltags
+aussagekräftig, und die Diagnoseseite `/livepunkte?league=…` sagt das oben
+ausdrücklich. Sie zeigt alle Kandidaten mit Fund, Feldnamen und einer Probe.
+
+### Was die Seite nicht weiß
+
+Ob ein Spiel läuft, schon vorbei ist oder noch nicht angepfiffen wurde. Ein
+Spieler mit 0 Punkten kann gespielt und nichts geholt haben oder noch gar nicht
+dran gewesen sein. Es steht deshalb nirgends „x von 11 fertig" — das wäre
+geraten.
+
+Die **Aufstellung stammt aus der Datenbank**. Wer seine Elf seit dem letzten
+Aktualisieren geändert hat, steht hier noch mit der alten; die Seite sagt das
+unter der Tabelle.
+
 ## Wann kommt ein Spieler wieder auf den Markt?
 
 Spieler kehren nach einem festen Rhythmus zurück, anfangs etwa alle 14 Tage. Der Rhythmus
@@ -741,12 +812,16 @@ app/
   liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
   liga/news/page.js                Spieler-News: eigener Kader und Transfermarkt
   liga/news/Newsliste.jsx          "use client" — Recherche in Bündeln, Fortschritt
+  liga/live/page.js                Live-Punkte am Spieltag, je Manager und Spieler
+  liga/live/Auffrischen.jsx        "use client" — von Hand oder alle 60 s
+  livepunkte/page.js               Diagnose: welcher Endpunkt liefert Live-Punkte
   _ui/Hinweis.jsx                  "use client" — Hinweis als anklickbares Popup
   _ui/Schublade.jsx                "use client" — Off-Canvas, schließt über den Verlauf
   liga/layout.js                   children + paralleler Slot @panel
   liga/@panel/(.)manager/[id]/     fängt die Managerseite ab und zeigt sie als Schublade
   api/frag/route.js                Frage → Antwortstrom
   api/news/route.js                Ein Bündel Spieler recherchieren und ablegen
+  api/live/route.js                Live-Endpunkt suchen und merken
   api/modelle/route.js             Modellliste beim Anbieter erfragen
   api/aktualisieren/route.js       Feed, Markt, Marktwerte, Teamwerte, Kader, Historie
   marktwert/page.js                Diagnose: welcher Endpunkt liefert die Marktwert-Historie
@@ -776,6 +851,8 @@ lib/
   verlauf.js        tagesraster(), tagesreihen() — Tagesstützstellen 0 Uhr
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
+  live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
+  liveabruf.js      holeLivestand(), sucheLivePfad() — Live-Stand holen und merken
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
                     holeLigen(), istAbgelaufen() — Zugriffsschutz
   kader.js          ladeKader(), ladeAufstellungen() — Kader und Startelf

@@ -150,6 +150,31 @@ function fuerPfad(pfad) {
     };
   }
 
+  // Live-Punkte am Spieltag. Mit KB_LIVE=1 antwortet **einer** der
+  // Kandidaten – so lässt sich prüfen, dass die Suche ihn findet, sich den
+  // Pfad merkt und die Seite danach nur noch einen Aufruf macht.
+  //
+  // Bewusst verschachtelt und mit Ablenkung: Der Manager heißt hier `u`,
+  // nicht `i`, die Punkte `mdp`, und daneben steht ein Marktwert. Wer
+  // Feldnamen rät statt zu suchen, fällt hier durch.
+  if (process.env.KB_LIVE === "1" && pfad.includes(`/leagues/${LIGA}/live`)) {
+    const spieler = (uid, punkte) =>
+      vollerKader(String(uid)).slice(0, 11).map((s, i) => ({
+        pi: String(s.i), pn: s.n, mdp: Math.max(0, punkte - i * 3), mv: s.mv,
+      }));
+    return {
+      d: {
+        ranking: {
+          players: MANAGER.filter((m) => !m.adm || process.env.KB_ADMIN_SPIELT === "1")
+            .map((m, i) => ({
+              u: String(m.i), unm: m.n, mdp: 80 - i * 17, tv: m.tv,
+              pl: spieler(m.i, 20 - i * 4),
+            })),
+        },
+      },
+    };
+  }
+
   const squad = pfad.match(/\/managers\/(\d+)\/squad/);
   if (squad) {
     // Mit KB_ELF=1 trägt der Kader eine Aufstellung, kodiert wie bei

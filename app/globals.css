@@ -1560,3 +1560,51 @@ th.kb-namensspalte { z-index: 3; }
   .kb-marke { display: none; }
   .kb-detailgitter { grid-template-columns: 1fr; }
 }
+
+/* ------------------------------------------------------------------
+   Live-Punkte
+   ------------------------------------------------------------------ */
+
+.kb-livekopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Die Aufstellung klappt in der Namensspalte auf. `summary` bringt einen
+   eigenen Marker mit, der links Platz frisst – der Name soll aber bündig
+   mit den übrigen Zeilen stehen. */
+.kb-elfauf > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 500;
+}
+.kb-elfauf > summary::-webkit-details-marker { display: none; }
+.kb-elfauf > summary::before { content: "+ "; color: var(--kb-text-leise); }
+.kb-elfauf[open] > summary::before { content: "− "; }
+
+.kb-elfliste {
+  margin: 8px 0 6px;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.kb-elfliste li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+/* Die Punktzahl rechts, damit die Spalte trotz verschieden langer Namen
+   eine Kante hat. */
+.kb-elfliste li > strong { margin-left: auto; }
+
+/* Beim Aufklappen wächst die Namensspalte. Die Zahlen sollen dann oben
+   neben dem Namen stehen bleiben und nicht in die Mitte der Aufstellung
+   rutschen. */
+.kb-livetabelle td { vertical-align: top; }
