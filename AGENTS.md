@@ -548,6 +548,25 @@ Aus demselben Grund ist die Suche nur **während** eines Spieltags
 aussagekräftig, und die Diagnoseseite `/livepunkte?league=…` sagt das oben
 ausdrücklich. Sie zeigt alle Kandidaten mit Fund, Feldnamen und einer Probe.
 
+**Auch die Diagnoseseite läuft erst auf Klick** (`&suchen=1`). Sie probiert elf
+Endpunkte durch, dazu Rangliste und Kader: 14 Aufrufe — und die fielen vorher bei
+**jedem Öffnen** an, Neuladen inklusive. Ein paar Neuladungen reichen, um in
+Kickbases Drosselung zu laufen; genau daran ist die App einmal ausgefallen. Offen
+kostet die Seite jetzt einen Aufruf (die Mitgliedsprüfung).
+
+Gemessen mit `KB_ZAEHLEN=1`, das jeden Aufruf der Attrappe protokolliert:
+
+| Seite | Aufrufe |
+|---|---|
+| `/liga/live` | 3 |
+| `/liga?league=…` | 4 |
+| `/livepunkte` (offen) | 1 |
+| `/livepunkte&suchen=1` | 14 |
+
+**Diese Regel gilt für alle Diagnoseseiten**, nicht nur für diese: Was mehr als
+eine Handvoll Aufrufe kostet, gehört hinter einen Knopf. Die übrigen Diagnoseseiten
+sind noch nicht umgestellt.
+
 ### Was die Seite nicht weiß
 
 Ob ein Spiel läuft, schon vorbei ist oder noch nicht angepfiffen wurde. Ein

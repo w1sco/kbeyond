@@ -27,6 +27,42 @@ export default async function Livepunkte({ searchParams }) {
 
   await verlangeLiga(leagueId, token);
 
+  // ── Erst auf Klick, nicht beim Öffnen ─────────────────────────────
+  //
+  // Diese Seite probiert elf Endpunkte durch, dazu Rangliste und Kader:
+  // **14 Aufrufe**. Vorher lief das beim Rendern — jedes Neuladen kostete
+  // sie erneut, und ein paar Neuladungen reichen, um in Kickbases
+  // Drosselung zu laufen. Genau daran ist die App einmal ausgefallen.
+  //
+  // Ein GET ist hier vertretbar, weil nichts geschrieben wird; entscheidend
+  // ist, dass niemand die Aufrufe versehentlich auslöst.
+  const losgehen = p.suchen === "1";
+
+  if (!losgehen) {
+    return (
+      <main className="kb-seite kb-seite--schmal">
+        <DiagnoseKopf titel="Live-Punkte: wo stehen sie?" leagueId={leagueId} />
+        <section className="kb-karte">
+          <p>
+            Diese Suche probiert <strong>elf Endpunkte</strong> durch und kostet zusammen
+            rund <strong>14 Kickbase-Aufrufe</strong>. Sie läuft deshalb erst auf Klick und
+            nicht beim Öffnen der Seite.
+          </p>
+          <p className="kb-leise">
+            Aussagekräftig ist sie nur, <strong>während ein Spieltag läuft</strong>. Vorher
+            stehen alle Live-Punkte auf 0 und sind von einer leeren Spalte nicht zu
+            unterscheiden.
+          </p>
+          <p>
+            <Link href={`/livepunkte?league=${leagueId}&suchen=1`} className="kb-btn">
+              Suche starten
+            </Link>
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   // Die echten Manager-IDs sind der Anker der ganzen Suche.
   let managerIds = [];
   let namen = new Map();

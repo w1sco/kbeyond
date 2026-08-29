@@ -18,6 +18,7 @@ const SEITEN = [
   ["News",               `/liga/news?league=${LIGA}`],
   ["Live-Punkte",        `/liga/live?league=${LIGA}`],
   ["Live-Diagnose",      `/livepunkte?league=${LIGA}`],
+  ["Live-Diagnose Suche", `/livepunkte?league=${LIGA}&suchen=1`],
   ["Einstellungen",      `/liga/einstellungen?league=${LIGA}`],
   ["Marktwert-Diagnose", `/marktwert?league=${LIGA}`],
   ["Endpunkt-Vergleich", `/ligamonitor?league=${LIGA}`],

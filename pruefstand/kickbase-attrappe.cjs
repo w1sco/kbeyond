@@ -262,6 +262,12 @@ globalThis.fetch = async function (eingabe, init) {
 
   const pfad = url.replace(/^https?:\/\/api\.kickbase\.com/, "");
 
+  // Mit KB_ZAEHLEN=1 wird jeder Aufruf protokolliert. Damit lässt sich die
+  // Frage "wie viele Kickbase-Aufrufe kostet diese Seite?" beantworten,
+  // statt sie zu schätzen — und genau die kam auf, als der Nutzer in eine
+  // Drosselung lief.
+  if (process.env.KB_ZAEHLEN === "1") console.log(`[KB] ${pfad}`);
+
   // Mit KB_401=1 antwortet Kickbase auf alles mit 401 – so wie bei einem
   // abgelaufenen Token. Die Seiten müssen dann zur Anmeldung führen und
   // nicht mit einem Serverfehler sterben.

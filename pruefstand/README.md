@@ -140,3 +140,15 @@ mit HTTP 500 — und damit die ganze App, weil sie der Einstieg ist.
 Die Ursache lag tiefer: Die Sperre in `kbFetch` war ein `boolean`, den nur
 `/api/aktualisieren` zurückgesetzt hat. Eine warme Serverless-Instanz blieb
 danach dauerhaft gesperrt. `pruefstand/bremse.mjs` prüft, dass sie abläuft.
+
+## KB_ZAEHLEN
+
+`KB_ZAEHLEN=1` protokolliert jeden Aufruf an die Attrappe als `[KB] /v4/…`.
+Damit lässt sich die Frage „wie viele Kickbase-Aufrufe kostet diese Seite?"
+**beantworten** statt schätzen.
+
+```bash
+vorher=$(grep -c "^\[KB\]" dev.log)
+curl -s -o /dev/null -b "kb_token=pruef" "http://localhost:3300/liga/live?league=1"
+echo $(( $(grep -c "^\[KB\]" dev.log) - vorher ))
+```
