@@ -927,6 +927,36 @@ Die Bremse macht drei Dinge:
    sofort ab. Das ist der wichtigste Punkt: Vorher machte jeder Lader für sich weiter und
    hat die Drosselung damit verlängert.
 
+### Die Sperre läuft ab — sonst bleibt sie für immer
+
+Die Sperre war ein `boolean`, zurückgesetzt **nur** von `/api/aktualisieren`. Jeder andere
+Einstieg — also jeder Seitenaufruf — hat sie nie angefasst. Eine warme Serverless-Instanz,
+die einmal in eine Drosselung gelaufen war, brach danach **jede** weitere Anfrage sofort ab:
+Die Ligaauswahl antwortete mit HTTP 500, obwohl Kickbase längst wieder lieferte. Der Nutzer
+sah `A server error occurred` auf der Startseite.
+
+Statt eines Schalters steht dort jetzt ein **Zeitfenster** (`gedrosseltBis`, 60 s, oder
+`Retry-After` bis maximal 5 Minuten). Der laufende Lauf bricht weiterhin sofort ab — dafür
+ist die Sperre da —, aber eine Minute später darf es wieder jemand versuchen. Das heilt sich
+von selbst, ohne dass irgendwer daran denken muss.
+
+### Der Einstieg darf nie sterben
+
+Die Ligaauswahl ist die Seite, auf der alles anfängt. Stirbt sie, ist die App weg — und
+`verlangeLiga` leitet bei jedem Fehler genau dorthin. `holeLigen()` warf alles außer 401/403
+durch, also endete eine Drosselung in einem Serverfehler.
+
+Jetzt wird der Fehler **angezeigt statt geworfen**: „Kickbase drosselt gerade" mit einem
+Knopf zum Neuladen. Eine leere Ligaliste wäre die falsche Antwort — sie sähe aus wie „du
+bist in keiner Liga".
+
+> **Achtung beim Auffangen:** Next.js setzt eine Weiterleitung als geworfenen Fehler um. Ein
+> `catch` um `holeLigen()` verschluckt damit auch die Weiterleitung zur Anmeldung.
+> `istWeiterleitung()` in `lib/auth.js` erkennt sie am `digest` und lässt sie durch.
+
+Nachgemessen mit `KB_429=1`: `/`, `/liga`, `/liga?league=…` und `/liga/live` antworten alle
+mit 200 und sagen, was los ist.
+
 ### Nur holen, was sich geändert hat
 
 Kein Zeitfenster, sondern nachsehen. Ein erster Versuch mit „Teamwerte alle 6 Stunden, Kader

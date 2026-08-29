@@ -265,6 +265,13 @@ globalThis.fetch = async function (eingabe, init) {
   // Mit KB_401=1 antwortet Kickbase auf alles mit 401 – so wie bei einem
   // abgelaufenen Token. Die Seiten müssen dann zur Anmeldung führen und
   // nicht mit einem Serverfehler sterben.
+  // Mit KB_429=1 drosselt Kickbase alles – wie bei zu vielen Aufrufen.
+  // Keine Seite darf daran sterben: Ein Serverfehler auf der Ligaauswahl
+  // nimmt dem Nutzer die ganze App weg.
+  if (process.env.KB_429 === "1" && !pfad.includes("/user/login")) {
+    return antwort({ error: "too many requests" }, 429);
+  }
+
   if (process.env.KB_401 === "1" && !pfad.includes("/user/login")) {
     return antwort({ error: "token expired" }, 401);
   }

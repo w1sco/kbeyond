@@ -7,7 +7,7 @@ import Tabelle from "./Tabelle";
 import Frag from "./Frag";
 import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
-import { sitzung, verlangeLiga, holeLigen } from "@/lib/auth";
+import { sitzung, verlangeLiga, holeLigen, istWeiterleitung } from "@/lib/auth";
 import { tagesraster, tagesreihen } from "@/lib/verlauf";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holeMitspieler } from "@/lib/mitspieler";
@@ -23,20 +23,48 @@ export default async function Liga({ searchParams }) {
   if (!leagueId) {
     // Über holeLigen: Eine abgelaufene Sitzung führt damit zur Anmeldung
     // statt zu einem Serverfehler.
-    const ligen = { it: await holeLigen(token) };
+    //
+    // **Alles andere darf hier nicht durchschlagen.** Diese Seite ist der
+    // Einstieg: Stirbt sie, ist die ganze App weg, und der Nutzer sieht
+    // nur „A server error occurred". Genau das ist passiert, als Kickbase
+    // gedrosselt hat. Ein Fehler wird deshalb angezeigt, nicht geworfen.
+    let ligen = [];
+    let ausfall = null;
+    try {
+      ligen = await holeLigen(token);
+    } catch (e) {
+      // Eine abgelaufene Sitzung leitet zur Anmeldung — die darf hier
+      // nicht hängen bleiben.
+      if (istWeiterleitung(e)) throw e;
+      ausfall = e?.gedrosselt
+        ? "Kickbase drosselt gerade. Das löst sich von selbst — kurz warten und neu laden."
+        : `Kickbase antwortet gerade nicht (${e?.status ?? e?.message ?? "unbekannt"}). Kurz warten und neu laden.`;
+    }
+
     return (
       <main className="kb-seite kb-seite--schmal">
         <h1 className="kb-titel">KBeyond</h1>
         <p className="kb-unter" style={{ marginBottom: 16 }}>Liga wählen</p>
         {p.fehler && <div className="kb-hinweis kb-hinweis--fehler">{p.fehler}</div>}
+        {ausfall && (
+          <div className="kb-hinweis kb-hinweis--warn">
+            {ausfall}
+            <div style={{ marginTop: 10 }}>
+              <Link href="/liga" className="kb-btn kb-btn--klein">Neu laden</Link>
+            </div>
+          </div>
+        )}
         <div className="kb-kacheln kb-kacheln--schmal">
-          {(ligen.it ?? []).map((l) => (
+          {ligen.map((l) => (
             <Link key={l.i} href={`/liga?league=${l.i}`} className="kb-kachel">
               <strong>{l.n}</strong>
               <span className="kb-leise">Budget {euro(l.b)} · Teamwert {euro(l.tv)}</span>
             </Link>
           ))}
         </div>
+        {!ausfall && ligen.length === 0 && (
+          <p className="kb-leise">Keine Ligen gefunden.</p>
+        )}
       </main>
     );
   }

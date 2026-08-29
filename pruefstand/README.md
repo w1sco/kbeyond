@@ -126,3 +126,17 @@ voller Nullen zeigen.
 curl -s --noproxy '*' -X POST -b "kb_token=pruef" -H "Origin: http://localhost:3300" \
   "http://localhost:3300/api/live?league=1"
 ```
+
+## KB_429
+
+`KB_429=1` lässt Kickbase auf alles mit **429** antworten — wie bei zu vielen
+Aufrufen. Keine Seite darf daran sterben.
+
+Nachgemessen, nachdem der Nutzer auf der Startseite `A server error occurred`
+sah: `/`, `/liga`, `/liga?league=…` und `/liga/live` antworten jetzt alle mit
+**200** und zeigen „Kickbase drosselt gerade". Vorher endete die Ligaauswahl
+mit HTTP 500 — und damit die ganze App, weil sie der Einstieg ist.
+
+Die Ursache lag tiefer: Die Sperre in `kbFetch` war ein `boolean`, den nur
+`/api/aktualisieren` zurückgesetzt hat. Eine warme Serverless-Instanz blieb
+danach dauerhaft gesperrt. `pruefstand/bremse.mjs` prüft, dass sie abläuft.
