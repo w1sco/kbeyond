@@ -3,7 +3,7 @@ import { pruefeApi, sitzung } from "@/lib/auth";
 import { initSchema } from "@/lib/db";
 import { kbFetch } from "@/lib/kickbase";
 import { holeMitspieler } from "@/lib/mitspieler";
-import { sucheLivePfad } from "@/lib/liveabruf";
+import { sucheLivePfad, sucheSpielerPunkte, holeLivestand } from "@/lib/liveabruf";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -30,16 +30,36 @@ export async function POST(request) {
 
     const e = await sucheLivePfad(leagueId, token, ids, uid);
 
+    // Ist der Manager-Endpunkt gefunden, gleich weitersuchen: Er liefert
+    // die Elf (`lp`), aber keine Punkte je Spieler. Die echten IDs aus
+    // `lp` sind dabei der Anker — deshalb erst jetzt und nicht vorher.
+    let spieler = null;
+    if (e.gefunden) {
+      const stand = await holeLivestand(leagueId, token, ids, new Map());
+      const ausAufstellung = [...(stand?.aufstellung?.values() ?? [])].flat();
+      if (!stand?.spieler?.size && ausAufstellung.length) {
+        spieler = await sucheSpielerPunkte(leagueId, token, uid, ausAufstellung);
+      }
+    }
+
     if (zurueck) {
-      const params = new URLSearchParams({
-        league: leagueId,
-        live: e.gefunden
-          ? `Endpunkt gefunden: ${e.gefunden.pfad} — ${e.gefunden.manager} Manager, Punkte im Feld ${e.gefunden.punkteFeld}`
-          : `Kein Endpunkt liefert Live-Punkte (${e.versucht.length} probiert)`,
-      });
+      const teile = [];
+      teile.push(
+        e.gefunden
+          ? `Manager-Punkte: ${e.gefunden.pfad} (Feld ${e.gefunden.punkteFeld}, ${e.gefunden.manager} Manager)`
+          : `Kein Endpunkt liefert Live-Punkte (${e.versucht.length} probiert)`
+      );
+      if (spieler) {
+        teile.push(
+          spieler.gefunden
+            ? `Einzelpunkte: ${spieler.gefunden.pfad} (Feld ${spieler.gefunden.punkteFeld}, ${spieler.gefunden.spieler} Spieler)`
+            : `Einzelpunkte: kein Kandidat liefert welche (${spieler.versucht.length} probiert)`
+        );
+      }
+      const params = new URLSearchParams({ league: leagueId, live: teile.join(" · ") });
       return Response.redirect(new URL(`/liga/live?${params}`, request.url), 303);
     }
-    return Response.json(e);
+    return Response.json({ ...e, spieler });
   } catch (err) {
     if (zurueck) {
       return Response.redirect(

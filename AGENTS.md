@@ -525,6 +525,31 @@ hier schlimmer als gar keine: Danach entscheidet jemand.
 Antwort liegt ohnehin vor — das kostet keinen zusätzlichen Aufruf und beantwortet
 die Frage, woran es liegt, ohne die Diagnoseseite mit ihren vierzehn Aufrufen.
 
+### Was der Live-Endpunkt wirklich liefert
+
+An echten Daten abgelesen (`/v4/leagues/{id}/live`, Managereintrag):
+
+```json
+{ "i": "1142416", "n": "O-L-I", "adm": false,
+  "sp": 448, "mdp": 448, "shp": 0, "tv": 136147433,
+  "spl": 13, "mdpl": 13, "pa": true,
+  "lp": [1580, 11949, 15589, 3129, 9642, …] }
+```
+
+- `mdp` = **Spieltagspunkte** des Managers, `sp` = Saisonpunkte (am 1. Spieltag
+  gleich), `mdpl`/`spl` = die jeweiligen Plätze.
+- **`lp` ist eine Liste blanker Zahlen — die Spieler-IDs seiner Elf, ohne Punkte.**
+
+Daraus folgt zweierlei. Erstens: Die **Aufstellung** kommt jetzt aus der
+Live-Antwort statt aus der Datenbank — sie ist aktueller. Erkannt wird sie an ihrer
+Form (Array aus mindestens zwei eindeutigen Zahlen), nicht am Namen `lp`. Namen und
+Positionen steuern Kader, Pool und Events bei; das kostet keinen Aufruf.
+
+Zweitens: **Die Einzelpunkte stehen nicht in dieser Antwort.** Sie brauchen einen
+zweiten Endpunkt, und welcher das ist, ist noch nicht belegt. `sucheSpielerPunkte()`
+probiert Kandidaten durch — mit den **echten IDs aus `lp`** als Anker, deshalb erst
+nach dem ersten Fund und nur auf Klick.
+
 Angezeigt wird immer **Kickbases eigene Managersumme**, nicht die Summe der
 Spieler. Weichen beide ab, sagt die Zeile das — der Unterschied ist eine
 Information (Bank, noch nicht gewertete Spiele), kein Fehler zum Verstecken.

@@ -1,5 +1,7 @@
 // Findet die Live-Punkte-Suche das Richtige — und schweigt sie, wenn nichts da ist?
-import { findePunkte, besterFund, sammleTreffer, spielerImEintrag, LIVE_PFADE } from "../lib/live.js";
+import {
+  findePunkte, besterFund, sammleTreffer, spielerImEintrag, idListeImEintrag, LIVE_PFADE,
+} from "../lib/live.js";
 
 let ok = 0, fehler = 0;
 const pruefe = (name, ist, soll) => {
@@ -177,6 +179,28 @@ const sehrTief = { a: { b: { c: { d: { pl: [
   { pi: "x", mdp: 3 }, { pi: "y", mdp: 8 },
 ] } } } } };
 pruefe("sechs Ebenen tief", spielerImEintrag(sehrTief, "mdp")?.spieler.length, 2);
+
+// ── Die Aufstellung als blanke ID-Liste (echte Form) ───────────────
+//
+// An echten Daten abgelesen: Der Managereintrag trägt unter `lp` ein
+// Array aus blanken Zahlen — die Elf, ohne Punkte.
+const echt = {
+  iapl: false, i: "1142416", n: "O-L-I", adm: false,
+  sp: 448, mdp: 448, shp: 0, tv: 136147433, spl: 13, mdpl: 13, pa: true,
+  lp: [1580, 11949, 15589, 3129, 9642, 7231, 4410, 8877, 2201, 6650, 9001],
+};
+pruefe("lp erkannt", idListeImEintrag(echt).length, 11);
+pruefe("als Zeichenketten", idListeImEintrag(echt)[0], "1580");
+pruefe("keine Punkte darin", spielerImEintrag(echt, "mdp"), null);
+
+// Der Managerwert wird trotzdem gefunden
+pruefe("mdp trotz lp", besterFund({ us: [echt, { ...echt, i: "222", mdp: 300 }] }, ["1142416","222"])?.punkteFeld, "mdp");
+
+// Kurze Zahlenlisten sind keine Aufstellung (etwa zwei Vereins-IDs)
+pruefe("längste Liste gewinnt", idListeImEintrag({ t: [3, 7], lp: [11, 22, 33] }), ["11","22","33"]);
+pruefe("keine Liste", idListeImEintrag({ mdp: 5 }), []);
+pruefe("gemischte Liste zählt nicht", idListeImEintrag({ x: [1, { a: 2 }] }), []);
+pruefe("Wiederholungen sind keine IDs", idListeImEintrag({ x: [5, 5, 5] }), []);
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

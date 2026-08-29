@@ -3,6 +3,7 @@ import { kbFetch } from "@/lib/kickbase";
 import { verlangeLiga, sitzung } from "@/lib/auth";
 import { initSchema, getKader, getSettings } from "@/lib/db";
 import { holeMitspieler } from "@/lib/mitspieler";
+import { holeNamen } from "@/lib/spielernamen";
 import { holeLivestand, bekannterLivePfad } from "@/lib/liveabruf";
 import { zeitpunkt, posRang, normalisiereSpieler } from "@/lib/format";
 import Hinweis from "@/app/_ui/Hinweis";
@@ -40,6 +41,10 @@ export default async function Live({ searchParams }) {
     ? await holeLivestand(leagueId, token, manager.map((m) => String(m.i)), kaderIds)
     : null;
 
+  // Namen für Spieler, die der gespeicherte Kader nicht kennt. Kostet
+  // keinen Kickbase-Aufruf — Pool und Events stehen in der Datenbank.
+  const namen = live?.aufstellung?.size ? await holeNamen(leagueId) : new Map();
+
   const zeilen = manager
     .map((m) => {
       const id = String(m.i);
@@ -52,24 +57,40 @@ export default async function Live({ searchParams }) {
       // Name und Position steuert der gespeicherte Kader bei; kennt er den
       // Spieler nicht (frisch gekauft, Kader noch nicht aktualisiert),
       // stehen sie in der Antwort selbst.
+      // Die Aufstellung aus der Live-Antwort ist die **aktuelle** — unser
+      // gespeicherter Kader kann einen Tag alt sein.
+      const liveElf = live?.aufstellung?.get(id) ?? null;
+
+      const bau = (spielerId, punkte) => {
+        const bekannt = nachId.get(spielerId);
+        return {
+          id: spielerId,
+          name: bekannt?.name ?? namen.get(spielerId) ?? `Spieler #${spielerId}`,
+          position: bekannt?.position ?? null,
+          // In der Live-Aufstellung stehen heißt aufgestellt. Ohne diese
+          // Liste bleibt nur unser Kader — und wen der nicht kennt, der
+          // bekommt kein Zeichen statt eines geratenen.
+          aufgestellt: liveElf ? true : bekannt ? bekannt.aufgestellt : null,
+          punkte,
+        };
+      };
+
       const spieler = proSpieler
         ? [...proSpieler].map(([spielerId, eintrag]) => {
-            const bekannt = nachId.get(spielerId);
-            const ausAntwort = eintrag.roh ? normalisiereSpieler(eintrag.roh) : null;
-            return {
-              id: spielerId,
-              name: bekannt?.name ?? ausAntwort?.name ?? `Spieler #${spielerId}`,
-              position: bekannt?.position ?? ausAntwort?.position ?? null,
-              // Aufgestellt laut gespeichertem Kader. Wer dort gar nicht
-              // steht, bekommt kein Zeichen — nicht "auf der Bank".
-              aufgestellt: bekannt ? bekannt.aufgestellt : null,
-              punkte: eintrag.punkte,
-            };
+            const gebaut = bau(spielerId, eintrag.punkte);
+            if (gebaut.name.startsWith("Spieler #") && eintrag.roh) {
+              const ausAntwort = normalisiereSpieler(eintrag.roh);
+              if (ausAntwort.name !== "Unbekannt") gebaut.name = ausAntwort.name;
+              gebaut.position = gebaut.position ?? ausAntwort.position;
+            }
+            return gebaut;
           })
-        : // Ohne Einzelpunkte wenigstens die gespeicherte Elf zeigen.
-          kaderListe
-            .filter((s) => s.aufgestellt)
-            .map((s) => ({ ...s, id: String(s.id), punkte: null, aufgestellt: true }));
+        : liveElf
+          ? // Ohne Einzelpunkte wenigstens die echte, aktuelle Elf.
+            liveElf.map((spielerId) => bau(spielerId, null))
+          : kaderListe
+              .filter((s) => s.aufgestellt)
+              .map((s) => ({ ...s, id: String(s.id), punkte: null, aufgestellt: true }));
 
       spieler.sort(
         (a, b) =>
@@ -92,7 +113,8 @@ export default async function Live({ searchParams }) {
         spieler,
         // Wie viele Spieler die Antwort für ihn führt – nicht dasselbe wie
         // die Kadergröße, und genau deshalb einen eigenen Wert wert.
-        gezaehlt: proSpieler?.size ?? null,
+        gezaehlt: proSpieler?.size ?? liveElf?.length ?? null,
+        ausAntwort: Boolean(proSpieler || liveElf),
         ausSpielern,
         gemeldet: gemeldet ?? null,
         aufgestellt: kaderListe.filter((s) => s.aufgestellt).length,
@@ -190,17 +212,30 @@ export default async function Live({ searchParams }) {
           {!jeSpieler && (
             <Hinweis
               art="warn"
-              titel="Nur Managersummen, keine Einzelspieler"
-              kurz="Der Endpunkt meldet Punkte je Manager, aber keine je Spieler."
+              titel="Aufstellung ja, Einzelpunkte nein"
+              kurz="Der Endpunkt meldet Punkte je Manager und die Elf — aber keine Punkte je Spieler."
             >
-              Gesucht wurde auf zwei Wegen: im Eintrag jedes Managers nach einer Liste
-              mit Spieler-IDs und Punkten, und in der ganzen Antwort nach den Spieler-IDs
-              aus den gespeicherten Kadern. Beides bleibt leer — die Antwort führt die
-              Punkte offenbar nur je Manager. Die Aufklappzeile zeigt deshalb die
-              gespeicherte Aufstellung ohne Einzelpunkte. Welche Felder die Antwort
-              tatsächlich trägt, steht auf{" "}
-              <Link href={`/livepunkte?league=${leagueId}`}>der Diagnoseseite</Link>.
+              Gesucht wurde auf drei Wegen: im Eintrag jedes Managers nach einer Liste mit
+              Spieler-IDs und Punkten, in der ganzen Antwort nach den Spieler-IDs aus der
+              Aufstellung, und nach denen aus den gespeicherten Kadern. Alle drei bleiben
+              leer — diese Antwort trägt die Punkte nur je Manager. Für die Einzelpunkte
+              bräuchte es einen <strong>zweiten Endpunkt</strong>; welcher das ist, ist
+              noch nicht belegt.
+              {" "}Der Kasten darunter zeigt den Aufbau der Antwort, die gerade vorliegt.
             </Hinweis>
+          )}
+
+          {!jeSpieler && (
+            <form
+              method="POST"
+              action={`/api/live?league=${leagueId}&zurueck=1`}
+              style={{ marginBottom: 12 }}
+            >
+              <button className="kb-btn kb-btn--klein" type="submit">
+                Nach Einzelpunkten suchen
+              </button>
+              <span className="kb-leise"> · probiert einige Endpunkte durch, rund 15 Aufrufe</span>
+            </form>
           )}
 
           {!jeSpieler && live?.probe && (
@@ -214,7 +249,11 @@ export default async function Live({ searchParams }) {
                 Einzelpunkte stehen — oder ob sie gar nicht mitkommen.
               </p>
               <pre className="kb-roh">
-                {JSON.stringify(live.probe, null, 2).slice(0, 4000)}
+                {JSON.stringify(live.probe.eintrag, null, 2).slice(0, 2500)}
+              </pre>
+              <p className="kb-leise">Aufbau der ganzen Antwort:</p>
+              <pre className="kb-roh">
+                {live.probe.baum.map((z) => `${z.pfad} = ${z.wert}`).join("\n")}
               </pre>
             </details>
           )}
