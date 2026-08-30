@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTeamwertVerlauf, sql, getVortag } from "@/lib/db";
+import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTagesverlauf, sql, getVortag } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
-import { euro, zeitpunkt, vorZeit, inZeit, MW_UHRZEIT } from "@/lib/format";
+import { euro, zeitpunkt, vorZeit, inZeit, fuerTag, MW_UHRZEIT } from "@/lib/format";
 import Tabelle from "./Tabelle";
 import Frag from "./Frag";
 import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga, holeLigen, istWeiterleitung } from "@/lib/auth";
-import { tagesraster, tagesreihen } from "@/lib/verlauf";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holeMitspieler } from "@/lib/mitspieler";
 
@@ -171,12 +170,55 @@ export default async function Liga({ searchParams }) {
   const lueckeStd = feedStart && feedStart > stich ? (feedStart - stich) / 3_600_000 : 0;
   const lueckeTage = Math.round((lueckeStd / 24) * 10) / 10;
 
-  // ── Verlauf des Teamwerts, Tagesraster 0 Uhr deutscher Zeit ────────
-  const verlaufZeilen = await getTeamwertVerlauf(leagueId, settings.stichtag);
-  const verlaufTage = verlaufZeilen.length
-    ? tagesraster(new Date(verlaufZeilen[0].stand), new Date())
-    : [];
-  const verlaufReihen = Object.fromEntries(tagesreihen(verlaufZeilen, verlaufTage));
+  // ── Verlauf über die Zeit ──────────────────────────────────────────
+  //
+  // Grundlage ist `tagesstand`: je Manager und Kalendertag Kaderwert,
+  // Kontostand und Punkte. Gemessene Tage stehen dort neben
+  // zurückgerechneten — bis zum Liga-Reset zurück, ohne einen einzigen
+  // Kickbase-Aufruf.
+  const tagesZeilen = await getTagesverlauf(leagueId);
+
+  const verlaufTage = [...new Set(tagesZeilen.map((z) => fuerTag(z.tag)))].sort();
+
+  const reihenFuer = (feld) => {
+    const raus = {};
+    const nachTag = new Map(verlaufTage.map((t, i) => [t, i]));
+    for (const z of tagesZeilen) {
+      const wert = z[feld];
+      if (wert == null) continue;
+      const id = z.managerId;
+      if (!raus[id]) raus[id] = new Array(verlaufTage.length).fill(null);
+      raus[id][nachTag.get(fuerTag(z.tag))] = wert;
+    }
+    return raus;
+  };
+
+  const gesamtReihen = (() => {
+    const raus = {};
+    const nachTag = new Map(verlaufTage.map((t, i) => [t, i]));
+    for (const z of tagesZeilen) {
+      if (z.teamwert == null || z.konto == null) continue;
+      if (!raus[z.managerId]) raus[z.managerId] = new Array(verlaufTage.length).fill(null);
+      raus[z.managerId][nachTag.get(fuerTag(z.tag))] = z.teamwert + z.konto;
+    }
+    return raus;
+  })();
+
+  const verlaufMasse = [
+    { schluessel: "kaderwert", name: "Kaderwert", einheit: "geld", reihen: reihenFuer("teamwert") },
+    { schluessel: "gesamtwert", name: "Gesamtwert", einheit: "geld", reihen: gesamtReihen },
+    { schluessel: "kontostand", name: "Kontostand", einheit: "geld", reihen: reihenFuer("konto") },
+    {
+      schluessel: "punkte", name: "Punkte", einheit: "zahl", reihen: reihenFuer("punkte"),
+      leerGrund:
+        "Punkte werden erst seit dem ersten Aktualisieren mitgeschrieben — " +
+        "rückwirkend stehen sie nirgends und werden nicht geschätzt.",
+    },
+  ];
+
+  const rekonstruierteTage = new Set(
+    tagesZeilen.filter((z) => z.rekonstruiert).map((z) => fuerTag(z.tag))
+  ).size;
 
   const kaderStand = (await sql`
     SELECT MAX(stand) AS stand FROM kader WHERE league_id = ${leagueId}`)[0]?.stand ?? null;
@@ -418,12 +460,15 @@ export default async function Liga({ searchParams }) {
 
       <section className="kb-karte">
         <h2 className="kb-abschnitt-titel">
-          Teamwert-Verlauf
-          <span className="kb-leise"> Stand jeweils 0 Uhr</span>
+          Verlauf über die Zeit
+          <span className="kb-leise">
+            {" "}Stand jeweils 0 Uhr
+            {rekonstruierteTage > 0 ? ` · ${rekonstruierteTage} Tage zurückgerechnet` : ""}
+          </span>
         </h2>
         <Verlauf
-          tage={verlaufTage.map((t) => t.toISOString())}
-          reihen={verlaufReihen}
+          tage={verlaufTage}
+          masse={verlaufMasse}
           manager={konten.map((k) => ({ id: k.id, name: k.name }))}
           meineId={treffer.i}
         />

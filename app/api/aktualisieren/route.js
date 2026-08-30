@@ -2,6 +2,7 @@ import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDate
 import { kbFetch } from "@/lib/kickbase";
 import { importiere } from "@/lib/importer";
 import { berechneKonten } from "@/lib/ledger";
+import { schreibeRekonstruktion } from "@/lib/tagesverlauf";
 import { ladeTeamwerte } from "@/lib/teamwerte";
 import { ladeKader, ladeAufstellungen } from "@/lib/kader";
 import { rekonstruiere, holePool, aktualisierePool } from "@/lib/rekonstruktion";
@@ -230,6 +231,14 @@ export async function POST(request) {
         konten.map((k) => ({ ...k, teamwert: tw2.map.get(String(k.id))?.teamwert ?? 0 })),
         heute
       );
+      // Und die Tage davor zurückrechnen, bis zum Liga-Reset. Gemessene
+      // Tage werden dabei **nicht** überschrieben — was wirklich abgelesen
+      // wurde, ist besser als jede Rückrechnung. Kostet ebenfalls keinen
+      // Kickbase-Aufruf.
+      const rueck = await schreibeRekonstruktion(leagueId, mitspieler, settings);
+      if (rueck.geschrieben > 0) {
+        erledigt.push(`Verlauf: ${rueck.geschrieben} Tage zurückgerechnet`);
+      }
     } catch {
       // Der Tagesstand ist Beiwerk – der Lauf soll daran nicht scheitern
     }

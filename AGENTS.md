@@ -730,7 +730,43 @@ Ausgangslage; sobald genug gemessen ist, ersetzt der gemessene Rhythmus sie.
 
 ---
 
-## Diagramme
+## Verlauf über die Zeit
+
+`app/liga/Verlauf.jsx` zeigt vier Kennzahlen je Manager über die Zeit:
+**Kaderwert, Gesamtwert, Kontostand, Punkte**. Die Auswahl der Manager bleibt beim
+Umschalten stehen — man will dieselben Linien in einer anderen Größe sehen, nicht neu
+klicken.
+
+Grundlage ist `tagesstand` (je Manager und Kalendertag), nicht mehr
+`teamwert_verlauf`. Dort stehen alle vier Werte ohnehin schon.
+
+### Bis zum Reset zurückgerechnet
+
+Der Verlauf begann früher an dem Tag, an dem jemand zum ersten Mal aktualisiert hat.
+Alles davor lässt sich aber **ausrechnen**: Die Events tragen jeden Kauf und Verkauf
+mit Preis und Datum, daraus folgen Kontostand *und* Kaderzusammensetzung an jedem
+einzelnen Tag. `rekonstruiereVerlauf()` läuft Tag für Tag vom Stichtag bis heute.
+
+**Das kostet keinen einzigen Kickbase-Aufruf** — alles steht in der Datenbank. Der
+Lauf hängt deshalb im Aktualisieren-Knopf mit drin.
+
+**Gemessene Tage werden nicht überschrieben** (`ON CONFLICT DO NOTHING`). Was beim
+Aktualisieren wirklich abgelesen wurde, ist besser als jede Rückrechnung.
+
+### Was dabei fehlt, fehlt sichtbar
+
+- **Ein leerer Kader ist 0, ein unbekannter ist nichts.** Fehlt auch nur ein
+  Marktwert eines Spielers, wäre die Summe zu niedrig — und eine zu niedrige Linie
+  sieht aus wie ein Einbruch, den es nie gab. Dann steht dort `NULL` und die Linie
+  hat eine Lücke. `mw_bekannt`/`mw_gesamt` halten fest, wie vollständig es war.
+- **Punkte werden nicht zurückgerechnet.** Wie viele Punkte ein Manager an einem
+  vergangenen Tag hatte, steht nirgends. Rekonstruierte Tage tragen deshalb `NULL`,
+  und der Punkte-Verlauf beginnt beim ersten Aktualisieren. Aus demselben Grund
+  fehlt im zurückgerechneten Kontostand der Punkte-Bonus.
+
+### Diagramme
+
+### Der Teamwert-Verlauf im Detail
 
 `app/liga/Verlauf.jsx` zeigt den Teamwert aller Manager über die Zeit. Was dabei zu
 beachten war:
@@ -957,7 +993,9 @@ lib/
   rekonstruktion.js rekonstruiere(), holePool(), aktualisierePool()
   rhythmus.js       bildeAuftritte(), schaetzeZyklus(), prognostiziere()
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
-  verlauf.js        tagesraster(), tagesreihen() — Tagesstützstellen 0 Uhr
+  verlauf.js        tagesraster(), tagesreihen(), tageZwischen(), wertAmTag()
+                    — Tagesstützstellen 0 Uhr, ohne DB
+  tagesverlauf.js   rekonstruiereVerlauf(), schreibeRekonstruktion() — bis zum Reset
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
   live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB

@@ -49,9 +49,22 @@ function entzerre(marken, mindestAbstand = 15) {
   return sortiert;
 }
 
-export default function Verlauf({ tage, reihen, manager, meineId }) {
+export default function Verlauf({ tage, masse, manager, meineId }) {
   const schmal = useSchmal();
   const B = schmal ? SCHMAL : BREIT;
+
+  // Vier Kennzahlen, ein Diagramm. Die Auswahl der Manager bleibt beim
+  // Umschalten stehen — man will dieselben Linien in einer anderen
+  // Größe sehen, nicht neu klicken.
+  const [mass, setMass] = useState(masse[0]?.schluessel);
+  const aktiv = masse.find((m) => m.schluessel === mass) ?? masse[0];
+  // Eigenes useMemo: Ein `?? {}` erzeugt bei jedem Rendern ein neues
+  // Objekt und würde die Berechnung unten jedes Mal neu anwerfen.
+  const reihen = useMemo(() => aktiv?.reihen ?? {}, [aktiv]);
+  const zeigeWert = (w) =>
+    w == null ? "–" : aktiv?.einheit === "zahl" ? String(Math.round(w)) : euro(w);
+  const zeigeAchse = (w) =>
+    aktiv?.einheit === "zahl" ? String(Math.round(w)) : euroKurz(Math.round(w));
   // Von Haus aus die eigene Linie – der häufigste Blick
   const [gewaehlt, setGewaehlt] = useState(() => {
     const start = new Set();
@@ -97,10 +110,13 @@ export default function Verlauf({ tage, reihen, manager, meineId }) {
 
   if (!daten) {
     return (
-      <p className="kb-info">
-        Noch kein Verlauf gespeichert. Nach der zweiten Aktualisierung mit geänderten
-        Teamwerten entsteht die erste Linie.
-      </p>
+      <>
+        <Umschalter masse={masse} mass={mass} setMass={setMass} />
+        <p className="kb-info">
+          Für „{aktiv?.name}“ ist noch nichts gespeichert.
+          {aktiv?.leerGrund ? ` ${aktiv.leerGrund}` : ""}
+        </p>
+      </>
     );
   }
 
@@ -141,6 +157,7 @@ export default function Verlauf({ tage, reihen, manager, meineId }) {
 
   return (
     <>
+      <Umschalter masse={masse} mass={mass} setMass={setMass} />
       <div className="kb-diagramm" ref={flaeche}>
         <svg
           viewBox={`0 0 ${B.breite} ${B.hoehe}`}
@@ -157,7 +174,7 @@ export default function Verlauf({ tage, reihen, manager, meineId }) {
                 className="kb-gitter"
               />
               <text x={B.links - 8} y={y(w) + 4} className="kb-achse" textAnchor="end">
-                {euroKurz(Math.round(w))}
+                {zeigeAchse(w)}
               </text>
             </g>
           ))}
@@ -245,7 +262,7 @@ export default function Verlauf({ tage, reihen, manager, meineId }) {
                 <div key={m.id} className="kb-tooltip-zeile">
                   <span className="kb-punktfarbe" style={{ background: farbeVon.get(String(m.id)) }} />
                   <span className="kb-tooltip-name">{m.name}</span>
-                  <span className="kb-tooltip-wert">{w == null ? "–" : euro(w)}</span>
+                  <span className="kb-tooltip-wert">{zeigeWert(w)}</span>
                 </div>
               ))}
           </div>
@@ -282,5 +299,27 @@ export default function Verlauf({ tage, reihen, manager, meineId }) {
         </p>
       )}
     </>
+  );
+}
+
+// Die Kennzahl-Auswahl. Eigene Komponente, weil sie an zwei Stellen steht:
+// über dem Diagramm und über dem Hinweis, wenn eine Kennzahl leer ist.
+function Umschalter({ masse, mass, setMass }) {
+  if (masse.length < 2) return null;
+  return (
+    <div className="kb-sortleiste kb-sortleiste--immer" role="tablist">
+      {masse.map((m) => (
+        <button
+          key={m.schluessel}
+          type="button"
+          role="tab"
+          aria-selected={m.schluessel === mass}
+          className={`kb-chip${m.schluessel === mass ? " kb-chip--aktiv" : ""}`}
+          onClick={() => setMass(m.schluessel)}
+        >
+          {m.name}
+        </button>
+      ))}
+    </div>
   );
 }
