@@ -1,12 +1,23 @@
-// Das Zeichen: eine Linie, die steigt und oben aus dem Feld herausläuft.
+// Das Zeichen: ein **Liniendiagramm, aus dem der Buchstabe entsteht**.
 //
-// Warum so: „KBeyond" heißt, über das hinauszusehen, was Kickbase zeigt.
-// Eine Kurve, die den Rahmen verlässt, sagt das ohne Worte — und die
-// Grundlinie unten ist dieselbe Anspielung aufs Spielfeld wie in der
-// Aufstellungsgrafik.
+// Der Stamm ist zugleich y-Achse und Buchstabenstamm, unten läuft die
+// x-Achse, und die beiden Schenkel des K sind zwei Datenreihen — eine
+// steigt, eine fällt.
 //
-// **Inline-SVG, keine Bilddatei.** Skaliert verlustfrei, färbt sich über
-// `currentColor` mit und kostet keinen zusätzlichen Ladevorgang.
+// Warum zwei Reihen und nicht eine Linie: **Eine Diagrammlinie kann in x
+// nicht zurücklaufen.** Ein einzelner Streckenzug könnte die beiden
+// Schenkel gar nicht bilden. Zwei Reihen, die an derselben Stelle von der
+// Achse weggehen, sind die einzige Form, die zugleich ein ehrliches
+// Diagramm und ein K ist.
+//
+// **Der Stamm hat volle Strichstärke.** Mit einer dünnen Achse — wie ein
+// Diagramm sie hätte — las sich das Zeichen als „<" mit einem Strich
+// daneben. Die Diagramm-Lesart tragen dafür die x-Achse und die
+// Proportionen.
+//
+// **Inline-SVG, keine Bilddatei.** Skaliert verlustfrei und kostet keinen
+// zusätzlichen Ladevorgang. Die Grundlinie unten ist zugleich dieselbe
+// Anspielung aufs Spielfeld wie in der Aufstellungsgrafik.
 
 export function Zeichen({ groesse = 28, id = "kb" }) {
   return (
@@ -25,34 +36,33 @@ export function Zeichen({ groesse = 28, id = "kb" }) {
         </linearGradient>
       </defs>
 
-      <rect x="0" y="9" width="35" height="35" rx="10" fill={`url(#${id}-verlauf)`} />
+      <rect x="1" y="5" width="38" height="38" rx="10" fill={`url(#${id}-verlauf)`} />
 
-      {/* Zwei Rasenstreifen, sehr zurückhaltend – dieselbe Anspielung wie
-          auf dem gezeichneten Spielfeld. */}
-      <rect x="9" y="9" width="6" height="35" fill="#fff" opacity="0.07" />
-      <rect x="23" y="9" width="6" height="35" fill="#fff" opacity="0.07" />
+      {/* x-Achse, zurückhaltend. Zugleich dieselbe Anspielung aufs
+          Spielfeld wie in der Aufstellungsgrafik. */}
+      <line x1="13" y1="37.5" x2="30" y2="37.5"
+            stroke="#fff" strokeOpacity="0.4" strokeWidth="2" strokeLinecap="round" />
 
-      {/* Grundlinie */}
-      <line
-        x1="7" y1="37" x2="28" y2="37"
-        stroke="#fff" strokeOpacity="0.35" strokeWidth="1.6" strokeLinecap="round"
-      />
+      {/* Der Stamm ist y-Achse **und** Buchstabenstamm – deshalb in voller
+          Strichstärke. Mit einer dünnen Achse las sich das Zeichen als „<"
+          mit einem Strich daneben, nicht als K. */}
+      <line x1="13" y1="12" x2="13" y2="35"
+            stroke="#fff" strokeWidth="3.4" strokeLinecap="round" />
 
-      {/* Die Kurve im Feld – weiß */}
-      <path
-        d="M7 33 L15 26 L21 29 L29 19"
-        fill="none" stroke="#fff" strokeWidth="3.4"
-        strokeLinecap="round" strokeLinejoin="round"
-      />
+      {/* Zwei Reihen, die an derselben Stelle von der Achse weggehen: eine
+          steigt, eine fällt. Eine Diagrammlinie kann in x nicht
+          zurücklaufen – die beiden Schenkel des K *müssen* deshalb zwei
+          Reihen sein. Genau daraus entsteht der Buchstabe. */}
+      <g fill="none" stroke="#fff" strokeWidth="3.4"
+         strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 24 L28 13" />
+        <path d="M13 24 L28 34" />
+      </g>
 
-      {/* Und darüber hinaus. Außerhalb des Felds wäre Weiß unsichtbar –
-          deshalb wechselt der Strich hier auf die Markenfarbe. Genau
-          dieser Bruch ist die Aussage: über das hinaus, was Kickbase zeigt. */}
-      <path
-        d="M29 19 L38 8"
-        fill="none" stroke="#4338ca" strokeWidth="3.4" strokeLinecap="round"
-      />
-      <circle cx="39" cy="6" r="4" fill="#4338ca" />
+      {/* **Kein Anbau nach außen.** Ein austretender Strich mit Punkt sah
+          bei jeder Länge aus wie ein eingeschlagener Nagel — verglichen in
+          vier Abstufungen bei 112, 40, 28 und 18 px. Das „Beyond" trägt der
+          Name; das Zeichen bleibt ruhig. */}
     </svg>
   );
 }
