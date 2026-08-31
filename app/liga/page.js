@@ -10,6 +10,7 @@ import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga, holeLigen, istWeiterleitung } from "@/lib/auth";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holeMitspieler } from "@/lib/mitspieler";
+import Logo from "@/app/_ui/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function Liga({ searchParams }) {
 
     return (
       <main className="kb-seite kb-seite--schmal">
-        <h1 className="kb-titel">KBeyond</h1>
+        <h1 className="kb-titel"><Logo gross /></h1>
         <p className="kb-unter" style={{ marginBottom: 16 }}>Liga wählen</p>
         {p.fehler && <div className="kb-hinweis kb-hinweis--fehler">{p.fehler}</div>}
         {ausfall && (
@@ -238,7 +239,7 @@ export default async function Liga({ searchParams }) {
         <div className="kb-aktionen">
           {/* Formulare statt Links: ein GET, das Daten verändert, lässt sich
               von einer fremden Seite aus auslösen. */}
-          <Aktion pfad="aktualisieren" leagueId={leagueId}>Alles aktualisieren</Aktion>
+          <Aktion pfad="aktualisieren" leagueId={leagueId} haupt>Alles aktualisieren</Aktion>
           <a href={`/liga/live?league=${leagueId}`} className="kb-btn">Live-Punkte</a>
           <a href={`/liga/transfermarkt?league=${leagueId}`} className="kb-btn">Transfermarkt</a>
           <a href={`/liga/markt?league=${leagueId}`} className="kb-btn">Freie Spieler</a>
@@ -508,10 +509,14 @@ export default async function Liga({ searchParams }) {
 }
 
 // Ein Knopf, der eine schreibende API-Route per POST auslöst.
-function Aktion({ pfad, leagueId, children }) {
+// `haupt` für die eine Aktion, wegen der man die Seite aufruft. Acht
+// gleich aussehende Knöpfe nebeneinander sagen nicht, wo man anfängt.
+function Aktion({ pfad, leagueId, haupt = false, children }) {
   return (
     <form action={`/api/${pfad}?league=${leagueId}&zurueck=1`} method="post">
-      <button type="submit" className="kb-btn">{children}</button>
+      <button type="submit" className={`kb-btn${haupt ? " kb-btn--haupt" : ""}`}>
+        {children}
+      </button>
     </form>
   );
 }

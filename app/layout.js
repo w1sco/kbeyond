@@ -1,5 +1,6 @@
 import { Geist } from "next/font/google";
 import "./globals.css";
+import { Kopfleiste, Fussleiste } from "./_ui/Rahmen";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +24,11 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="de" className={geistSans.variable}>
-      <body>{children}</body>
+      <body>
+        <Kopfleiste />
+        {children}
+        <Fussleiste />
+      </body>
     </html>
   );
 }

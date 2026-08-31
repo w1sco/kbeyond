@@ -873,6 +873,39 @@ ist ein gemeinsamer Datensatz.
 
 ---
 
+## Marke: Logo, Kopf- und Fußzeile
+
+Das Zeichen ist eine **steigende Kurve, die oben aus ihrem Feld herausläuft** —
+„KBeyond" heißt, über das hinauszusehen, was Kickbase zeigt, und eine Linie, die
+den Rahmen verlässt, sagt das ohne Worte. Die Grundlinie darunter ist dieselbe
+Anspielung aufs Spielfeld wie in der Aufstellungsgrafik.
+
+**Inline-SVG, keine Bilddatei** (`app/_ui/Logo.jsx`) — skaliert verlustfrei und
+kostet keinen zusätzlichen Ladevorgang. Das Favicon liegt als `app/icon.svg`;
+Next bindet es allein über den Dateinamen ein.
+
+**Außerhalb des Felds wäre Weiß unsichtbar.** Der austretende Schenkel wechselt
+deshalb auf die Markenfarbe. Genau dieser Bruch ist die Aussage — ein erster
+Entwurf hielt alles im Feld und war damit nur ein Diagramm-Symbol. Im Favicon
+füllt das Feld dagegen die ganze Fläche: Bei 16 px wäre ein Rand Verschwendung,
+und der Überstand fiele ohnehin weg.
+
+`app/_ui/Rahmen.jsx` liefert Kopf- und Fußzeile für **alle** Seiten, eingehängt
+im Wurzel-Layout — so bekommen auch die Diagnoseseiten sie, ohne dass jede Seite
+daran denken muss. In der Fußzeile steht `created by wisco`.
+
+Auf den Einstiegsseiten (Login, Ligaauswahl) steht die Marke groß statt einer
+Überschrift „KBeyond"; die Kopfleiste darüber würde sie sonst nur wiederholen.
+
+### Eine kräftige Farbe, und die trägt jede betonte Aktion
+
+Acht gleich aussehende Knöpfe nebeneinander sagen nicht, wo man anfängt.
+`kb-btn--haupt` markiert die eine Aktion, wegen der man die Seite aufruft
+(`Alles aktualisieren`); der Rest bleibt zurückhaltend.
+
+`kb-btn--stark` war schlicht schwarz. Neben einem Logo in Markenfarbe sah das aus
+wie ein Fremdkörper — es läuft jetzt über denselben Verlauf (`--kb-marke`).
+
 ## Aussehen und Layout
 
 Alle Farben, Abstände, Radien und Breakpoints stehen in `app/globals.css`. Die Seiten
@@ -936,7 +969,10 @@ Diagnose-Seiten über Tokens laufen; dann reicht ein zweiter Block mit den Dunke
 
 ```
 app/
-  layout.js                        Wurzel-Layout: Viewport-Meta, Metadaten, Schrift
+  layout.js                        Wurzel-Layout: Viewport, Metadaten, Schrift, Rahmen
+  icon.svg                         Favicon – Next bindet es über den Dateinamen ein
+  _ui/Logo.jsx                     Zeichen und Schriftzug als Inline-SVG
+  _ui/Rahmen.jsx                   Kopfleiste mit Logo, Fußzeile „created by wisco"
   page.js                          Startseite → leitet auf /liga um
   globals.css                      Design-Tokens, Komponentenklassen, Breakpoints
   login/page.js                    Login: Server-Teil, liest ?abgelaufen

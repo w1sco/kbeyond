@@ -1,4 +1,5 @@
 import Formular from "./Formular";
+import Logo from "@/app/_ui/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function Login({ searchParams }) {
 
   return (
     <main className="kb-seite" style={{ maxWidth: 380, paddingTop: 72 }}>
-      <h1 className="kb-titel">KBeyond</h1>
+      <h1 className="kb-titel"><Logo gross /></h1>
       <p className="kb-unter" style={{ marginBottom: 20 }}>
         Anmeldung mit den Kickbase-Zugangsdaten. Sie werden an Kickbase
         weitergereicht und hier nicht gespeichert — abgelegt wird nur das

@@ -13,12 +13,12 @@
 
 :root {
   /* Flächen */
-  --kb-bg:            #f1f5f9;
+  --kb-bg:            #f4f6fb;
   --kb-flaeche:       #ffffff;
   --kb-flaeche-leise: #f8fafc;
 
   /* Linien */
-  --kb-rand:          #e2e8f0;
+  --kb-rand:          #e5e9f2;
   --kb-rand-stark:    #cbd5e1;
 
   /* Schrift */
@@ -28,7 +28,9 @@
 
   /* Signale */
   --kb-akzent:        #4f46e5;
+  --kb-akzent-stark:  #4338ca;
   --kb-akzent-weich:  #eef2ff;
+  --kb-marke:         linear-gradient(135deg, #6366f1, #4338ca);
   --kb-gut:           #16a34a;
   --kb-gut-weich:     #dcfce7;
   --kb-warn:          #b45309;
@@ -39,9 +41,15 @@
   --kb-korrektur:     #7c3aed;
 
   /* Form */
-  --kb-radius:        12px;
-  --kb-radius-klein:  8px;
-  --kb-schatten:      0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+  --kb-radius:        14px;
+  --kb-radius-klein:  9px;
+  /* Zwei Ebenen: eine harte Kante für die Form, ein weicher Schein für
+     die Tiefe. Ein einzelner Schatten wirkt entweder flach oder schmutzig. */
+  --kb-schatten:      0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px rgb(15 23 42 / 0.05);
+  --kb-schatten-hoch: 0 2px 4px rgb(15 23 42 / 0.05), 0 12px 28px rgb(15 23 42 / 0.09);
+
+  /* Kopfleiste */
+  --kb-topbar-hoehe:  56px;
 
   /* Rhythmus */
   --kb-luft:          24px;
@@ -157,14 +165,20 @@ body {
   cursor: pointer;
 }
 
+/* Früher schlicht schwarz. Neben einem Logo in Markenfarbe sah das aus
+   wie ein Fremdkörper – es gibt jetzt genau eine kräftige Farbe im
+   Projekt, und die trägt jede betonte Aktion. */
 .kb-btn--stark {
-  background: #0f172a;
-  border-color: #0f172a;
+  background: var(--kb-marke);
+  border-color: transparent;
   color: #fff;
+  font-weight: 550;
   padding: 11px 22px;
+  box-shadow: 0 1px 2px rgb(67 56 202 / 0.25), 0 6px 16px rgb(67 56 202 / 0.22);
 }
 
-.kb-btn--stark:hover { background: #1e293b; border-color: #1e293b; color: #fff; }
+.kb-btn--stark:hover { filter: brightness(1.07); border-color: transparent; color: #fff; }
+.kb-btn--stark:disabled { filter: none; box-shadow: none; }
 
 /* ------------------------------------------------------------------
    Karten, Status, Hinweise
@@ -1630,3 +1644,79 @@ th.kb-namensspalte { z-index: 3; }
   .kb-elfauf > p { max-width: calc(100vw - 150px); }
   .kb-elfauf > p { white-space: normal; }
 }
+
+/* ------------------------------------------------------------------
+   Marke: Kopfleiste, Logo, Fußzeile
+   ------------------------------------------------------------------ */
+
+.kb-topbar {
+  height: var(--kb-topbar-hoehe);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--kb-luft);
+  background: var(--kb-flaeche);
+  border-bottom: 1px solid var(--kb-rand);
+}
+
+.kb-topbar-marke { text-decoration: none; color: inherit; display: inline-flex; }
+
+.kb-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* Das Zeichen läuft oben aus seinem Feld heraus – der Überstand darf
+   nicht abgeschnitten werden, deshalb kein `overflow: hidden` darüber. */
+.kb-zeichen { display: block; flex: none; }
+
+.kb-wortmarke {
+  font-size: 19px;
+  font-weight: 640;
+  letter-spacing: -0.025em;
+  color: var(--kb-text);
+  white-space: nowrap;
+}
+
+.kb-wortmarke-k { color: var(--kb-akzent); }
+
+.kb-logo--gross .kb-wortmarke { font-size: 28px; }
+
+.kb-fuss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px var(--kb-luft) 36px;
+  font-size: 12px;
+  color: var(--kb-text-schwach);
+}
+
+.kb-fuss-punkt { color: var(--kb-rand-stark); }
+
+@media (max-width: 640px) {
+  .kb-topbar { padding: 0 14px; }
+  .kb-wortmarke { font-size: 17px; }
+}
+
+/* Die eine Aktion, wegen der man die Seite aufruft. Der Rest bleibt
+   zurückhaltend – acht gleich aussehende Knöpfe sagen nicht, wo man
+   anfängt. */
+.kb-btn--haupt {
+  background: var(--kb-marke);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 550;
+  box-shadow: 0 1px 2px rgb(67 56 202 / 0.25), 0 6px 16px rgb(67 56 202 / 0.22);
+}
+
+.kb-btn--haupt:hover {
+  filter: brightness(1.07);
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Eine Zeile unter dem Zeiger soll sich melden – in einer Tabelle mit
+   zwölf Spalten verliert man sonst die Zeile beim Lesen nach rechts. */
+.kb-tabelle tbody tr:hover td { background: var(--kb-flaeche-leise); }
+.kb-tabelle tbody tr:hover .kb-namensspalte { background: var(--kb-flaeche-leise); }
