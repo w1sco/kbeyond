@@ -890,49 +890,7 @@ Entwurf hielt alles im Feld und war damit nur ein Diagramm-Symbol. Im Favicon
 füllt das Feld dagegen die ganze Fläche: Bei 16 px wäre ein Rand Verschwendung,
 und der Überstand fiele ohnehin weg.
 
-### Das K als Diagramm
-
-Der Stamm des K ist die y-Achse, die beiden Schenkel sind Linien eines Diagramms —
-und der obere bricht oben rechts aus und fliegt über das Wort hinweg: „Beyond".
-
-**Der Buchstabe kommt aus der Schrift, die Geometrie aus der Messung.** Ein erster
-Ausbruch war frei geschätzt und knickte am Ansatz sichtbar ab. Die Werte stammen
-jetzt aus den **Pixeln des gerenderten K** (Geist 640, Größe 100): Stamm-Außenkante
-bei x = 7,75, oberer Schenkel von (57,75 | 8) nach (39 | 32), Steigung −1,28,
-Versalhöhe 71, Vorschub 67,9. Der Bogen setzt in genau dieser Richtung an und flacht
-dann ab.
-
-Dieselbe Lehre wie beim „ond": **Buchstaben werden nicht nachgezeichnet.** Ein
-Versuch, „ond" von Hand zu setzen, machte aus dem „n" ein ∩. Der Text steht deshalb
-**innerhalb** der SVG — Buchstabe und Grafik liegen in einem Koordinatensystem, und
-nichts muss ausgerichtet werden.
-
-Vom Fernglas ist **ein** Auge im „o" geblieben. Zwei Linsen (o und d) machten den
-Schriftzug unruhig, und bei kleiner Größe blieb davon nur Schmutz.
-
-#### Zwei Fassungen, und das mit Absicht
-
-- **Groß** (Login, Ligaauswahl): Das K trägt alles, **kein Abzeichen**. Beide
-  nebeneinander erzählen zweimal dasselbe — eine Linie, die ihren Rahmen verlässt.
-  Nebeneinander gestellt sah das unruhig und redundant aus.
-- **Klein** (Kopfleiste, 19 px): Abzeichen und schlichter Schriftzug. Der Bogen wäre
-  dort ein Kratzer von einem Pixel über dem B. Durchgesehen bei 44, 28 und 19 px.
-
-Das Abzeichen bleibt als Favicon und in der Kopfleiste.
-
-> **Zwei Fallen, beide gemessen:**
->
-> `display: inline-block` ist Pflicht — Tailwinds Reset setzt jede SVG auf
-> `display: block`, und der Schriftzug bricht mitten im Wort um. Derselbe
-> Stolperstein wie beim `<dialog>`, dem der Reset sein `margin: auto` nahm.
->
-> Die Luft über der Versalhöhe kommt über **`margin-top`** weg, nicht über
-> `margin-bottom`. Bei `vertical-align: baseline` ist die Unterkante des Kastens der
-> Ausrichtungspunkt, und die liegt schon auf der Grundlinie des K — ein negativer
-> unterer Rand schiebt den Buchstaben deshalb nach unten statt nach oben. Nachgemessen:
-> Grundlinien von K und „ond" jetzt auf 0 px genau.
-
-`app/_ui/Rahmen.jsx` liefert Kopf- und Fußzeile`app/_ui/Rahmen.jsx` liefert Kopf- und Fußzeile für **alle** Seiten, eingehängt
+`app/_ui/Rahmen.jsx` liefert Kopf- und Fußzeile für **alle** Seiten, eingehängt
 im Wurzel-Layout — so bekommen auch die Diagnoseseiten sie, ohne dass jede Seite
 daran denken muss. In der Fußzeile steht `created by wisco`.
 

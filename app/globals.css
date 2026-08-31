@@ -1922,25 +1922,3 @@ th.kb-namensspalte { z-index: 3; }
 :root[data-theme="dark"]  .kb-thema-mond  { display: none; }
 :root[data-theme="light"] .kb-thema-sonne { display: none; }
 :root[data-theme="light"] .kb-thema-mond  { display: block; }
-
-/* Das „ond" mit den Fernglaslinsen. Der Text steht **in** der SVG, damit
-   Buchstaben und Linsen in einem Koordinatensystem liegen.
-
-   `display: inline-block` ist Pflicht: Tailwinds Reset setzt jede SVG auf
-   `display: block`, und damit bricht der Schriftzug um. Derselbe
-   Stolperstein wie beim <dialog>, dem der Reset sein `margin: auto` nahm. */
-/* Beide Teile des Schriftzugs, die als SVG gesetzt sind.
-
-   `display: inline-block` ist Pflicht: Tailwinds Reset setzt jede SVG auf
-   `display: block`, und damit bricht der Schriftzug mitten im Wort um.
-   Derselbe Stolperstein wie beim <dialog>, dem der Reset sein
-   `margin: auto` genommen hat.
-
-   `overflow: visible` lässt den Ausbruch des K außerhalb seiner viewBox
-   malen – so fliegt die Linie über das Wort, ohne Platz zu belegen. */
-.kb-ond,
-.kb-diagramm-k {
-  display: inline-block;
-  vertical-align: baseline;
-  overflow: visible;
-}
