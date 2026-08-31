@@ -1929,7 +1929,17 @@ th.kb-namensspalte { z-index: 3; }
    `display: inline-block` ist Pflicht: Tailwinds Reset setzt jede SVG auf
    `display: block`, und damit bricht der Schriftzug um. Derselbe
    Stolperstein wie beim <dialog>, dem der Reset sein `margin: auto` nahm. */
-.kb-ond {
+/* Beide Teile des Schriftzugs, die als SVG gesetzt sind.
+
+   `display: inline-block` ist Pflicht: Tailwinds Reset setzt jede SVG auf
+   `display: block`, und damit bricht der Schriftzug mitten im Wort um.
+   Derselbe Stolperstein wie beim <dialog>, dem der Reset sein
+   `margin: auto` genommen hat.
+
+   `overflow: visible` lässt den Ausbruch des K außerhalb seiner viewBox
+   malen – so fliegt die Linie über das Wort, ohne Platz zu belegen. */
+.kb-ond,
+.kb-diagramm-k {
   display: inline-block;
   vertical-align: baseline;
   overflow: visible;

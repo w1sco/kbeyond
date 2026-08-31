@@ -57,60 +57,107 @@ export function Zeichen({ groesse = 28, id = "kb" }) {
   );
 }
 
-// ── Das Fernglas im Schriftzug ──────────────────────────────────────
+// ── Das K als Diagramm ─────────────────────────────────────────────
 //
-// „o" und die Schale des „d" sind zwei Kreise – die Form von
-// Fernglaslinsen, mit dem „n" als Brücke dazwischen. Ein zarter Innenring
-// macht das sichtbar, ohne das Wort anzutasten.
+// Der Stamm des K ist die y-Achse, die beiden Schenkel sind Linien eines
+// Diagramms — und der obere bricht oben rechts aus und fliegt über das
+// Wort hinweg: „Beyond".
 //
-// **Die Buchstaben kommen aus der Schrift, nicht aus meiner Hand.** Ein
-// erster Versuch hat „ond" nachgezeichnet; das „n" wurde dabei zum ∩ und
-// der Schriftzug unlesbar. Hier steht echter Text **innerhalb** der SVG,
-// damit Buchstaben und Linsen in einem Koordinatensystem liegen und nichts
-// ausgerichtet werden muss.
+// **Der Buchstabe kommt aus der Schrift, die Geometrie aus der Messung.**
+// Ein erster Ausbruch war frei geschätzt und knickte sichtbar ab. Aus den
+// Pixeln des gerenderten K abgelesen (Geist 640, Größe 100):
+//   Stamm-Außenkante x = 7,75 · oberer Schenkel (57,75|8) → (39|32),
+//   Steigung dy/dx = −1,28 · Versalhöhe 71 · Vorschub 67,9
 //
-// Maße aus Geist 640 gemessen: „ond" 181,7 bei Schriftgröße 100,
-// Oberlänge 71, x-Höhe 54. Laufweite −0,025 em = −2,5 Einheiten.
-const SPUR = -2.5;
-const OND_BREITE = 181.7 + SPUR * 2;
-const GRUNDLINIE = 71;
-const LINSE_Y = GRUNDLINIE - 27;
-const LINSE_R = 7;
+// Der Bogen setzt genau in dieser Richtung an und flacht dann ab.
+const KAP = 71;
+const K_VOR = 67.9;
+const K_HOCH = 62;                       // Luft über der Versalhöhe
+const SPITZE = { x: 59, y: 7.5 };        // Ansatz am oberen Schenkel
+const STEUER = { x: 79, y: -18 };        // Tangente in Schenkelrichtung
+const ZIEL = { x: 133.9, y: -54 };       // über dem „Be"
 
-function Ond() {
+function DiagrammK() {
   return (
     <svg
-      viewBox={`0 0 ${OND_BREITE} ${GRUNDLINIE}`}
-      className="kb-ond"
-      style={{ width: `${OND_BREITE / 100}em`, height: `${GRUNDLINIE / 100}em` }}
+      viewBox={`0 ${-K_HOCH} ${K_VOR} ${KAP + K_HOCH}`}
+      className="kb-diagramm-k"
+      style={{
+        width: `${K_VOR / 100}em`, height: `${(KAP + K_HOCH) / 100}em`,
+        // **Nicht `margin-bottom`.** Bei `vertical-align: baseline` ist die
+        // Unterkante des Kastens der Ausrichtungspunkt – und die liegt hier
+        // schon genau auf der Grundlinie des K. Ein negativer unterer Rand
+        // schiebt den Buchstaben deshalb nach unten statt nach oben.
+        // Die Luft über der Versalhöhe kommt oben wieder weg, damit die
+        // Zeile nicht aufgeht.
+        marginTop: `${-K_HOCH / 100}em`,
+      }}
       aria-hidden="true"
     >
-      {/* Familie und Schnitt erbt der Text aus dem CSS – nur die Größe
-          muss in Nutzereinheiten stehen, damit sie mit skaliert. */}
-      <text x="0" y={GRUNDLINIE} fontSize="100" letterSpacing={SPUR} fill="currentColor">
-        ond
-      </text>
-      <g fill="none" stroke="currentColor" strokeWidth="3">
-        <circle cx="30.45" cy={LINSE_Y} r={LINSE_R} />
-        <circle cx={145.5 + SPUR * 2} cy={LINSE_Y} r={LINSE_R} />
-      </g>
+      <text x="0" y={KAP} fontSize="100" fill="currentColor">K</text>
+      {/* Der Ausbruch liegt außerhalb der viewBox – `overflow: visible`
+          malt ihn trotzdem. Reservierte die SVG den Platz, drifteten K
+          und „Beyond" auseinander. */}
+      <path
+        d={`M${SPITZE.x} ${SPITZE.y} Q${STEUER.x} ${STEUER.y} ${ZIEL.x} ${ZIEL.y}`}
+        fill="none" stroke="currentColor" strokeWidth="11" strokeLinecap="round"
+      />
+      <circle cx={ZIEL.x} cy={ZIEL.y} r="8.5" fill="currentColor" />
     </svg>
   );
 }
 
-// Zeichen und Schriftzug zusammen. `gross` für die Einstiegsseiten.
-//
-// **Die Linsen nur im großen Schriftzug.** Bei 19 px in der Kopfleiste
-// sind sie zwei Punkte von zwei Pixeln – sie tragen dort nichts und
-// trüben nur die Buchstaben. Gemessen bei 48, 34, 26 und 19 px.
-export default function Logo({ gross = false, ohneText = false }) {
+// „ond" mit **einem** Auge im o. Zwei Linsen (o und d) waren zu viel —
+// der Schriftzug wurde unruhig, und bei kleiner Größe blieb davon nur
+// Schmutz. Der Text steht in der SVG, damit Buchstabe und Auge in einem
+// Koordinatensystem liegen; ihn nachzuzeichnen ging schief (das „n„
+// wurde zum ∩).
+const SPUR = -2.5;
+const OND_BREITE = 181.7 + SPUR * 2;
+
+function Ond() {
   return (
-    <span className={`kb-logo${gross ? " kb-logo--gross" : ""}`}>
-      <Zeichen groesse={gross ? 40 : 28} id={gross ? "kb-gross" : "kb-klein"} />
+    <svg
+      viewBox={`0 0 ${OND_BREITE} ${KAP}`}
+      className="kb-ond"
+      style={{ width: `${OND_BREITE / 100}em`, height: `${KAP / 100}em` }}
+      aria-hidden="true"
+    >
+      <text x="0" y={KAP} fontSize="100" letterSpacing={SPUR} fill="currentColor">
+        ond
+      </text>
+      <circle cx="30.45" cy={KAP - 27} r="7" fill="none"
+              stroke="currentColor" strokeWidth="3" />
+    </svg>
+  );
+}
+
+// Zwei Fassungen, und das mit Absicht.
+//
+// **Groß (Login, Ligaauswahl): das K trägt alles, kein Abzeichen.** Beide
+// nebeneinander erzählen zweimal dasselbe — eine Linie, die ihren Rahmen
+// verlässt. Nebeneinander gestellt sah das unruhig und redundant aus.
+//
+// **Klein (Kopfleiste, 19 px): Abzeichen und schlichter Schriftzug.** Der
+// Bogen wäre dort ein Kratzer von einem Pixel über dem B, und das Auge im
+// o ein Schmutzpunkt. Durchgesehen bei 44, 28 und 19 px.
+export default function Logo({ gross = false, ohneText = false }) {
+  if (gross) {
+    return (
+      <span className="kb-logo kb-logo--gross">
+        <span className="kb-wortmarke">
+          <span className="kb-wortmarke-k"><DiagrammK /></span>
+          Bey<Ond />
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="kb-logo">
+      <Zeichen groesse={28} id="kb-klein" />
       {!ohneText && (
         <span className="kb-wortmarke">
-          <span className="kb-wortmarke-k">K</span>
-          {gross ? <>Bey<Ond /></> : "Beyond"}
+          <span className="kb-wortmarke-k">K</span>Beyond
         </span>
       )}
     </span>
