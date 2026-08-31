@@ -6,19 +6,6 @@ import { euro, restzeit, normalisiereSpieler } from "@/lib/format";
 import { holeLigen } from "@/lib/auth";
 
 
-const S = {
-  main: { maxWidth: 1000, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 },
-  h1: { fontSize: 26, margin: 0 },
-  sub: { color: "#64748b", margin: "4px 0 0", fontSize: 14 },
-  muted: { color: "#64748b", fontSize: 13 },
-  link: { color: "#2563eb", fontSize: 13, textDecoration: "none" },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 },
-  th: { textAlign: "left", padding: "8px 10px", borderBottom: "2px solid #e2e8f0", fontSize: 12, textTransform: "uppercase", color: "#64748b" },
-  td: { padding: "10px", borderBottom: "1px solid #f1f5f9" },
-  ligaCard: { display: "flex", flexDirection: "column", gap: 2, padding: 14, border: "1px solid #e2e8f0", borderRadius: 8, textDecoration: "none", color: "inherit" },
-  pre: { background: "#f8fafc", padding: 14, borderRadius: 8, fontSize: 12, overflowX: "auto" },
-};
 
 export const dynamic = "force-dynamic";
 
@@ -35,14 +22,14 @@ export default async function Markt({ searchParams }) {
     // statt zu einem Serverfehler.
     const ligen = { it: await holeLigen(token) };
     return (
-      <main style={S.main}>
-        <h1 style={S.h1}>KBeyond</h1>
-        <p style={S.sub}>Liga wählen</p>
+      <main className="kb-seite kb-seite--schmal">
+        <h1 className="kb-titel">KBeyond</h1>
+        <p className="kb-unter">Liga wählen</p>
         <div style={{ display: "grid", gap: 8 }}>
           {(ligen.it ?? []).map((l) => (
-            <Link key={l.i} href={`/markt?league=${l.i}`} style={S.ligaCard}>
+            <Link key={l.i} href={`/markt?league=${l.i}`} className="kb-kachel">
               <strong>{l.n}</strong>
-              <span style={S.muted}>
+              <span className="kb-leise">
                 Budget {euro(l.b)} · Teamwert {euro(l.tv)}
               </span>
             </Link>
@@ -61,19 +48,19 @@ export default async function Markt({ searchParams }) {
 
   if (fehler) {
     return (
-      <main style={S.main}>
-        <h1 style={S.h1}>Fehler</h1>
-        <pre style={S.pre}>{fehler}</pre>
-        <Link href="/markt" style={S.link}>← Ligaauswahl</Link>
+      <main className="kb-seite kb-seite--schmal">
+        <h1 className="kb-titel">Fehler</h1>
+        <pre className="kb-roh">{fehler}</pre>
+        <Link href="/markt" className="kb-zurueck">← Ligaauswahl</Link>
       </main>
     );
   }
 
   if (params.debug === "1") {
     return (
-      <main style={S.main}>
-        <h1 style={S.h1}>Debug</h1>
-        <pre style={S.pre}>{JSON.stringify(daten, null, 2)}</pre>
+      <main className="kb-seite kb-seite--schmal">
+        <h1 className="kb-titel">Debug</h1>
+        <pre className="kb-roh">{JSON.stringify(daten, null, 2)}</pre>
       </main>
     );
   }
@@ -82,40 +69,40 @@ export default async function Markt({ searchParams }) {
   const spieler = liste.map(normalisiereSpieler);
 
   return (
-    <main style={S.main}>
-      <div style={S.header}>
+    <main className="kb-seite kb-seite--schmal">
+      <div className="kb-kopf">
         <div>
-          <h1 style={S.h1}>Transfermarkt</h1>
-          <p style={S.sub}>{spieler.length} Angebote</p>
+          <h1 className="kb-titel">Transfermarkt</h1>
+          <p className="kb-unter">{spieler.length} Angebote</p>
         </div>
-        <Link href={`/markt?league=${leagueId}&debug=1`} style={S.link}>
+        <Link href={`/markt?league=${leagueId}&debug=1`} className="kb-zurueck">
           Rohdaten
         </Link>
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={S.table}>
+      <div className="kb-tabellenrahmen">
+        <table className="kb-tabelle">
           <thead>
             <tr>
-              <th style={S.th}>Spieler</th>
-              <th style={S.th}>Pos</th>
-              <th style={{ ...S.th, textAlign: "right" }}>Marktwert</th>
-              <th style={{ ...S.th, textAlign: "right" }}>Preis</th>
-              <th style={{ ...S.th, textAlign: "right" }}>Ø Punkte</th>
-              <th style={{ ...S.th, textAlign: "right" }}>Läuft ab</th>
-              <th style={S.th}>Von</th>
+              <th>Spieler</th>
+              <th>Pos</th>
+              <th>Marktwert</th>
+              <th>Preis</th>
+              <th>Ø Punkte</th>
+              <th>Läuft ab</th>
+              <th>Von</th>
             </tr>
           </thead>
           <tbody>
             {spieler.map((s) => (
               <tr key={s.id}>
-                <td style={S.td}><strong>{s.name}</strong></td>
-                <td style={S.td}>{s.position}</td>
-                <td style={{ ...S.td, textAlign: "right" }}>{euro(s.marktwert)}</td>
-                <td style={{ ...S.td, textAlign: "right" }}>{euro(s.preis)}</td>
-                <td style={{ ...S.td, textAlign: "right" }}>{s.schnitt ?? "–"}</td>
-                <td style={{ ...S.td, textAlign: "right" }}>{restzeit(s.ablauf)}</td>
-                <td style={{ ...S.td, color: "#64748b" }}>{s.anbieter ?? "Kickbase"}</td>
+                <td><strong>{s.name}</strong></td>
+                <td>{s.position}</td>
+                <td>{euro(s.marktwert)}</td>
+                <td>{euro(s.preis)}</td>
+                <td>{s.schnitt ?? "–"}</td>
+                <td>{restzeit(s.ablauf)}</td>
+                <td className="kb-leise">{s.anbieter ?? "Kickbase"}</td>
               </tr>
             ))}
           </tbody>
@@ -123,7 +110,7 @@ export default async function Markt({ searchParams }) {
       </div>
 
       {spieler.length === 0 && (
-        <p style={S.muted}>
+        <p className="kb-leise">
           Keine Einträge erkannt. Ruf die Seite mit <code>&amp;debug=1</code> auf,
           um die Rohdaten zu sehen.
         </p>

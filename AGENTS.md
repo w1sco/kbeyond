@@ -956,12 +956,54 @@ Geprüft mit Chromium bei 320/360/390/430/640/768/900/1280 px: kein horizontales
 der Seite, ab 390 px passt auch die Tabelle ohne Scrollen. Bei 768–900 px scrollt die
 vollständige Tabelle innerhalb ihres Rahmens, die Namensspalte bleibt dabei stehen.
 
-### Dunkelmodus ist bewusst aus
+### Dunkelmodus
 
-Die frühere `prefers-color-scheme`-Regel hat nur `body` umgefärbt, während Karten und
-Tabelle fest auf Weiß standen — auf einem dunkel gestellten Handy stand heller Text auf
-weißem Grund. Die Regel ist raus. Ein echter Dunkelmodus geht erst, wenn auch die
-Diagnose-Seiten über Tokens laufen; dann reicht ein zweiter Block mit den Dunkelwerten.
+Zwei Wege, und beide gelten:
+
+- **Die Systemeinstellung** — wer sein Handy dunkel gestellt hat, bekommt es hier dunkel.
+- **Die eigene Wahl** — `data-theme` am `<html>`, gesetzt von einem kleinen Skript im
+  `<head>`, **bevor gezeichnet wird**. Ohne dieses Skript blitzt beim Laden die helle
+  Seite auf.
+
+Daher die Bedingung `:not([data-theme="light"])` am Medienblock: Wer ausdrücklich hell
+gewählt hat, bekommt hell — auch auf einem dunkel gestellten Gerät.
+
+**Der Zustand steckt nicht in React.** Ein `useState`, das beim ersten Rendern aus dem
+`localStorage` liest, erzeugt auf dem Server einen anderen Baum als im Browser — genau
+der Hydrierungskonflikt, der in diesem Projekt schon einmal die Aufstellungsauswahl
+gekostet hat. Der Knopf schreibt nur das Attribut um; **welches Symbol zu sehen ist,
+entscheidet CSS**.
+
+Ein früherer Anlauf hat nur `body` umgefärbt, während Karten und Tabelle fest auf Weiß
+standen. Deshalb liegt jetzt **jede** Fläche an einem Token; die alte Marktseite mit
+ihrem `const S = {...}`-Styleobjekt war der letzte Grund, warum es das hier nicht gab.
+
+#### Gemessen, nicht geschätzt
+
+`pruefstand/dunkel.cjs` rendert jede Seite mit `colorScheme: "dark"` und prüft dreierlei:
+kein Serverfehler, keine hell gebliebene Fläche, und der Umschalter sticht die
+Systemeinstellung in beide Richtungen. Das Spielfeld ist ausgenommen — es ist in beiden
+Themen grün, die weißen Spielerpunkte darauf sind dort richtig.
+
+Dazu eine Kontrastmessung über alle sichtbaren Textknoten. Sie hat **120 Stellen unter
+4,5:1** gefunden, die meisten davon **im hellen Modus** und lange vor dem Dunkelmodus
+entstanden:
+
+| Fundstelle | vorher | Ursache |
+|---|---|---|
+| Nebenknöpfe | 1,6:1 | fester Grauton `#334155` auf dunkler Fläche |
+| Warnhinweise | 1,6:1 | fester Braunton `#78350f` auf dunklem Grund |
+| Aktiver Chip | 2,0:1 | weiß auf der Akzentfarbe, die im Dunkeln hell ist |
+| `kb-leise` | 2,6:1 | `#94a3b8` auf Weiß — schon immer zu schwach |
+
+Daraus zwei Tokens, die es vorher nicht gab: `--kb-auf-akzent` (Text auf farbiger
+Fläche) und `--kb-warn-text`. Beide kippen mit dem Thema, weil im Dunkelmodus die
+Fläche hell ist und der Text darauf dunkel sein muss. Am Ende liegt **kein Text mehr
+unter 4,5:1**, in beiden Themen über acht Seiten.
+
+Die **Diagramm-Palette** steht ebenfalls als Token (`--kb-serie-1` … `-8`): Zwei der
+acht Stufen sind auf hellem Grund gut lesbar und auf dunklem fast unsichtbar. Die
+Farben laufen im Diagramm ohnehin durch `style`, wo `var()` erlaubt ist.
 
 ---
 
@@ -1643,14 +1685,12 @@ Diagnose-Seite statt einer leeren Tabelle.
 
 ## Nächste Schritte
 
-**Erledigt:** Mobile Responsiveness, Managerseite mit Verkaufsrechner, Marktseite,
+**Erledigt:** Dunkelmodus, Mobile Responsiveness, Managerseite mit Verkaufsrechner, Marktseite,
 Zugriffsschutz, persönliche Einstellungen je Nutzer, ein gebündelter Aktualisieren-Knopf,
 Frag-die-Liga mit drei Anbietern.
 
 1. **Punkte-Bonus nach dem ersten Spieltag verifizieren.** Bis dahin ist `sp` überall 0 und
    der Posten trägt nichts bei — die Annahme 10.000 €/Punkt ist weiter unbewiesen.
-2. **Dunkelmodus.** Alle Seiten laufen über Tokens, es fehlt nur ein zweiter Block mit den
-   Dunkelwerten in `globals.css`.
 4. **`markt/page.js` (der alte Transfermarkt) überarbeiten** — nicht zu verwechseln mit
    `/liga/markt`.
 5. **Bietrechner:** wer kann bei welchem Spieler mitbieten — alle Zahlen dafür stehen bereit.

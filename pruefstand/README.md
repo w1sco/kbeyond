@@ -162,3 +162,12 @@ diesen Manager meldet. Daneben steht `p` mit Saisonpunkten als Ablenkung.
 Damit lässt sich der ganze Weg prüfen: Endpunkt suchen → Punktefeld über die
 Summe beweisen → holen → speichern → anzeigen. Das falsche Feld muss dabei
 durchfallen.
+
+## dunkel.cjs
+
+`node pruefstand/dunkel.cjs` rendert jede Seite mit `colorScheme: "dark"` und
+prüft: kein Serverfehler, keine hell gebliebene Fläche, Kontrast von Text zu
+Grund, und ob der Umschalter die Systemeinstellung in beide Richtungen sticht.
+
+Das Spielfeld (`.kb-platz`) ist ausgenommen — es ist in beiden Themen grün, die
+weißen Spielerpunkte darauf sind dort richtig und keine Fundstelle.

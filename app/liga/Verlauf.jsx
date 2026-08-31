@@ -13,9 +13,15 @@ import { euro, euroKurz } from "@/lib/format";
 // an seinen Rang: eine Auswahl darf die übrigen nicht umfärben.
 
 // Geprüfte kategoriale Palette, in dieser Reihenfolge.
+// Die Palette steht als Token in globals.css, nicht als Hexcode hier.
+//
+// Grund: Zwei der acht Stufen (ein dunkles Grün, ein dunkles Indigo) sind
+// auf hellem Grund gut lesbar und auf dunklem fast unsichtbar. Als
+// Variable schaltet die Farbe mit dem Thema um; alle Farben laufen hier
+// ohnehin schon durch `style`, wo `var()` erlaubt ist.
 const FARBEN = [
-  "#2a78d6", "#eb6834", "#1baf7a", "#eda100",
-  "#e87ba4", "#008300", "#4a3aa7", "#e34948",
+  "var(--kb-serie-1)", "var(--kb-serie-2)", "var(--kb-serie-3)", "var(--kb-serie-4)",
+  "var(--kb-serie-5)", "var(--kb-serie-6)", "var(--kb-serie-7)", "var(--kb-serie-8)",
 ];
 
 const MAX_FARBIG = FARBEN.length;
@@ -314,7 +320,7 @@ function Umschalter({ masse, mass, setMass }) {
           type="button"
           role="tab"
           aria-selected={m.schluessel === mass}
-          className={`kb-chip${m.schluessel === mass ? " kb-chip--aktiv" : ""}`}
+          className={`kb-chip${m.schluessel === mass ? " kb-chip--an" : ""}`}
           onClick={() => setMass(m.schluessel)}
         >
           {m.name}

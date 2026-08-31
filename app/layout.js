@@ -18,12 +18,30 @@ export const metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f172a",
+  // Zwei Werte, sonst steht die Browserleiste im Dunkelmodus in der
+  // falschen Farbe – auf dem Handy fällt genau das sofort auf.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1120" },
+  ],
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="de" className={geistSans.variable}>
+    <html lang="de" className={geistSans.variable} suppressHydrationWarning>
+      <head>
+        {/* Läuft, bevor gezeichnet wird. Ohne das blitzt beim Laden kurz
+            die helle Seite auf, wenn jemand dunkel gewählt hat. Kein
+            React-Zustand: Der Browser setzt das Attribut, CSS wertet es
+            aus — deshalb kann es hier keinen Hydrierungskonflikt geben. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('kb-thema');" +
+              "if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();",
+          }}
+        />
+      </head>
       <body>
         <Kopfleiste />
         {children}

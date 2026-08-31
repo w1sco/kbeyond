@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import Thema from "./Thema";
 
 // Kopf- und Fußzeile für **alle** Seiten. Sie stehen im Wurzel-Layout,
 // damit auch die Diagnoseseiten sie bekommen — ohne dass jede Seite
@@ -11,6 +12,7 @@ export function Kopfleiste() {
       <Link href="/liga" className="kb-topbar-marke" aria-label="KBeyond – zur Ligaauswahl">
         <Logo />
       </Link>
+      <Thema />
     </header>
   );
 }

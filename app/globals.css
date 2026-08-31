@@ -23,22 +23,35 @@
 
   /* Schrift */
   --kb-text:          #0f172a;
-  --kb-text-leise:    #64748b;
-  --kb-text-schwach:  #94a3b8;
+  --kb-text-leise:    #5b6878;
+  /* War #94a3b8 und stand damit bei 2,6:1 auf Weiß – für Fließtext zu
+     wenig. Gemessen über alle Seiten, bis nichts mehr unter 4,5:1 lag. */
+  --kb-text-schwach:  #566275;
 
   /* Signale */
   --kb-akzent:        #4f46e5;
   --kb-akzent-stark:  #4338ca;
   --kb-akzent-weich:  #eef2ff;
   --kb-marke:         linear-gradient(135deg, #6366f1, #4338ca);
-  --kb-gut:           #16a34a;
+  --kb-gut:           #14722f;
   --kb-gut-weich:     #dcfce7;
-  --kb-warn:          #b45309;
+  --kb-warn:          #8a4009;
   --kb-warn-weich:    #fef3c7;
   --kb-warn-rand:     #fbbf24;
   --kb-schlecht:      #dc2626;
+  --kb-schlecht-weich:#fef2f2;
+  --kb-schlecht-rand: #fca5a5;
+  --kb-schlecht-text: #991b1b;
   --kb-info-weich:    #dbeafe;
+  --kb-info-rand:     #93c5fd;
+  --kb-gut-rand:      #86efac;
   --kb-korrektur:     #7c3aed;
+
+  /* Text auf der Warnfläche und auf der Akzentfarbe. Beide kippen im
+     Dunkelmodus: Dort ist der Grund dunkel bzw. die Akzentfarbe hell. */
+  --kb-warn-text:     #78350f;
+  --kb-warn-text-leise: #92400e;
+  --kb-auf-akzent:    #ffffff;
 
   /* Form */
   --kb-radius:        14px;
@@ -51,6 +64,18 @@
   /* Kopfleiste */
   --kb-topbar-hoehe:  56px;
 
+  /* Diagramm-Serien. Geprüfte kategoriale Palette (Kontrast,
+     Farbfehlsichtigkeit, Nachbarpaare). Als Token, weil zwei Stufen auf
+     dunklem Grund aufgehellt werden müssen. */
+  --kb-serie-1: #2a78d6;
+  --kb-serie-2: #eb6834;
+  --kb-serie-3: #1baf7a;
+  --kb-serie-4: #eda100;
+  --kb-serie-5: #e87ba4;
+  --kb-serie-6: #008300;
+  --kb-serie-7: #4a3aa7;
+  --kb-serie-8: #e34948;
+
   /* Rhythmus */
   --kb-luft:          24px;
 }
@@ -59,9 +84,138 @@
   --font-sans: var(--font-geist-sans);
 }
 
-/* Dunkelmodus ist bewusst NICHT aktiv: die Diagnose-Seiten haben noch
-   fest verdrahtete helle Inline-Styles und würden unlesbar. Sobald die
-   auf Tokens umgestellt sind, kommt hier ein Block mit den Dunkelwerten. */
+/* ==================================================================
+   Dunkelmodus
+
+   Zwei Wege, und beide müssen gelten:
+
+   1. **Die Systemeinstellung** – wer sein Handy dunkel gestellt hat, will
+      es hier auch dunkel. Das greift, solange niemand von Hand gewählt hat.
+   2. **Die eigene Wahl** – `data-theme` am <html>, gesetzt von einem
+      kleinen Skript im <head>, bevor gezeichnet wird. Ohne dieses Skript
+      blitzt beim Laden kurz die helle Seite auf.
+
+   Deshalb die Bedingung `:not([data-theme="light"])` am Medienblock: Wer
+   ausdrücklich hell gewählt hat, bekommt hell – auch auf einem dunkel
+   gestellten Gerät.
+
+   Ein früherer Anlauf hat nur `body` umgefärbt, während Karten und Tabelle
+   fest auf Weiß standen: heller Text auf weißem Grund. Deshalb liegen
+   jetzt **alle** Flächen an Tokens, und die alte Marktseite mit ihrem
+   festen Style-Objekt war der letzte Grund, warum es das hier nicht gab.
+   ================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --kb-bg:            #0b1120;
+    --kb-flaeche:       #151c2c;
+    --kb-flaeche-leise: #1b2334;
+
+    --kb-rand:          #273246;
+    --kb-rand-stark:    #3a475f;
+
+    --kb-text:          #e8edf7;
+    --kb-text-leise:    #9aa7bd;
+    --kb-text-schwach:  #7a879d;
+
+    --kb-akzent:        #a5b4fc;
+    --kb-akzent-stark:  #818cf8;
+    --kb-akzent-weich:  #262f4d;
+    --kb-marke:         linear-gradient(135deg, #6366f1, #4f46e5);
+
+    --kb-gut:           #4ade80;
+    --kb-gut-weich:     #14321f;
+    --kb-warn:          #fbbf24;
+    --kb-warn-weich:    #35270c;
+    --kb-warn-rand:     #a16207;
+    --kb-schlecht:      #f87171;
+    --kb-info-weich:    #16243d;
+    --kb-korrektur:     #c4b5fd;
+    --kb-schlecht-weich:#3a1618;
+    --kb-schlecht-rand: #7f2b2b;
+    --kb-schlecht-text: #fca5a5;
+    --kb-info-rand:     #2c4a7a;
+    --kb-gut-rand:      #2c6b45;
+    /* Auf dunklem Grund muss der Warntext hell sein – und die Akzentfarbe
+       ist hier hell, also braucht der Text darauf einen dunklen Ton. */
+    --kb-warn-text:     #fcd34d;
+    --kb-warn-text-leise: #fbbf24;
+    --kb-auf-akzent:    #11172a;
+    --kb-text-schwach:  #8b98ae;
+
+    /* Auf dunklem Grund trägt ein Schatten nicht – Tiefe entsteht über
+       die Fläche selbst. Ein schwarzer Schatten wäre schlicht unsichtbar. */
+    --kb-schatten:      0 1px 2px rgb(0 0 0 / 0.4);
+    --kb-schatten-hoch: 0 8px 28px rgb(0 0 0 / 0.55);
+
+    /* Auf dunklem Grund brauchen die dunkelsten Stufen mehr Licht – sonst
+       verschwinden Grün und Indigo schlicht im Hintergrund. */
+    --kb-serie-1: #6aa9f0;
+    --kb-serie-2: #ff9057;
+    --kb-serie-3: #3ed4a0;
+    --kb-serie-4: #f0be42;
+    --kb-serie-5: #f4a0c0;
+    --kb-serie-6: #52c352;
+    --kb-serie-7: #9b8cf0;
+    --kb-serie-8: #ff7a78;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --kb-bg:            #0b1120;
+  --kb-flaeche:       #151c2c;
+  --kb-flaeche-leise: #1b2334;
+
+  --kb-rand:          #273246;
+  --kb-rand-stark:    #3a475f;
+
+  --kb-text:          #e8edf7;
+  --kb-text-leise:    #9aa7bd;
+  --kb-text-schwach:  #7a879d;
+
+  --kb-akzent:        #a5b4fc;
+  --kb-akzent-stark:  #818cf8;
+  --kb-akzent-weich:  #262f4d;
+  --kb-marke:         linear-gradient(135deg, #6366f1, #4f46e5);
+
+  --kb-gut:           #4ade80;
+  --kb-gut-weich:     #14321f;
+  --kb-warn:          #fbbf24;
+  --kb-warn-weich:    #35270c;
+  --kb-warn-rand:     #a16207;
+  --kb-schlecht:      #f87171;
+  --kb-info-weich:    #16243d;
+  --kb-korrektur:     #c4b5fd;
+  --kb-schlecht-weich:#3a1618;
+  --kb-schlecht-rand: #7f2b2b;
+  --kb-schlecht-text: #fca5a5;
+  --kb-info-rand:     #2c4a7a;
+  --kb-gut-rand:      #2c6b45;
+  /* Auf dunklem Grund muss der Warntext hell sein – und die Akzentfarbe
+     ist hier hell, also braucht der Text darauf einen dunklen Ton. */
+  --kb-warn-text:     #fcd34d;
+  --kb-warn-text-leise: #fbbf24;
+  --kb-auf-akzent:    #11172a;
+  --kb-text-schwach:  #8b98ae;
+
+  --kb-schatten:      0 1px 2px rgb(0 0 0 / 0.4);
+  --kb-schatten-hoch: 0 8px 28px rgb(0 0 0 / 0.55);
+
+  /* Auf dunklem Grund brauchen die dunkelsten Stufen mehr Licht – sonst
+     verschwinden Grün und Indigo schlicht im Hintergrund. */
+  --kb-serie-1: #6aa9f0;
+  --kb-serie-2: #ff9057;
+  --kb-serie-3: #3ed4a0;
+  --kb-serie-4: #f0be42;
+  --kb-serie-5: #f4a0c0;
+  --kb-serie-6: #52c352;
+  --kb-serie-7: #9b8cf0;
+  --kb-serie-8: #ff7a78;
+
+  color-scheme: dark;
+}
 
 html {
   -webkit-text-size-adjust: 100%;
@@ -142,7 +296,9 @@ body {
   border: 1px solid var(--kb-rand-stark);
   border-radius: var(--kb-radius-klein);
   background: var(--kb-flaeche);
-  color: #334155;
+  /* War ein fester Grauton. Im Dunkelmodus stand er mit 1,6:1 auf der
+     Fläche – praktisch unlesbar. Gemessen, nicht geschätzt. */
+  color: var(--kb-text);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -215,10 +371,10 @@ body {
   margin-bottom: 12px;
 }
 
-.kb-hinweis--gut     { background: var(--kb-gut-weich);  border-color: #86efac; }
-.kb-hinweis--info    { background: var(--kb-info-weich); border-color: #93c5fd; }
+.kb-hinweis--gut     { background: var(--kb-gut-weich);  border-color: var(--kb-gut-rand); }
+.kb-hinweis--info    { background: var(--kb-info-weich); border-color: var(--kb-info-rand); }
 .kb-hinweis--warn    { background: var(--kb-warn-weich); border-color: var(--kb-warn-rand); }
-.kb-hinweis--fehler  { background: #fef2f2; border-color: #fca5a5; color: var(--kb-schlecht); }
+.kb-hinweis--fehler  { background: var(--kb-schlecht-weich); border-color: var(--kb-schlecht-rand); color: var(--kb-schlecht); }
 
 /* ------------------------------------------------------------------
    Hinweise als Popup
@@ -252,7 +408,9 @@ body {
   height: 18px;
   border-radius: 999px;
   background: var(--kb-akzent);
-  color: #fff;
+  /* Nicht fest weiß: Im Dunkelmodus ist die Akzentfarbe hell, weiß darauf
+     stand mit 2,0:1 da. Gemessen. */
+  color: var(--kb-auf-akzent);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -271,12 +429,14 @@ body {
   text-decoration: underline;
 }
 
-.kb-hinweisknopf--warn   { background: var(--kb-warn-weich); border-color: var(--kb-warn-rand); color: #78350f; }
-.kb-hinweisknopf--warn   .kb-hinweiszeichen { background: #d97706; }
-.kb-hinweisknopf--warn   .kb-hinweismehr { color: #92400e; }
-.kb-hinweisknopf--fehler { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+.kb-hinweisknopf--warn   { background: var(--kb-warn-weich); border-color: var(--kb-warn-rand); color: var(--kb-warn-text); }
+/* Der Kreis war Bernstein mit weißem "!" – 3,2:1. Ein dunkleres Orange
+   trägt das Weiß; im Dunkelmodus kippt der Ton über das Token mit. */
+.kb-hinweisknopf--warn   .kb-hinweiszeichen { background: var(--kb-warn); color: var(--kb-auf-akzent); }
+.kb-hinweisknopf--warn   .kb-hinweismehr { color: var(--kb-warn-text-leise); }
+.kb-hinweisknopf--fehler { background: var(--kb-schlecht-weich); border-color: var(--kb-schlecht-rand); color: var(--kb-schlecht-text); }
 .kb-hinweisknopf--fehler .kb-hinweiszeichen { background: var(--kb-schlecht); }
-.kb-hinweisknopf--fehler .kb-hinweismehr { color: #991b1b; }
+.kb-hinweisknopf--fehler .kb-hinweismehr { color: var(--kb-schlecht-text); }
 
 .kb-dialog {
   /* <dialog> zentriert sich über margin:auto der Browser-Vorgabe. Der
@@ -351,7 +511,7 @@ body {
 }
 
 .kb-luecke p { margin: 8px 0 0; }
-.kb-luecke a { color: #0f172a; text-decoration: underline; }
+.kb-luecke a { color: var(--kb-text); text-decoration: underline; }
 .kb-luecke code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
@@ -398,7 +558,7 @@ body {
   line-height: 1.6;
 }
 
-.kb-verdacht a { color: #0f172a; }
+.kb-verdacht a { color: var(--kb-text); }
 
 .kb-rechnung {
   margin-top: 14px;
@@ -486,7 +646,7 @@ body {
 
 .kb-tabelle td {
   padding: 11px 10px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--kb-rand);
   text-align: right;
   white-space: nowrap;
 }
@@ -551,7 +711,7 @@ th.kb-namensspalte { z-index: 3; }
 .kb-sortleiste.kb-sortleiste--immer .kb-sortchip--aktiv {
   background: var(--kb-akzent);
   border-color: var(--kb-akzent);
-  color: #fff;
+  color: var(--kb-auf-akzent);
 }
 
 .kb-minus     { color: var(--kb-schlecht); }
@@ -566,7 +726,7 @@ th.kb-namensspalte { z-index: 3; }
 }
 
 .kb-marke--exakt { color: var(--kb-gut); }
-.kb-marke--circa { color: #ea580c; }
+.kb-marke--circa { color: var(--kb-warn); }
 .kb-marke--warn  { color: var(--kb-schlecht); }
 
 /* Aufstellung und Markt als kleine Zeichen in der Kaderliste. Ein Punkt
@@ -865,7 +1025,7 @@ th.kb-namensspalte { z-index: 3; }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #b45309;
+  color: var(--kb-warn);
 }
 
 /* ------------------------------------------------------------------
@@ -956,7 +1116,7 @@ th.kb-namensspalte { z-index: 3; }
 .kb-kaderchip--aktiv {
   background: var(--kb-akzent);
   border-color: var(--kb-akzent);
-  color: #fff;
+  color: var(--kb-auf-akzent);
 }
 
 .kb-kaderchip--aktiv .kb-leise { color: rgb(255 255 255 / 0.75); }
@@ -1259,6 +1419,7 @@ th.kb-namensspalte { z-index: 3; }
 .kb-chip--an {
   border-color: var(--kb-akzent);
   background: var(--kb-akzent-weich);
+  color: var(--kb-akzent);
   font-weight: 600;
 }
 
@@ -1692,7 +1853,7 @@ th.kb-namensspalte { z-index: 3; }
   color: var(--kb-text-schwach);
 }
 
-.kb-fuss-punkt { color: var(--kb-rand-stark); }
+.kb-fuss-punkt { color: var(--kb-text-schwach); }
 
 @media (max-width: 640px) {
   .kb-topbar { padding: 0 14px; }
@@ -1720,3 +1881,44 @@ th.kb-namensspalte { z-index: 3; }
    zwölf Spalten verliert man sonst die Zeile beim Lesen nach rechts. */
 .kb-tabelle tbody tr:hover td { background: var(--kb-flaeche-leise); }
 .kb-tabelle tbody tr:hover .kb-namensspalte { background: var(--kb-flaeche-leise); }
+
+/* ------------------------------------------------------------------
+   Umschalter hell/dunkel
+
+   Welches Symbol zu sehen ist, entscheidet CSS und nicht JavaScript.
+   Ein Zustand in React müsste beim ersten Rendern das Thema kennen —
+   auf dem Server weiß es das nicht, und der Baum liefe auseinander.
+   ------------------------------------------------------------------ */
+
+.kb-thema {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius-klein);
+  background: var(--kb-flaeche);
+  color: var(--kb-text-leise);
+  cursor: pointer;
+}
+
+.kb-thema:hover { color: var(--kb-akzent); border-color: var(--kb-akzent); }
+
+/* Vorgabe hell: gezeigt wird der Mond, also wohin der Klick führt. */
+.kb-thema-sonne { display: none; }
+.kb-thema-mond  { display: block; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .kb-thema-sonne { display: block; }
+  :root:not([data-theme="light"]) .kb-thema-mond  { display: none; }
+}
+
+/* Die ausdrückliche Wahl sticht die Systemeinstellung – in beide
+   Richtungen. Ohne die zweite Regel bliebe auf einem dunkel gestellten
+   Gerät nach der Wahl "hell" das falsche Symbol stehen. */
+:root[data-theme="dark"]  .kb-thema-sonne { display: block; }
+:root[data-theme="dark"]  .kb-thema-mond  { display: none; }
+:root[data-theme="light"] .kb-thema-sonne { display: none; }
+:root[data-theme="light"] .kb-thema-mond  { display: block; }
