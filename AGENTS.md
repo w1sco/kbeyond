@@ -890,6 +890,32 @@ Entwurf hielt alles im Feld und war damit nur ein Diagramm-Symbol. Im Favicon
 füllt das Feld dagegen die ganze Fläche: Bei 16 px wäre ein Rand Verschwendung,
 und der Überstand fiele ohnehin weg.
 
+### Das Fernglas im Schriftzug
+
+„o" und die Schale des „d" sind zwei Kreise — die Form von Fernglaslinsen, mit dem
+„n" als Brücke dazwischen. Ein zarter Innenring macht das sichtbar, ohne das Wort
+anzutasten.
+
+**Die Buchstaben kommen aus der Schrift, nicht aus eigener Hand.** Ein erster
+Versuch hat „ond" nachgezeichnet: Das „n" wurde dabei zum ∩ und der Schriftzug
+unlesbar. Eine fremde Schrift nachzubauen ist der falsche Weg. Jetzt steht echter
+Text **innerhalb** der SVG — Buchstaben und Linsen liegen damit in einem
+Koordinatensystem, und es muss nichts ausgerichtet werden. Ein Kontrolldurchlauf
+ohne Linsen ist von der reinen Schrift nicht zu unterscheiden.
+
+Die Maße stammen aus der Messung, nicht aus dem Gefühl: „ond" ist 181,7 Einheiten
+breit bei Schriftgröße 100, Oberlänge 71, x-Höhe 54, Laufweite −2,5.
+
+**Die Linsen nur im großen Schriftzug.** Bei 19 px in der Kopfleiste sind sie zwei
+Punkte von zwei Pixeln — sie tragen dort nichts und trüben nur die Buchstaben.
+Durchgesehen bei 48, 34, 26 und 19 px; eine zusätzliche Brücke zwischen den Linsen
+und ein voller Punkt statt des Rings sind daran gescheitert (der Punkt macht aus dem
+„o" ein „ø").
+
+> **`display: inline-block` ist Pflicht.** Tailwinds Reset setzt jede SVG auf
+> `display: block` — der Schriftzug bricht sonst mitten im Wort um. Derselbe
+> Stolperstein wie beim `<dialog>`, dem der Reset sein `margin: auto` genommen hat.
+
 `app/_ui/Rahmen.jsx` liefert Kopf- und Fußzeile für **alle** Seiten, eingehängt
 im Wurzel-Layout — so bekommen auch die Diagnoseseiten sie, ohne dass jede Seite
 daran denken muss. In der Fußzeile steht `created by wisco`.

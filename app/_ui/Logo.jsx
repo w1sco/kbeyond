@@ -57,14 +57,60 @@ export function Zeichen({ groesse = 28, id = "kb" }) {
   );
 }
 
+// ── Das Fernglas im Schriftzug ──────────────────────────────────────
+//
+// „o" und die Schale des „d" sind zwei Kreise – die Form von
+// Fernglaslinsen, mit dem „n" als Brücke dazwischen. Ein zarter Innenring
+// macht das sichtbar, ohne das Wort anzutasten.
+//
+// **Die Buchstaben kommen aus der Schrift, nicht aus meiner Hand.** Ein
+// erster Versuch hat „ond" nachgezeichnet; das „n" wurde dabei zum ∩ und
+// der Schriftzug unlesbar. Hier steht echter Text **innerhalb** der SVG,
+// damit Buchstaben und Linsen in einem Koordinatensystem liegen und nichts
+// ausgerichtet werden muss.
+//
+// Maße aus Geist 640 gemessen: „ond" 181,7 bei Schriftgröße 100,
+// Oberlänge 71, x-Höhe 54. Laufweite −0,025 em = −2,5 Einheiten.
+const SPUR = -2.5;
+const OND_BREITE = 181.7 + SPUR * 2;
+const GRUNDLINIE = 71;
+const LINSE_Y = GRUNDLINIE - 27;
+const LINSE_R = 7;
+
+function Ond() {
+  return (
+    <svg
+      viewBox={`0 0 ${OND_BREITE} ${GRUNDLINIE}`}
+      className="kb-ond"
+      style={{ width: `${OND_BREITE / 100}em`, height: `${GRUNDLINIE / 100}em` }}
+      aria-hidden="true"
+    >
+      {/* Familie und Schnitt erbt der Text aus dem CSS – nur die Größe
+          muss in Nutzereinheiten stehen, damit sie mit skaliert. */}
+      <text x="0" y={GRUNDLINIE} fontSize="100" letterSpacing={SPUR} fill="currentColor">
+        ond
+      </text>
+      <g fill="none" stroke="currentColor" strokeWidth="3">
+        <circle cx="30.45" cy={LINSE_Y} r={LINSE_R} />
+        <circle cx={145.5 + SPUR * 2} cy={LINSE_Y} r={LINSE_R} />
+      </g>
+    </svg>
+  );
+}
+
 // Zeichen und Schriftzug zusammen. `gross` für die Einstiegsseiten.
+//
+// **Die Linsen nur im großen Schriftzug.** Bei 19 px in der Kopfleiste
+// sind sie zwei Punkte von zwei Pixeln – sie tragen dort nichts und
+// trüben nur die Buchstaben. Gemessen bei 48, 34, 26 und 19 px.
 export default function Logo({ gross = false, ohneText = false }) {
   return (
     <span className={`kb-logo${gross ? " kb-logo--gross" : ""}`}>
       <Zeichen groesse={gross ? 40 : 28} id={gross ? "kb-gross" : "kb-klein"} />
       {!ohneText && (
         <span className="kb-wortmarke">
-          <span className="kb-wortmarke-k">K</span>Beyond
+          <span className="kb-wortmarke-k">K</span>
+          {gross ? <>Bey<Ond /></> : "Beyond"}
         </span>
       )}
     </span>
