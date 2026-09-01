@@ -76,3 +76,20 @@ INSERT INTO mw_beobachtung (player_id, tag, marktwert) VALUES
  ('204', NOW()::date,                       44200000),   -- -700 Tsd
  ('206', (NOW() - '1 day'::interval)::date, 15100000),
  ('206', NOW()::date,                       15100000);   -- ±0
+
+-- Spielplan: zwei gewertete Spieltage und drei kommende.
+-- Die Vereins-IDs sind dieselben wie im Spielerpool der Attrappe
+-- (2 Stuttgart, 3 Leverkusen, 7 Bayern) plus einer, den der Pool NICHT
+-- kennt (99) - damit sich zeigt, dass ein unbekannter Gegner sauber
+-- ausgewiesen und nicht geraten wird.
+INSERT INTO spiele (spieltag, heim, gast, punkte_heim, punkte_gast) VALUES
+  (1, '7', '99', 900, 300),
+  (1, '3',  '2', 600, 600),
+  (2, '99', '3', 400, 800),
+  (2, '2',  '7', 500, 700),
+  (3, '7',  '3', NULL, NULL),
+  (3, '2', '99', NULL, NULL),
+  (4, '99', '7', NULL, NULL),
+  (4, '3',  '2', NULL, NULL),
+  (5, '7',  '2', NULL, NULL)
+ON CONFLICT DO NOTHING;

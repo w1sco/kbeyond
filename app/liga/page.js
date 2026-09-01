@@ -241,6 +241,7 @@ export default async function Liga({ searchParams }) {
               von einer fremden Seite aus auslösen. */}
           <Aktion pfad="aktualisieren" leagueId={leagueId} haupt>Alles aktualisieren</Aktion>
           <a href={`/liga/live?league=${leagueId}`} className="kb-btn">Live-Punkte</a>
+          <a href={`/liga/gegner?league=${leagueId}`} className="kb-btn">Gegner</a>
           <a href={`/liga/transfermarkt?league=${leagueId}`} className="kb-btn">Transfermarkt</a>
           <a href={`/liga/markt?league=${leagueId}`} className="kb-btn">Freie Spieler</a>
           <a href={`/liga/aufschlaege?league=${leagueId}`} className="kb-btn">Aufschläge</a>

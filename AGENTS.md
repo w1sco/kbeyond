@@ -642,6 +642,64 @@ Die **Aufstellung stammt aus der Datenbank**. Wer seine Elf seit dem letzten
 Aktualisieren geändert hat, steht hier noch mit der alten; die Seite sagt das
 unter der Tabelle.
 
+## Gegner der nächsten Spiele
+
+`/liga/gegner` beantwortet die Frage, auf welche Spieler man setzen sollte — über den
+Gegner. Gegen eine durchlässige Mannschaft holen Spieler mehr Punkte als gegen eine zähe.
+
+### Gemessen wird, was ein Verein zugesteht
+
+Nicht, wie viele Punkte er selbst macht. Wer auf Spieler setzen will, sucht den
+durchlässigen Gegner, nicht den schwachen Angriff. `zugestanden()` summiert deshalb die
+Punkte, die die **jeweils andere Seite** gegen ihn geholt hat.
+
+### Der Score: 5 : 4 : 3 : 2 : 1
+
+Die nächsten fünf Spiele werden linear absteigend gewichtet — das nächste trägt damit ein
+Drittel. Linear und nicht exponentiell, weil sich 5:4:3:2:1 jedem erklären lässt.
+
+Ergebnis ist ein Index: **100 = Ligaschnitt**, 118 heißt „die kommenden Gegner sind
+zusammen rund 18 % durchlässiger als üblich".
+
+**Wenige Spiele werden gedämpft** (`RUECKHALT = 3`). Am zweiten Spieltag hat jede
+Mannschaft ein einziges Spiel; ein Ausreißer bestimmte sonst die ganze Bewertung. Der
+Schnitt wird zum Ligaschnitt hingezogen, als hätte jede Mannschaft drei zusätzliche,
+genau durchschnittliche Spiele bestritten. Nach zehn Spielen zählt das Gemessene zu drei
+Vierteln.
+
+**Der Heimvorteil ist eine Zahl für die ganze Liga**, nicht eine je Mannschaft. Je
+Mannschaft wären es am zweiten Spieltag ein bis zwei Spiele — daraus lässt sich nichts
+ableiten. Über alle Partien zusammen schon.
+
+**Ein Gegner ohne Daten wird nicht geraten.** Er fällt aus der Rechnung, die übrigen
+Gewichte tragen ihn mit, und die Zeile weist ihn aus. 35 Fälle durchgerechnet
+(`pruefstand/gegner.mjs`), darunter die Probe, dass das nächste Spiel wirklich ein Drittel
+trägt und dass ein einzelner Ausreißer gedämpft wird.
+
+`lib/gegner.js` ist wie `gebot.js` und `loginbonus.js` **ohne Datenbank** — sonst ließe es
+sich nicht ohne Postgres durchrechnen.
+
+### Woher die Daten kommen, ist noch offen
+
+Zwei Dinge fehlen und sind in diesem Projekt **nicht belegt**:
+
+1. **Der Spielplan** — wer spielt an welchem Spieltag gegen wen, zu Hause oder auswärts.
+2. **Punkte je Spieltag.** `kader.punkte` ist die Saisonsumme; `mdp` aus dem Live-Endpunkt
+   hängt am Manager, nicht am Verein.
+
+`/spielplan?league=…` probiert rund sechzehn Kandidaten für beides durch und zeigt zu jeder
+Antwort erst den **Aufbau** (Schlüsselbaum), dann die Rohdaten — daran sieht man in einer
+Zeile, ob überhaupt etwas Passendes drinsteht. Wie alle teuren Diagnoseseiten läuft sie
+**erst auf Klick**.
+
+Die Tabelle `spiele` ist **ligaunabhängig**: Die Bundesliga ist für alle dieselbe, und die
+Punkte einer Mannschaft hängen nicht an der Kickbase-Liga. `punkte_heim`/`punkte_gast`
+stehen auf `NULL`, solange eine Partie nicht gewertet ist — das unterscheidet „kommt noch"
+von „null Punkte geholt".
+
+Solange nichts gespeichert ist, sagt die Seite das und verweist auf die Diagnose, statt
+eine leere Tabelle zu zeigen.
+
 ## Wann kommt ein Spieler wieder auf den Markt?
 
 Spieler kehren nach einem festen Rhythmus zurück, anfangs etwa alle 14 Tage. Der Rhythmus
@@ -1035,6 +1093,8 @@ app/
   liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
   liga/news/page.js                Spieler-News: eigener Kader und Transfermarkt
   liga/news/Newsliste.jsx          "use client" — Recherche in Bündeln, Fortschritt
+  liga/gegner/page.js              Gegner der nächsten fünf Spiele, Score je Verein
+  spielplan/page.js                Diagnose: Spielplan und Punkte je Spieltag
   liga/live/page.js                Live-Punkte am Spieltag, je Manager und Spieler
   liga/live/Auffrischen.jsx        "use client" — von Hand oder alle 60 s
   livepunkte/page.js               Diagnose: welcher Endpunkt liefert Live-Punkte
@@ -1076,6 +1136,7 @@ lib/
   tagesverlauf.js   rekonstruiereVerlauf(), schreibeRekonstruktion() — bis zum Reset
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
+  gegner.js         faktoren(), heimfaktor(), gegnerScore() — Gegnerstärke, ohne DB
   live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
   liveabruf.js      holeLivestand(), sucheLivePfad() — Live-Stand holen und merken
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
