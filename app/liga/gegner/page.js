@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { sitzung, verlangeLiga } from "@/lib/auth";
-import { initSchema, getSpiele, getKader } from "@/lib/db";
+import { initSchema, getSpielePunkte, getKader, sql } from "@/lib/db";
 import { holePool } from "@/lib/rekonstruktion";
 import { euroKurz } from "@/lib/format";
 import {
@@ -15,8 +15,7 @@ export const dynamic = "force-dynamic";
 // durchlässige Mannschaft holen Spieler mehr Punkte als gegen eine zähe.
 //
 // Diese Seite bewertet deshalb jeden Verein danach, wie günstig seine
-// **nächsten fünf Gegner** stehen — das nächste Spiel am stärksten
-// gewichtet — und listet darunter seine Spieler.
+// **nächsten fünf Gegner** stehen, und listet darunter seine Spieler.
 export default async function Gegner({ searchParams }) {
   const { token } = await sitzung();
   const p = await searchParams;
@@ -24,11 +23,12 @@ export default async function Gegner({ searchParams }) {
   await verlangeLiga(leagueId, token);
   await initSchema();
 
-  const [spiele, pool, kader, ranking] = await Promise.all([
-    getSpiele(),
+  const [spiele, pool, kader, ranking, fortschritt] = await Promise.all([
+    getSpielePunkte(),
     holePool(),
     getKader(leagueId),
     kbFetch(`/v4/leagues/${leagueId}/ranking`, token),
+    sql`SELECT COUNT(*)::int AS n FROM leistung_geprueft`,
   ]);
 
   const gespielt = gewertete(spiele);
@@ -38,33 +38,54 @@ export default async function Gegner({ searchParams }) {
 
   // Vereine aus dem Spielerpool – dort steht die Zuordnung Spieler → Verein.
   const vereine = new Map();
-  // holePool() liefert { spieler, stand, leer } – keine blanke Liste.
   for (const s of pool.spieler ?? []) {
     const id = String(s.teamId ?? "");
     if (!id) continue;
     if (!vereine.has(id)) vereine.set(id, { id, name: s.verein ?? `Verein ${id}`, spieler: [] });
     vereine.get(id).spieler.push(s);
   }
+  // Vereine, die im Spielplan stehen, aber (noch) nicht im Pool.
+  for (const s of spiele) {
+    for (const id of [s.heim, s.gast]) {
+      if (!vereine.has(id)) vereine.set(id, { id, name: `Verein ${id}`, spieler: [] });
+    }
+  }
 
-  // Wem gehört wer? Für den Hinweis „gehört bereits jemandem".
   const besetzt = kader.besetzt ?? new Set();
+  const nameVon = (id) => vereine.get(String(id))?.name ?? `Verein ${id}`;
 
   const zeilen = [...vereine.values()]
     .map((v) => {
       const kommende = naechsteSpiele(spiele, v.id);
       const bewertung = gegnerScore(kommende, fMap, heim);
+      // Die eigene Bilanz: was gegen diesen Verein geholt wurde, je Spiel.
+      const bilanz = gespielt
+        .filter((s) => s.heim === v.id || s.gast === v.id)
+        .map((s) => {
+          const daheim = s.heim === v.id;
+          return {
+            spieltag: s.spieltag,
+            gegner: daheim ? s.gast : s.heim,
+            daheim,
+            eigene: daheim ? s.punkteHeim : s.punkteGast,
+            zugestanden: daheim ? s.punkteGast : s.punkteHeim,
+          };
+        });
       return {
         ...v,
         kommende,
         score: bewertung?.score ?? null,
         teile: bewertung?.teile ?? [],
         eigen: fMap.get(v.id) ?? null,
+        bilanz,
       };
     })
-    .sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    .sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.name.localeCompare(b.name));
 
-  const nameVon = (id) => vereine.get(String(id))?.name ?? `Verein ${id}`;
-  const ohneDaten = gespielt.length === 0;
+  const ohneSpielplan = spiele.length === 0;
+  const ohnePunkte = !ohneSpielplan && gespielt.length === 0;
+  const geprueft = fortschritt[0]?.n ?? 0;
+  const spielerGesamt = (pool.spieler ?? []).length;
 
   return (
     <main className="kb-seite">
@@ -78,22 +99,17 @@ export default async function Gegner({ searchParams }) {
         </div>
       </header>
 
-      {ohneDaten ? (
+      {ohneSpielplan ? (
         <section className="kb-karte">
-          <h2 className="kb-abschnitt-titel">Noch kein Spielplan gespeichert</h2>
+          <h2 className="kb-abschnitt-titel">Noch kein Spielplan geladen</h2>
           <p>
-            Für diese Auswertung fehlen zwei Dinge, die in diesem Projekt noch nicht belegt
-            sind: der <strong>Spielplan</strong> (wer spielt wann gegen wen) und die
-            <strong> Punkte einer Mannschaft je Spieltag</strong>. Der Kader trägt nur die
-            Saisonsumme, und die Live-Punkte hängen am Manager, nicht am Verein.
-          </p>
-          <p className="kb-leise">
-            Welcher Endpunkt beides liefert, klärt die Diagnoseseite — sie probiert rund
-            sechzehn Kandidaten durch und zeigt für jeden den Aufbau der Antwort.
+            Der Spielplan kommt beim <strong>Aktualisieren</strong> mit — er kostet einen
+            einzigen Kickbase-Aufruf für alle 34 Spieltage. Danach stehen hier die
+            nächsten fünf Gegner jedes Vereins.
           </p>
           <p>
-            <Link href={`/spielplan?league=${leagueId}`} className="kb-btn">
-              Endpunkte suchen
+            <Link href={`/liga?league=${leagueId}`} className="kb-btn kb-btn--haupt">
+              Zur Liga und aktualisieren
             </Link>
           </p>
         </section>
@@ -106,13 +122,22 @@ export default async function Gegner({ searchParams }) {
             </div>
             <div>
               <span className="kb-label">Heimvorteil</span>
-              <strong>{Math.round((heim.heim - 1) * 100)} %</strong>
+              <strong>{gespielt.length === 0 ? "–" : `${Math.round((heim.heim - 1) * 100)} %`}</strong>
             </div>
             <div>
               <span className="kb-label">Grundlage</span>
               <strong>{gespielt.length} Partien</strong>
             </div>
           </div>
+
+          {ohnePunkte && (
+            <p className="kb-warnung">
+              Der Spielplan steht, die <strong>Punkte je Spiel</strong> fehlen noch:
+              {" "}{geprueft} von {spielerGesamt || "?"} Spielern sind abgeholt. Das kostet
+              einen Aufruf je Spieler und läuft deshalb in Häppchen — ein paarmal
+              aktualisieren, dann steht der Score. Die Ansetzungen unten stimmen bereits.
+            </p>
+          )}
 
           <Hinweis
             titel="Wie der Score entsteht"
@@ -125,20 +150,22 @@ export default async function Gegner({ searchParams }) {
               Angriff.
             </p>
             <p>
-              Die nächsten fünf Spiele werden mit <strong>{GEWICHTE.join(" : ")}</strong>
-              {" "}gewichtet — das nächste trägt damit ein Drittel. <strong>100</strong> ist
-              Ligaschnitt, <strong>118</strong> heißt: die kommenden Gegner sind zusammen
-              rund 18 % durchlässiger als üblich.
+              Die nächsten fünf Spiele wiegen <strong>{GEWICHTE.join(" : ")}</strong> — das
+              nächste trägt damit ein Drittel. <strong>100</strong> ist Ligaschnitt,
+              {" "}<strong>118</strong> heißt: die kommenden Gegner sind zusammen rund 18 %
+              durchlässiger als üblich.
             </p>
             <p>
               <strong>Wenige Spiele werden gedämpft.</strong> Am zweiten Spieltag hat jede
               Mannschaft ein einziges Spiel — ein Ausreißer bestimmte sonst die ganze
-              Bewertung. Der Schnitt wird deshalb zum Ligaschnitt hingezogen, als hätte jede
+              Bewertung. Der Schnitt wird zum Ligaschnitt hingezogen, als hätte jede
               Mannschaft drei zusätzliche, genau durchschnittliche Spiele bestritten.
             </p>
             <p>
-              Ein Gegner ohne Daten wird <strong>nicht geraten</strong> — er fällt aus der
-              Rechnung, die übrigen Gewichte tragen ihn mit.
+              Die Punkte einer Mannschaft sind die Summe ihrer Spieler in diesem einen
+              Spiel, aus Kickbases eigener Leistungsreihe. Maßgeblich ist dabei der Verein
+              <strong> zum Zeitpunkt des Spiels</strong> — ein Winterwechsel zählt für
+              beide Vereine richtig.
             </p>
           </Hinweis>
 
@@ -160,11 +187,25 @@ export default async function Gegner({ searchParams }) {
                     <td className="kb-namensspalte">
                       <details className="kb-elfauf">
                         <summary>{v.name}</summary>
+                        {v.bilanz.length > 0 && (
+                          <ul className="kb-elfliste">
+                            {v.bilanz.map((b) => (
+                              <li key={b.spieltag}>
+                                <span className="kb-leise">
+                                  {b.spieltag}. {b.daheim ? "vs" : "bei"}
+                                </span>
+                                <span className="kb-livename">{nameVon(b.gegner)}</span>
+                                <strong>{b.eigene ?? "–"}</strong>
+                                <span className="kb-leise">({b.zugestanden ?? "–"})</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                         <ul className="kb-elfliste">
                           {v.spieler
                             .slice()
                             .sort((a, b) => (b.marktwert ?? 0) - (a.marktwert ?? 0))
-                            .slice(0, 12)
+                            .slice(0, 10)
                             .map((s) => (
                               <li key={s.id}>
                                 <span className="kb-leise">{s.position ?? "?"}</span>
@@ -188,9 +229,9 @@ export default async function Gegner({ searchParams }) {
                       {v.eigen?.schnitt == null ? "–" : Math.round(v.eigen.schnitt)}
                     </td>
                     <td className="kb-sek kb-leise">
-                      {v.teile.length === 0
-                        ? "kein Spielplan"
-                        : v.teile
+                      {v.kommende.length === 0
+                        ? "Saison durch"
+                        : v.kommende
                             .map((t) => `${t.heim ? "" : "@"}${nameVon(t.gegner)}`)
                             .join(" · ")}
                     </td>
@@ -201,9 +242,10 @@ export default async function Gegner({ searchParams }) {
           </div>
 
           <p className="kb-info">
-            „gesteht zu“ ist der rohe Schnitt der Punkte, die Gegner gegen diesen Verein
-            geholt haben — ungedämpft, damit die Datenlage ablesbar bleibt. In den Score
-            geht der gedämpfte Wert ein.
+            Aufgeklappt stehen oben die bisherigen Spiele des Vereins (eigene Punkte, in
+            Klammern die des Gegners), darunter seine teuersten Spieler. „gesteht zu“ ist
+            der rohe Schnitt der Punkte, die Gegner gegen ihn geholt haben — ungedämpft,
+            damit die Datenlage ablesbar bleibt.
           </p>
         </>
       )}

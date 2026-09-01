@@ -8,6 +8,7 @@ import { ladeKader, ladeAufstellungen } from "@/lib/kader";
 import { rekonstruiere, holePool, aktualisierePool } from "@/lib/rekonstruktion";
 import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { ergaenzeMarktwerte } from "@/lib/marktwerte";
+import { importiereSpielplan, importiereLeistungen } from "@/lib/spieleabruf";
 import { pruefeApi, sitzung } from "@/lib/auth";
 import { bremseZuruecksetzen } from "@/lib/kickbase";
 import { holeMitspieler } from "@/lib/mitspieler";
@@ -241,6 +242,34 @@ export async function POST(request) {
       }
     } catch {
       // Der Tagesstand ist Beiwerk – der Lauf soll daran nicht scheitern
+    }
+
+    // 6b. Spielplan und Punkte je Spiel — die Grundlage der Gegner-Seite.
+    //
+    // Der Spielplan kostet **einen** Aufruf für alle 34 Spieltage und läuft
+    // deshalb immer mit. Die Einzelleistungen kosten einen Aufruf je
+    // Spieler; sie laufen in Häppchen und nur, wenn noch Zeit übrig ist.
+    if (rest() > MINDESTZEIT_MS) {
+      try {
+        const sp = await importiereSpielplan(token);
+        if (sp.spiele > 0) {
+          erledigt.push(`Spielplan ${sp.gewertet}/${sp.spiele} gewertet`);
+        }
+        if (rest() > MINDESTZEIT_MS) {
+          const lp = await importiereLeistungen(token);
+          if (lp.geholt > 0) {
+            erledigt.push(
+              lp.offen > 0
+                ? `Spielpunkte ${lp.geholt} Spieler (${lp.offen} offen)`
+                : `Spielpunkte ${lp.geholt} Spieler`
+            );
+          }
+        }
+      } catch (e) {
+        // Der Lauf soll daran nicht scheitern — aber ein stiller Ausfall
+        // sieht aus wie „nichts zu tun". Deshalb wird er benannt.
+        offen.push(`Spielplan: ${e?.message ?? "unbekannter Fehler"}`);
+      }
     }
 
     // 7. Historie – nur solange die Lücke nicht abgearbeitet ist

@@ -237,6 +237,51 @@ function fuerPfad(pfad) {
     return { it: eigene };
   }
 
+  // Der Spielplan: alle Spieltage in einem Aufruf, wie im Original.
+  // Gewertete Partien tragen Tore, kommende lassen sie weg – daran
+  // erkennt der Leser sie, nicht an einem Statuscode.
+  if (pfad.includes("/competitions/1/matchdays")) {
+    const paare = [[7, 2], [3, 7], [2, 3], [7, 3], [3, 2], [2, 7]];
+    const it = paare.map(([h, g], i) => ({
+      day: i + 1,
+      mdln: `Spieltag ${i + 1}`,
+      it: [{
+        mi: String(9000 + i),
+        day: i + 1,
+        // Echte Kalendertage – ein "2026-08-34" hat den Import schon
+        // einmal mit einem Postgres-Fehler abbrechen lassen.
+        dt: new Date(Date.UTC(2026, 7, 20 + i * 7, 18, 30)).toISOString(),
+        t1: String(h), t2: String(g),
+        // Nur die ersten beiden Spieltage sind gespielt.
+        ...(i < 2 ? { t1g: 3 - i, t2g: i } : {}),
+      }],
+    }));
+    return { it, day: 3 };
+  }
+
+  // Die Leistungsreihe eines Spielers: je Saison eine Liste, darin je
+  // Spiel seine Punkte und **sein Verein zu diesem Zeitpunkt** (`pt`).
+  const leistung = pfad.match(/\/players\/(\d+)\/performance/);
+  if (leistung) {
+    const pid = leistung[1];
+    // Der Verein des Spielers aus dem Vereinskader.
+    const tid = Object.keys(VEREINSKADER).find((t) =>
+      (VEREINSKADER[t] ?? []).some((s) => String(s.i ?? s.pi) === pid)) ?? "7";
+    return {
+      it: [
+        { sid: "40", ti: "2025/2026", n: "Bundesliga", ph: [
+          { mi: "8000", day: 1, p: 99, pt: tid, cur: false },
+        ] },
+        { sid: "42", ti: "2026/2027", n: "Bundesliga", ph: [
+          { mi: "9000", day: 1, p: 40, pt: tid, cur: true },
+          { mi: "9001", day: 2, p: 20, pt: tid, cur: false },
+          // Kommende Spiele stehen mit drin, aber ohne Punkte.
+          { mi: "9002", day: 3, pt: tid, cur: false },
+        ] },
+      ],
+    };
+  }
+
   if (pfad.includes("/competitions/1/table")) {
     // Mit Vereinsnamen: Der Pool soll den Namen tragen, nicht die Team-ID.
     const namen = { 7: "FC Bayern München", 2: "VfB Stuttgart", 3: "Bayer 04 Leverkusen" };

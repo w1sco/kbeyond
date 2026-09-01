@@ -59,6 +59,10 @@ Auth: `Authorization: Bearer {token}`, Token aus dem Login.
 | `/v4/leagues/{id}/market` | Aktueller Transfermarkt |
 | `/v4/competitions/1/table` | Alle 18 Team-IDs |
 | `/v4/competitions/1/teams/{tid}/teamprofile` | Vereinskader mit Spieler-IDs |
+| `/v4/competitions/1/matchdays` | **Der ganze Spielplan**: 34 Spieltage, je Partie `mi`, `t1`/`t2`, `dt`, dazu `t1g`/`t2g` sobald gespielt |
+| `/v4/competitions/1/players/{pid}/performance` | **Punkte je Spiel**, 14 Saisons zurück: `mi`, `p`, `pt` (Verein zum Spielzeitpunkt) |
+| `/v4/competitions/1/players/{pid}` | Spielerprofil: `mv`, `pos`, `tid`, `prob` (Startelf-Wahrscheinlichkeit), `mdsum` (nächste drei Partien) |
+| `/v4/competitions/1/teams/{tid}/teamcenter` | Vereinskader mit Saisonpunkten je Spieler, dazu die Punkte-Rangliste aller 18 Vereine |
 
 ### Bestätigt NICHT vorhanden (404/405/500)
 
@@ -283,6 +287,11 @@ teamwert_verlauf(league_id, manager_id, teamwert, stand)   -- PK (league_id, man
   + Index (league_id, manager_id, stand DESC)
 markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, player_id, ablauf)
   + Index (league_id, player_id)
+spiele(spieltag, heim, gast, datum, mi, tore_heim, tore_gast, stand)
+  PK (spieltag, heim, gast), UNIQUE (mi) — ligaunabhängig, aus /matchdays
+spieler_punkte(player_id, mi, team_id, spieltag, punkte)  -- PK (player_id, mi)
+  team_id = Verein ZUM ZEITPUNKT DES SPIELS, ligaunabhängig
+leistung_geprueft(player_id, bis_tag, geprueft)  -- wen wir schon gefragt haben
 news(league_id, player_id, name, text, stimmung, quellen JSONB, stand)
   PK (league_id, player_id) — leerer text = nachgesehen, nichts gefunden
 kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis,
@@ -679,26 +688,75 @@ trägt und dass ein einzelner Ausreißer gedämpft wird.
 `lib/gegner.js` ist wie `gebot.js` und `loginbonus.js` **ohne Datenbank** — sonst ließe es
 sich nicht ohne Postgres durchrechnen.
 
-### Woher die Daten kommen, ist noch offen
+### Woher die Daten kommen — beide Endpunkte sind belegt
 
-Zwei Dinge fehlen und sind in diesem Projekt **nicht belegt**:
+**Der Spielplan: ein Aufruf für die ganze Saison.**
+`/v4/competitions/1/matchdays` liefert alle 34 Spieltage auf einmal, je Partie
+`mi` (Spiel-ID), `t1`/`t2` (Heim/Gast), `dt` und — sobald gespielt — `t1g`/`t2g`.
+So billig, dass er in jedem Aktualisieren-Lauf mitläuft.
 
-1. **Der Spielplan** — wer spielt an welchem Spieltag gegen wen, zu Hause oder auswärts.
-2. **Punkte je Spieltag.** `kader.punkte` ist die Saisonsumme; `mdp` aus dem Live-Endpunkt
-   hängt am Manager, nicht am Verein.
+**Gewertet ist, was Tore trägt.** Kommende Partien lassen `t1g`/`t2g` einfach weg.
+Das ist die Form, an der man sie erkennt, und sie ist verlässlicher als ein
+Statuscode, dessen Bedeutung nirgends steht. Ein **0:0 ist gewertet** — die Null
+ist dort ein Ergebnis, kein fehlender Wert.
 
-`/spielplan?league=…` probiert rund sechzehn Kandidaten für beides durch und zeigt zu jeder
-Antwort erst den **Aufbau** (Schlüsselbaum), dann die Rohdaten — daran sieht man in einer
-Zeile, ob überhaupt etwas Passendes drinsteht. Wie alle teuren Diagnoseseiten läuft sie
-**erst auf Klick**.
+**Die Punkte: `/v4/competitions/1/players/{pid}/performance`.**
+Je Spieler eine Reihe über **vierzehn Saisons**, darin je Spiel `mi`, `p` (seine
+Punkte) und `pt`. `pt` ist der Grund, warum das trägt: **es ist sein Verein zum
+Zeitpunkt des Spiels**, nicht der heutige. Ein Winterwechsel zählt damit für
+beide Vereine richtig — mit dem heutigen Kader gerechnet wäre die halbe Saison
+falsch zugeordnet.
 
-Die Tabelle `spiele` ist **ligaunabhängig**: Die Bundesliga ist für alle dieselbe, und die
-Punkte einer Mannschaft hängen nicht an der Kickbase-Liga. `punkte_heim`/`punkte_gast`
-stehen auf `NULL`, solange eine Partie nicht gewertet ist — das unterscheidet „kommt noch"
-von „null Punkte geholt".
+Die Mannschaftspunkte werden **nicht gespeichert, sondern gerechnet** (Summe der
+Einzelleistungen je Spiel und Verein). So kann die Summe nicht veralten, während
+im Hintergrund weitere Spieler nachgeladen werden.
 
-Solange nichts gespeichert ist, sagt die Seite das und verweist auf die Diagnose, statt
-eine leere Tabelle zu zeigen.
+#### Der Preis: ein Aufruf je Spieler
+
+Das ist der teuerste Posten im Projekt — die Bundesliga hat rund 470 Spieler.
+Deshalb dasselbe Muster wie bei der Rekonstruktion: **25 je Lauf, mit Gedächtnis**
+(`leistung_geprueft.bis_tag`) und einem Zeitbudget davor. Nach etwa zwanzig
+Klicks ist die Liga vollständig; nach jedem Spieltag läuft es erneut, weil jeder
+Spieler eine neue Zeile bekommen hat.
+
+> **Die billige Abkürzung wurde geprüft und verworfen.** `/v4/competitions/1/table`
+> trägt `sp` — die Saisonpunkte je Verein, alle 18 in einem Aufruf. Aus der
+> Differenz zweier Ablesungen ließe sich der Spieltag ableiten. Das hängt aber
+> daran, dass zwischen zwei Ablesungen genau ein Spieltag liegt: Wer eine Woche
+> nicht aktualisiert, bekäme zwei Spieltage in einer Zahl und könnte sie keinem
+> Gegner mehr zuordnen. Genau die Klasse Fehler, die beim Marktwert-Tag schon
+> einmal zugeschlagen hat. Die Spielerreihe ist teurer, aber **exakt und
+> rückwirkend** — sie trägt die Spiel-ID mit.
+
+#### Ein stiller Ausfall sieht aus wie „nichts zu tun"
+
+Der Spielplan-Schritt hängt in einem `try`, damit ein Ausfall den Lauf nicht
+mitreißt. Ein leeres `catch` hat den ersten Import aber **spurlos** verschluckt:
+Die Rückmeldung sagte nichts, die Tabelle blieb leer, und es sah aus, als wäre
+gar nichts angestanden. Der Fehler (`date/time field value out of range`) wurde
+erst sichtbar, als der `catch` ihn unter „offen" nennt. Er tut es jetzt.
+
+`/spielplan?league=…` bleibt als Diagnose stehen: Sie probiert die Kandidaten
+durch und zeigt zu jeder Antwort erst den Aufbau, dann die Rohdaten — falls
+Kickbase die Form ändert. Wie alle teuren Diagnoseseiten läuft sie erst auf Klick.
+
+Die Tabellen `spiele` und `spieler_punkte` sind **ligaunabhängig**: Die Bundesliga
+ist für alle dieselbe. `punkte` bleibt `NULL`, wo Kickbase kein `p` liefert; ob
+daraus eine 0 wird, entscheidet erst die Auswertung — und nur bei einer
+gewerteten Partie.
+
+### Drei Zustände, drei Anzeigen
+
+Kein Spielplan, Spielplan ohne Punkte, alles da. Der mittlere ist der wichtige:
+Die **Ansetzungen stimmen dann schon**, nur der Score fehlt noch. Die Seite sagt
+das mit Zählerstand („140 von 470 Spielern abgeholt") und zeigt die nächsten fünf
+Gegner trotzdem — statt so zu tun, als wüsste sie nichts.
+
+### Was noch drin steckt
+
+Der Spielplan trägt für die nächsten Spieltage **Wettquoten** (`bo.o1/ox/o2`) und
+das Spielerprofil eine **Startelf-Wahrscheinlichkeit** (`prob`). Beides ist ein
+starkes Signal für „wie schwer wird das Spiel" und noch nicht ausgewertet.
 
 ## Wann kommt ein Spieler wieder auf den Markt?
 
@@ -1137,6 +1195,8 @@ lib/
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
   gegner.js         faktoren(), heimfaktor(), gegnerScore() — Gegnerstärke, ohne DB
+  spielplan.js      leseSpielplan(), leseLeistungen(), mannschaftsPunkte() — ohne DB
+  spieleabruf.js    importiereSpielplan(), importiereLeistungen() — Spielplan und Punkte
   live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
   liveabruf.js      holeLivestand(), sucheLivePfad() — Live-Stand holen und merken
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
