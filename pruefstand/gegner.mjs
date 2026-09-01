@@ -1,8 +1,8 @@
 // Der Gegner-Score: rechnet er das Richtige, und schweigt er, wenn nichts
 // da ist?
 import {
-  GEWICHTE, RUECKHALT, gewertete, ligaSchnitt, zugestanden, faktoren,
-  heimfaktor, gegnerScore, naechsteSpiele,
+  GEWICHTE, RUECKHALT, MIN_SPIELE_HEIM, MIN_GEGNER, gewertete, ligaSchnitt,
+  zugestanden, faktoren, heimfaktor, gegnerScore, naechsteSpiele, nurVollstaendige,
 } from "../lib/gegner.js";
 
 let ok = 0, fehler = 0;
@@ -52,21 +52,29 @@ pruefe("ein Ausreißer wird gedämpft", fe.get("A").faktor < 1.25 && fe.get("A")
 pruefe("roher Schnitt bleibt ablesbar", fe.get("A").schnitt, 500);
 
 // ── Heimvorteil ────────────────────────────────────────────────────
+// **Vier Partien sind zu wenig.** Aus einer einzigen kam einmal 1,63
+// heraus, und der Wert trug damit den halben Score.
 const h = heimfaktor(SPIELE);
-// In diesen vier Partien stehen 2400 Heim- gegen 2400 Auswärtspunkte –
-// also kein Vorteil. Genau das muss herauskommen.
-nah("ausgeglichen → beide 1", h.heim, 1);
-nah("ausgeglichen → beide 1 (auswärts)", h.auswaerts, 1);
-nah("Heim und Auswärts mitteln auf 1", (h.heim + h.auswaerts) / 2, 1);
+pruefe("unter dem Mindestmass: neutral", [h.heim, h.auswaerts, h.belegt], [1, 1, false]);
 
-// Und mit echtem Heimvorteil schlägt er durch.
-const mitVorteil = heimfaktor([
-  { heim: "A", gast: "B", punkteHeim: 700, punkteGast: 500 },
-  { heim: "C", gast: "D", punkteHeim: 700, punkteGast: 500 },
-]);
+const eine = heimfaktor([{ heim: "A", gast: "B", punkteHeim: 2200, punkteGast: 496 }]);
+pruefe("eine Partie ergibt keinen Heimvorteil", eine.heim, 1);
+
+// Ab einem vollen Spieltag zaehlt er.
+const genug = Array.from({ length: MIN_SPIELE_HEIM }, (_, i) => ({
+  heim: `H${i}`, gast: `G${i}`, punkteHeim: 700, punkteGast: 500 }));
+const mitVorteil = heimfaktor(genug);
+pruefe("ab neun Partien belegt", mitVorteil.belegt, true);
 pruefe("Heimvorteil erkannt", mitVorteil.heim > mitVorteil.auswaerts, true);
 nah("700 zu 500 → 1,167", mitVorteil.heim, 700 / 600);
-pruefe("ohne Spiele neutral", heimfaktor([]), { heim: 1, auswaerts: 1, spiele: 0 });
+nah("Heim und Auswärts mitteln auf 1", (mitVorteil.heim + mitVorteil.auswaerts) / 2, 1);
+
+// Ausgeglichen bleibt ausgeglichen.
+const gleich = heimfaktor(Array.from({ length: MIN_SPIELE_HEIM }, (_, i) => ({
+  heim: `H${i}`, gast: `G${i}`, punkteHeim: 600, punkteGast: 600 })));
+nah("ausgeglichen → beide 1", gleich.heim, 1);
+pruefe("ohne Spiele neutral", heimfaktor([]),
+  { heim: 1, auswaerts: 1, spiele: 0, belegt: false });
 
 // ── Der Score ──────────────────────────────────────────────────────
 const neutral = { heim: 1, auswaerts: 1 };
@@ -91,17 +99,36 @@ nah("Gewichte 5:4:3:2:1 – hinten", hinten, ((14*0.5 + 1*1.5) / 15) * 100, 1);
 pruefe("vier statt fünf Spiele",
   gegnerScore(Array(4).fill({ gegner: "X" }), durchschnitt, neutral).score, 100);
 
-// Ein unbekannter Gegner wird nicht geraten
+// Ein unbekannter Gegner wird nicht geraten – aber drei müssen bekannt sein.
 const einerFehlt = gegnerScore(
-  [{ gegner: "X" }, { gegner: "UNBEKANNT" }, { gegner: "X" }], durchschnitt, neutral);
+  [{ gegner: "X" }, { gegner: "UNBEKANNT" }, { gegner: "X" }, { gegner: "X" }],
+  durchschnitt, neutral);
 pruefe("unbekannter Gegner faellt raus", einerFehlt.score, 100);
 pruefe("und wird als Lücke ausgewiesen",
   einerFehlt.teile.filter((t) => t.faktor == null).length, 1);
-pruefe("beruecksichtigtes Gewicht", einerFehlt.beruecksichtigt, 5 + 3);
+pruefe("bekannte Gegner gezaehlt", einerFehlt.bekannt, 3);
+pruefe("beruecksichtigtes Gewicht", einerFehlt.beruecksichtigt, 5 + 3 + 2);
+
+// **Ein einziger bekannter Gegner ergibt keinen Score.** Sonst käme
+// derselbe Wert heraus, egal an welcher Stelle der Gegner steht.
+const nurEiner = gegnerScore(
+  [{ gegner: "X" }, ...Array(4).fill({ gegner: "?" })], durchschnitt, neutral);
+pruefe("ein bekannter Gegner reicht nicht", nurEiner.score, null);
+pruefe("aber die Zahl wird genannt", nurEiner.bekannt, 1);
+pruefe("zwei reichen auch nicht", gegnerScore(
+  [{ gegner: "X" }, { gegner: "X" }, ...Array(3).fill({ gegner: "?" })],
+  durchschnitt, neutral).score, null);
+pruefe("drei reichen", gegnerScore(
+  [{ gegner: "X" }, { gegner: "X" }, { gegner: "X" }, ...Array(2).fill({ gegner: "?" })],
+  durchschnitt, neutral).score, 100);
+
+// Weniger als drei Ansetzungen insgesamt (Saisonende): dann zählt, was da ist.
+pruefe("zwei Ansetzungen am Saisonende",
+  gegnerScore([{ gegner: "X" }, { gegner: "X" }], durchschnitt, neutral).score, 100);
 
 pruefe("gar keine Spiele → nichts", gegnerScore([], durchschnitt, neutral), null);
 pruefe("nur Unbekannte → nichts",
-  gegnerScore([{ gegner: "?" }], new Map(), neutral), null);
+  gegnerScore([{ gegner: "?" }], new Map(), neutral).score, null);
 
 // Mehr als fünf Spiele: nur die ersten fünf zählen
 pruefe("hoechstens fuenf",
@@ -110,8 +137,8 @@ pruefe("hoechstens fuenf",
 // Heim/Auswärts schlägt durch
 const mitOrt = { heim: 1.1, auswaerts: 0.9 };
 pruefe("zu Hause besser bewertet",
-  gegnerScore([{ gegner: "X", heim: true }], durchschnitt, mitOrt).score >
-  gegnerScore([{ gegner: "X", heim: false }], durchschnitt, mitOrt).score, true);
+  gegnerScore(Array(3).fill({ gegner: "X", heim: true }), durchschnitt, mitOrt).score >
+  gegnerScore(Array(3).fill({ gegner: "X", heim: false }), durchschnitt, mitOrt).score, true);
 
 // ── Die nächsten Spiele aus dem Plan ───────────────────────────────
 const PLAN = [
@@ -129,6 +156,39 @@ pruefe("fremde Mannschaft", naechsteSpiele(PLAN, "GIBTSNICHT"), []);
 pruefe("leerer Plan", naechsteSpiele(null, "BAY"), []);
 
 pruefe("fuenf Gewichte", GEWICHTE.length, 5);
+
+
+// ── Unvollstaendige Kader ──────────────────────────────────────────
+// **Der Fehler, der die Seite unbrauchbar gemacht hat:** Von drei der
+// achtzehn Spieler geladen, sah die Summe aus wie ein schwacher Auftritt.
+const SOLL = new Map([["A", 18], ["B", 18], ["C", 18]]);
+const roh = [
+  { mi: "1", heim: "A", gast: "B", gewertet: true,
+    punkteHeim: 900, punkteGast: 800, spielerHeim: 18, spielerGast: 18 },
+  { mi: "2", heim: "A", gast: "C", gewertet: true,
+    punkteHeim: 900, punkteGast: 120, spielerHeim: 18, spielerGast: 3 },
+];
+const geprueft = nurVollstaendige(roh, SOLL);
+pruefe("vollstaendige Partie bleibt",
+  [geprueft[0].punkteHeim, geprueft[0].punkteGast, geprueft[0].vollstaendig],
+  [900, 800, true]);
+// **Eine Seite unvollstaendig verwirft die ganze Partie** – die andere
+// Seite allein sagt nichts ueber das Spiel.
+pruefe("halb geladen: beide Seiten verworfen",
+  [geprueft[1].punkteHeim, geprueft[1].punkteGast, geprueft[1].vollstaendig],
+  [null, null, false]);
+pruefe("nur die vollstaendige Partie zaehlt", gewertete(geprueft).length, 1);
+
+pruefe("unbekannter Verein zaehlt nicht als vollstaendig",
+  nurVollstaendige([{ mi: "3", heim: "A", gast: "Z", gewertet: true,
+    punkteHeim: 900, punkteGast: 900, spielerHeim: 18, spielerGast: 18 }],
+    SOLL)[0].vollstaendig, false);
+pruefe("mehr geladen als erwartet ist vollstaendig (Zugang)",
+  nurVollstaendige([{ mi: "4", heim: "A", gast: "B", gewertet: true,
+    punkteHeim: 900, punkteGast: 900, spielerHeim: 19, spielerGast: 18 }],
+    SOLL)[0].vollstaendig, true);
+pruefe("ohne Sollwerte bleibt alles leer",
+  nurVollstaendige(roh, new Map())[0].punkteHeim, null);
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

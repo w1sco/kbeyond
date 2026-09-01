@@ -5,7 +5,8 @@ import { initSchema, getSpielePunkte, getKader, sql } from "@/lib/db";
 import { holePool } from "@/lib/rekonstruktion";
 import { euroKurz } from "@/lib/format";
 import {
-  GEWICHTE, faktoren, heimfaktor, ligaSchnitt, gegnerScore, naechsteSpiele, gewertete,
+  GEWICHTE, MIN_GEGNER, faktoren, heimfaktor, ligaSchnitt, gegnerScore,
+  naechsteSpiele, gewertete, nurVollstaendige,
 } from "@/lib/gegner";
 import Hinweis from "@/app/_ui/Hinweis";
 
@@ -23,18 +24,18 @@ export default async function Gegner({ searchParams }) {
   await verlangeLiga(leagueId, token);
   await initSchema();
 
-  const [spiele, pool, kader, ranking, fortschritt] = await Promise.all([
+  const [spiele, pool, kader, ranking, fortschritt, geladen] = await Promise.all([
     getSpielePunkte(),
     holePool(),
     getKader(leagueId),
     kbFetch(`/v4/leagues/${leagueId}/ranking`, token),
     sql`SELECT COUNT(*)::int AS n FROM leistung_geprueft`,
+    // Wie viele Spieler je Verein schon geladen sind — die Gegenprobe zur
+    // Kadergröße im Pool.
+    sql`SELECT team_id, COUNT(DISTINCT player_id)::int AS n
+        FROM spieler_punkte GROUP BY team_id`,
   ]);
-
-  const gespielt = gewertete(spiele);
-  const fMap = faktoren(spiele);
-  const heim = heimfaktor(spiele);
-  const schnitt = ligaSchnitt(spiele);
+  const geladenJeVerein = new Map(geladen.map((z) => [z.team_id, z.n]));
 
   // Vereine aus dem Spielerpool – dort steht die Zuordnung Spieler → Verein.
   const vereine = new Map();
@@ -44,6 +45,19 @@ export default async function Gegner({ searchParams }) {
     if (!vereine.has(id)) vereine.set(id, { id, name: s.verein ?? `Verein ${id}`, spieler: [] });
     vereine.get(id).spieler.push(s);
   }
+
+  // **Erst vollständig, dann rechnen.** Solange von einem Verein nur ein Teil
+  // der Spieler geladen ist, ist seine Punktsumme zu niedrig — und eine zu
+  // niedrige Summe sieht aus wie ein schwacher Auftritt. Deshalb zählt eine
+  // Partie erst, wenn *beide* Kader vollständig abgeholt sind.
+  const sollJeVerein = new Map(
+    [...vereine.values()].map((v) => [v.id, v.spieler.length]));
+  const geprueftSpiele = nurVollstaendige(spiele, sollJeVerein);
+
+  const gespielt = gewertete(geprueftSpiele);
+  const fMap = faktoren(geprueftSpiele);
+  const heim = heimfaktor(geprueftSpiele);
+  const schnitt = ligaSchnitt(geprueftSpiele);
   // Vereine, die im Spielplan stehen, aber (noch) nicht im Pool.
   for (const s of spiele) {
     for (const id of [s.heim, s.gast]) {
@@ -56,7 +70,7 @@ export default async function Gegner({ searchParams }) {
 
   const zeilen = [...vereine.values()]
     .map((v) => {
-      const kommende = naechsteSpiele(spiele, v.id);
+      const kommende = naechsteSpiele(geprueftSpiele, v.id);
       const bewertung = gegnerScore(kommende, fMap, heim);
       // Die eigene Bilanz: was gegen diesen Verein geholt wurde, je Spiel.
       const bilanz = gespielt
@@ -75,6 +89,7 @@ export default async function Gegner({ searchParams }) {
         ...v,
         kommende,
         score: bewertung?.score ?? null,
+        bekannt: bewertung?.bekannt ?? 0,
         teile: bewertung?.teile ?? [],
         eigen: fMap.get(v.id) ?? null,
         bilanz,
@@ -85,6 +100,8 @@ export default async function Gegner({ searchParams }) {
   const ohneSpielplan = spiele.length === 0;
   const ohnePunkte = !ohneSpielplan && gespielt.length === 0;
   const geprueft = fortschritt[0]?.n ?? 0;
+  const vollstaendigeVereine = [...vereine.values()].filter((v) =>
+    v.spieler.length > 0 && (geladenJeVerein.get(v.id) ?? 0) >= v.spieler.length).length;
   const spielerGesamt = (pool.spieler ?? []).length;
 
   return (
@@ -122,7 +139,9 @@ export default async function Gegner({ searchParams }) {
             </div>
             <div>
               <span className="kb-label">Heimvorteil</span>
-              <strong>{gespielt.length === 0 ? "–" : `${Math.round((heim.heim - 1) * 100)} %`}</strong>
+              {/* Unter einem vollen Spieltag ist der Wert nicht belegt —
+                  aus einer Partie kamen einmal 63 % heraus. */}
+              <strong>{heim.belegt ? `${Math.round((heim.heim - 1) * 100)} %` : "–"}</strong>
             </div>
             <div>
               <span className="kb-label">Grundlage</span>
@@ -133,9 +152,11 @@ export default async function Gegner({ searchParams }) {
           {ohnePunkte && (
             <p className="kb-warnung">
               Der Spielplan steht, die <strong>Punkte je Spiel</strong> fehlen noch:
-              {" "}{geprueft} von {spielerGesamt || "?"} Spielern sind abgeholt. Das kostet
-              einen Aufruf je Spieler und läuft deshalb in Häppchen — ein paarmal
-              aktualisieren, dann steht der Score. Die Ansetzungen unten stimmen bereits.
+              {" "}{geprueft} von {spielerGesamt || "?"} Spielern sind abgeholt, davon
+              {" "}{vollstaendigeVereine} von {vereine.size} Vereinen vollständig. Gerechnet
+              wird erst mit einem <strong>vollständigen</strong> Kader — eine halb geladene
+              Mannschaft sähe sonst aus wie eine schwache. Ein paarmal aktualisieren, dann
+              steht der Score. Die Ansetzungen unten stimmen bereits.
             </p>
           )}
 
@@ -224,6 +245,11 @@ export default async function Gegner({ searchParams }) {
                         : v.score >= 105 ? "kb-plus" : v.score <= 95 ? "kb-minus" : undefined}>
                         {v.score ?? "–"}
                       </strong>
+                      {v.score == null && v.kommende.length > 0 && (
+                        <div className="kb-leise" style={{ fontSize: "0.75rem" }}>
+                          {v.bekannt} von {Math.min(MIN_GEGNER, v.kommende.length)} Gegnern
+                        </div>
+                      )}
                     </td>
                     <td className="kb-sek kb-leise">
                       {v.eigen?.schnitt == null ? "–" : Math.round(v.eigen.schnitt)}

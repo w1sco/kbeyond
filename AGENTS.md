@@ -681,9 +681,10 @@ Mannschaft wären es am zweiten Spieltag ein bis zwei Spiele — daraus lässt s
 ableiten. Über alle Partien zusammen schon.
 
 **Ein Gegner ohne Daten wird nicht geraten.** Er fällt aus der Rechnung, die übrigen
-Gewichte tragen ihn mit, und die Zeile weist ihn aus. 35 Fälle durchgerechnet
-(`pruefstand/gegner.mjs`), darunter die Probe, dass das nächste Spiel wirklich ein Drittel
-trägt und dass ein einzelner Ausreißer gedämpft wird.
+Gewichte tragen ihn mit, und die Zeile weist ihn aus — solange mindestens drei der fünf
+bekannt sind, siehe unten. 49 Fälle durchgerechnet (`pruefstand/gegner.mjs`), darunter die
+Probe, dass das nächste Spiel wirklich ein Drittel trägt und dass ein einzelner Ausreißer
+gedämpft wird.
 
 `lib/gegner.js` ist wie `gebot.js` und `loginbonus.js` **ohne Datenbank** — sonst ließe es
 sich nicht ohne Postgres durchrechnen.
@@ -745,12 +746,47 @@ ist für alle dieselbe. `punkte` bleibt `NULL`, wo Kickbase kein `p` liefert; ob
 daraus eine 0 wird, entscheidet erst die Auswertung — und nur bei einer
 gewerteten Partie.
 
+### Drei Sicherungen gegen Zahlen, die genauer aussehen als sie sind
+
+Die erste Fassung stand live und zeigte **202 gegen 23** über achtzehn Vereine —
+bei *einer* gewerteten Partie. Jede der drei Ursachen ist für sich harmlos und
+zusammen ergaben sie eine Tabelle, die aussah wie eine Auswertung.
+
+**1. Eine halb geladene Mannschaft hat keine Punktzahl.**
+Während die 470 Spieler in Häppchen hereinkommen, ist die Summe eines Vereins
+zu niedrig — und eine zu niedrige Summe sieht aus wie ein schwacher Auftritt,
+nicht wie eine Datenlücke. `nurVollstaendige()` vergleicht deshalb die Zahl
+geladener Leistungen mit der Kadergröße im Pool und verwirft alles darunter.
+**Eine unvollständige Seite verwirft die ganze Partie**: Die andere Mannschaft
+allein sagt nichts über das Spiel. Dasselbe Prinzip wie beim Kaderwert im
+Verlauf — „ein leerer Kader ist 0, ein unbekannter ist nichts".
+
+**2. Ein Heimvorteil aus einer Handvoll Spiele ist keiner.**
+Gemessen an einer einzigen Partie kamen **63 %** heraus, und dieser Faktor trug
+danach den halben Score: Ein Verein mit Faktor 1,16 stand mit 202 da, weil
+1,16 × 1,72 knapp über 2 liegt. Unter `MIN_SPIELE_HEIM = 9` (ein voller
+Spieltag) gilt jetzt **kein Heimvorteil**, und die Kachel zeigt „–" statt einer
+Zahl.
+
+**3. Ein bekannter Gegner ist kein gewichteter Schnitt.**
+Sind von den fünf Gegnern vier unbekannt, ist `summe / gewicht` schlicht der
+Faktor des einen — und es kam **dieselbe Zahl** heraus, egal ob er am nächsten
+oder am fünften Spieltag dran war. Die ganze Gewichtung war Fiktion. Unter
+`MIN_GEGNER = 3` steht deshalb kein Score, sondern „x von 3 Gegnern".
+
+> Alle drei sind Varianten desselben Fehlers, und alle drei hätte die Prüfung
+> fangen können: **Die Tests rechneten nur mit vollständigen, ausgewogenen
+> Daten.** Erst ein Fall mit *einer* Partie und *einem* bekannten Gegner hat sie
+> sichtbar gemacht. 49 Fälle durchgerechnet, darunter genau diese.
+
 ### Drei Zustände, drei Anzeigen
 
 Kein Spielplan, Spielplan ohne Punkte, alles da. Der mittlere ist der wichtige:
 Die **Ansetzungen stimmen dann schon**, nur der Score fehlt noch. Die Seite sagt
-das mit Zählerstand („140 von 470 Spielern abgeholt") und zeigt die nächsten fünf
-Gegner trotzdem — statt so zu tun, als wüsste sie nichts.
+das mit Zählerstand — und zwar auf **Vereinsebene** („140 von 470 Spielern
+abgeholt, davon 6 von 18 Vereinen vollständig"), weil erst ein vollständiger
+Kader eine Partie zählbar macht. Die nächsten fünf Gegner stehen trotzdem da —
+statt so zu tun, als wüsste die Seite nichts.
 
 ### Was noch drin steckt
 
