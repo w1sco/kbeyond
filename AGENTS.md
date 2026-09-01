@@ -875,33 +875,20 @@ ist ein gemeinsamer Datensatz.
 
 ## Marke: Logo, Kopf- und Fußzeile
 
-Das Zeichen ist ein **Liniendiagramm, aus dem der Buchstabe entsteht**: Der Stamm ist
-zugleich y-Achse und Buchstabenstamm, unten läuft die x-Achse, und die beiden
-Schenkel des K sind zwei Datenreihen — eine steigt, eine fällt.
+Das Zeichen ist eine **steigende Kurve, die oben aus ihrem Feld herausläuft** —
+„KBeyond" heißt, über das hinauszusehen, was Kickbase zeigt, und eine Linie, die
+den Rahmen verlässt, sagt das ohne Worte. Die Grundlinie darunter ist dieselbe
+Anspielung aufs Spielfeld wie in der Aufstellungsgrafik.
 
-**Warum zwei Reihen und nicht eine Linie:** Eine Diagrammlinie kann in x nicht
-zurücklaufen. Ein einzelner Streckenzug könnte die beiden Schenkel gar nicht bilden.
-Zwei Reihen, die an derselben Stelle von der Achse weggehen, sind die einzige Form,
-die zugleich ein ehrliches Diagramm und ein K ist.
+**Inline-SVG, keine Bilddatei** (`app/_ui/Logo.jsx`) — skaliert verlustfrei und
+kostet keinen zusätzlichen Ladevorgang. Das Favicon liegt als `app/icon.svg`;
+Next bindet es allein über den Dateinamen ein.
 
-**Der Stamm hat volle Strichstärke.** Mit einer dünnen Achse — wie ein Diagramm sie
-hätte — las sich das Zeichen als „<" mit einem Strich daneben, nicht als K. Die
-Diagramm-Lesart tragen dafür die x-Achse und die Proportionen.
-
-**Kein Anbau nach außen.** Ein austretender Strich mit Punkt („beyond") sah bei jeder
-Länge aus wie ein eingeschlagener Nagel — verglichen in vier Abstufungen bei 112, 40,
-28 und 18 px. Das „Beyond" trägt der Name; das Zeichen bleibt ruhig.
-
-**Inline-SVG, keine Bilddatei** (`app/_ui/Logo.jsx`) — skaliert verlustfrei und kostet
-keinen zusätzlichen Ladevorgang. Die x-Achse ist zugleich dieselbe Anspielung aufs
-Spielfeld wie in der Aufstellungsgrafik. Das Favicon liegt als `app/icon.svg` und
-trägt dieselbe Form randlos; bei 16 px wäre ein Rand Verschwendung.
-
-> **Nicht am Schriftzug herumbauen.** Zwei Versuche sind daran gescheitert:
-> Fernglaslinsen in „o" und „d", und ein Diagramm-Bogen, der am K ansetzt und über
-> das Wort fliegt. Beides wurde verworfen — angeklebte Grafik an gesetzten Buchstaben
-> sieht angeklebt aus. Was am Buchstaben passieren soll, muss den Buchstaben
-> **bilden**, nicht schmücken.
+**Außerhalb des Felds wäre Weiß unsichtbar.** Der austretende Schenkel wechselt
+deshalb auf die Markenfarbe. Genau dieser Bruch ist die Aussage — ein erster
+Entwurf hielt alles im Feld und war damit nur ein Diagramm-Symbol. Im Favicon
+füllt das Feld dagegen die ganze Fläche: Bei 16 px wäre ein Rand Verschwendung,
+und der Überstand fiele ohnehin weg.
 
 `app/_ui/Rahmen.jsx` liefert Kopf- und Fußzeile für **alle** Seiten, eingehängt
 im Wurzel-Layout — so bekommen auch die Diagnoseseiten sie, ohne dass jede Seite

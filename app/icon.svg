@@ -5,14 +5,14 @@
       <stop offset="100%" stop-color="#4338ca"/>
     </linearGradient>
   </defs>
-  <!-- Randlos: bei 16 px waere ein Rand Verschwendung. -->
+  <!-- Als Favicon fuellt das Feld die ganze Flaeche: bei 16 px waere ein
+       Rand pure Verschwendung, und der Ueberstand faellt dort ohnehin weg. -->
   <rect x="0" y="0" width="44" height="44" rx="10" fill="url(#v)"/>
-  <line x1="13" y1="36" x2="32" y2="36" stroke="#fff" stroke-opacity="0.4"
-        stroke-width="2.2" stroke-linecap="round"/>
-  <line x1="13" y1="9" x2="13" y2="33.5" stroke="#fff" stroke-width="3.8"
-        stroke-linecap="round"/>
-  <path d="M13 21.5 L30 9" fill="none" stroke="#fff" stroke-width="3.8"
-        stroke-linecap="round"/>
-  <path d="M13 21.5 L30 33" fill="none" stroke="#fff" stroke-width="3.8"
-        stroke-linecap="round"/>
+  <rect x="11" y="0" width="7" height="44" fill="#fff" opacity="0.07"/>
+  <rect x="28" y="0" width="7" height="44" fill="#fff" opacity="0.07"/>
+  <line x1="8" y1="35" x2="34" y2="35" stroke="#fff" stroke-opacity="0.35"
+        stroke-width="2" stroke-linecap="round"/>
+  <path d="M9 30 L18 22 L25 26 L35 12" fill="none" stroke="#fff" stroke-width="4.2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="35" cy="12" r="4.4" fill="#fff"/>
 </svg>
