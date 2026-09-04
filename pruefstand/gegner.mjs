@@ -1,7 +1,7 @@
 // Der Gegner-Score: rechnet er das Richtige, und schweigt er, wenn nichts
 // da ist?
 import {
-  GEWICHTE, RUECKHALT, MIN_SPIELE_HEIM, MIN_GEGNER, gewertete, ligaSchnitt,
+  GEWICHTE, RUECKHALT, MIN_SPIELE_HEIM, gewertete, ligaSchnitt,
   zugestanden, faktoren, heimfaktor, gegnerScore, naechsteSpiele, nurVollstaendige,
 } from "../lib/gegner.js";
 

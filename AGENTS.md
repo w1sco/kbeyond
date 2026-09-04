@@ -1132,14 +1132,19 @@ ihrem `const S = {...}`-Styleobjekt war der letzte Grund, warum es das hier nich
 
 #### Gemessen, nicht geschätzt
 
-`pruefstand/dunkel.cjs` rendert jede Seite mit `colorScheme: "dark"` und prüft dreierlei:
-kein Serverfehler, keine hell gebliebene Fläche, und der Umschalter sticht die
-Systemeinstellung in beide Richtungen. Das Spielfeld ist ausgenommen — es ist in beiden
-Themen grün, die weißen Spielerpunkte darauf sind dort richtig.
+`pruefstand/dunkel.cjs` rendert jede Seite in **beiden Themen** und prüft: kein
+Serverfehler, keine hell gebliebene Fläche (nur im Dunkelmodus eine Fundstelle — im
+hellen ist sie das Thema), Kontrast jedes Textes zu **seinem eigenen Grund**, und ob der
+Umschalter die Systemeinstellung in beide Richtungen sticht. Das Spielfeld ist
+ausgenommen — es ist in beiden Themen grün, die weißen Spielerpunkte darauf sind dort
+richtig.
 
-Dazu eine Kontrastmessung über alle sichtbaren Textknoten. Sie hat **120 Stellen unter
-4,5:1** gefunden, die meisten davon **im hellen Modus** und lange vor dem Dunkelmodus
-entstanden:
+Der Grund eines Textes steht selten am Element selbst. `grundVon()` reicht deshalb nach
+oben durch, bis eine deckende Fläche kommt; über einem Verlauf wird nicht gemessen,
+statt einen Wert zu erfinden.
+
+Die erste Messung fand **120 Stellen unter 4,5:1**, die meisten davon **im hellen
+Modus** und lange vor dem Dunkelmodus entstanden:
 
 | Fundstelle | vorher | Ursache |
 |---|---|---|
@@ -1156,6 +1161,36 @@ unter 4,5:1**, in beiden Themen über acht Seiten.
 Die **Diagramm-Palette** steht ebenfalls als Token (`--kb-serie-1` … `-8`): Zwei der
 acht Stufen sind auf hellem Grund gut lesbar und auf dunklem fast unsichtbar. Die
 Farben laufen im Diagramm ohnehin durch `style`, wo `var()` erlaubt ist.
+
+#### Ein Zustand, den niemand misst, ist nicht geprüft
+
+Die Messung sah nur den **Ruhezustand** einer Seite. Eine **gewählte** Kaderzeile hat
+sie deshalb nie zu Gesicht bekommen: Deren Fläche entsteht erst durch einen Klick, und
+sie stand als fester Hellton `#e0e7ff` im Stylesheet. Im Dunkelmodus lag darauf heller
+Text — **1,05:1**, also schlicht unlesbar. Der Nutzer hat es gemeldet, nicht der
+Prüfstand.
+
+Der Lauf klickt jetzt je Seite an, was seinen Grund ändert (`.kb-klickzeile`,
+`.kb-chip`, `.kb-sortchip`, `.kb-aufklapp`) und misst danach erneut. **Der Zeiger wird
+dafür weggefahren** — sonst überdeckt die Hover-Regel genau die Fläche, um die es geht.
+Erst das hat den Fehler überhaupt sichtbar gemacht.
+
+Zwei Sachen kamen dabei ans Licht, beide von derselben Art:
+
+| Fundstelle | vorher | Ursache |
+|---|---|---|
+| Gewählte Zeile (dunkel) | 1,05:1 | fester Hellton `#e0e7ff` statt eines Tokens |
+| `--kb-schlecht` auf getönter Fläche (hell) | 3,9:1 | `#dc2626` reichte nur auf Weiß |
+
+Das Rot ist der lehrreichere Fund: Auf Weiß lag es bei 5,7:1 und ist deshalb nie
+aufgefallen — auf der gewählten Zeile, der Warnfläche und der Erfolgsfläche fiel es
+unter 4,5. Es steht jetzt auf `#c81e1e` und trägt überall.
+
+`--kb-zeile-gewaehlt` ist deshalb ein eigenes Token: hell `#e0e7ff`, dunkel `#242d49`.
+Der dunkle Wert ist **nicht frei gewählt**, sondern die Obergrenze, bei der der
+schwächste Textton (`--kb-text-schwach`) noch 4,66:1 erreicht. Unterschieden wird die
+gewählte Zeile ohnehin nicht nur über die Fläche, sondern über den Akzentbalken links
+und das stärkere Schriftgewicht.
 
 ---
 

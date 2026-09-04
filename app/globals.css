@@ -32,13 +32,20 @@
   --kb-akzent:        #4f46e5;
   --kb-akzent-stark:  #4338ca;
   --kb-akzent-weich:  #eef2ff;
+  /* Die gewählte Zeile: kräftiger als der Zeiger-Effekt, aber der Text
+     darauf muss lesbar bleiben — auch der rote. Im Dunkelmodus ist das
+     deshalb ein dunkles Indigo und keine aufgehellte Fläche. */
+  --kb-zeile-gewaehlt: #e0e7ff;
   --kb-marke:         linear-gradient(135deg, #6366f1, #4338ca);
   --kb-gut:           #14722f;
   --kb-gut-weich:     #dcfce7;
   --kb-warn:          #8a4009;
   --kb-warn-weich:    #fef3c7;
   --kb-warn-rand:     #fbbf24;
-  --kb-schlecht:      #dc2626;
+  /* War #dc2626 und lag damit auf jeder getönten Fläche unter 4,5:1 –
+     auf der gewählten Zeile bei 3,9:1. Auf Weiß reichte es knapp, und
+     genau deshalb ist es nie aufgefallen. */
+  --kb-schlecht:      #c81e1e;
   --kb-schlecht-weich:#fef2f2;
   --kb-schlecht-rand: #fca5a5;
   --kb-schlecht-text: #991b1b;
@@ -121,6 +128,7 @@
     --kb-akzent:        #a5b4fc;
     --kb-akzent-stark:  #818cf8;
     --kb-akzent-weich:  #262f4d;
+    --kb-zeile-gewaehlt: #242d49;
     --kb-marke:         linear-gradient(135deg, #6366f1, #4f46e5);
 
     --kb-gut:           #4ade80;
@@ -178,6 +186,7 @@
   --kb-akzent:        #a5b4fc;
   --kb-akzent-stark:  #818cf8;
   --kb-akzent-weich:  #262f4d;
+  --kb-zeile-gewaehlt: #242d49;
   --kb-marke:         linear-gradient(135deg, #6366f1, #4f46e5);
 
   --kb-gut:           #4ade80;
@@ -1068,7 +1077,7 @@ th.kb-namensspalte { z-index: 3; }
 .kb-klickzeile { cursor: pointer; }
 .kb-klickzeile:hover td { background: var(--kb-akzent-weich); }
 .kb-zeile--gewaehlt td {
-  background: #e0e7ff;
+  background: var(--kb-zeile-gewaehlt);
   font-weight: 500;
 }
 
@@ -1078,7 +1087,7 @@ th.kb-namensspalte { z-index: 3; }
    Kaufrechner
    ------------------------------------------------------------------ */
 
-.kb-rechner--eng { border-left-color: var(--kb-schlecht); background: #fef2f2; }
+.kb-rechner--eng { border-left-color: var(--kb-schlecht); background: var(--kb-schlecht-weich); }
 
 .kb-regler {
   display: grid;
@@ -1650,7 +1659,7 @@ th.kb-namensspalte { z-index: 3; }
   .kb-sortchip--aktiv {
     background: var(--kb-akzent);
     border-color: var(--kb-akzent);
-    color: #fff;
+    color: var(--kb-auf-akzent);
   }
 
   .kb-aufklapp {

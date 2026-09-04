@@ -165,9 +165,23 @@ durchfallen.
 
 ## dunkel.cjs
 
-`node pruefstand/dunkel.cjs` rendert jede Seite mit `colorScheme: "dark"` und
-prüft: kein Serverfehler, keine hell gebliebene Fläche, Kontrast von Text zu
-Grund, und ob der Umschalter die Systemeinstellung in beide Richtungen sticht.
+`node pruefstand/dunkel.cjs` rendert jede Seite in **beiden Themen** und prüft:
+kein Serverfehler, keine hell gebliebene Fläche, Kontrast **jedes Textes zu
+seinem eigenen Grund**, und ob der Umschalter die Systemeinstellung in beide
+Richtungen sticht.
+
+Eine helle Fläche zählt nur im Dunkelmodus als Fundstelle — im hellen ist sie
+das Thema. Der Kontrast wird in beiden gemessen: Die getönten Flächen
+(gewählte Zeile, Warnung, Erfolg) sind im **hellen** Modus die kritischen.
+
+**Und zwar in zwei Zuständen.** Je Seite wird angeklickt, was seinen Grund
+ändert (`.kb-klickzeile`, `.kb-chip`, `.kb-sortchip`, `.kb-aufklapp`), danach
+wird erneut gemessen. Der Zeiger fährt dabei weg — sonst überdeckt die
+Hover-Regel genau die Fläche, um die es geht.
+
+Das war kein theoretischer Zusatz: Eine gewählte Kaderzeile stand im
+Dunkelmodus auf `#e0e7ff` mit hellem Text darauf, **1,05:1**. Im Ruhezustand
+war davon nichts zu sehen.
 
 Das Spielfeld (`.kb-platz`) ist ausgenommen — es ist in beiden Themen grün, die
 weißen Spielerpunkte darauf sind dort richtig und keine Fundstelle.
