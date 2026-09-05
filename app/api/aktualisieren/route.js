@@ -9,7 +9,6 @@ import { rekonstruiere, holePool, aktualisierePool } from "@/lib/rekonstruktion"
 import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { ergaenzeMarktwerte } from "@/lib/marktwerte";
 import { importiereSpielplan, importiereLeistungen } from "@/lib/spieleabruf";
-import { importiereStartelf } from "@/lib/startelfabruf";
 import { pruefeApi, sitzung } from "@/lib/auth";
 import { bremseZuruecksetzen } from "@/lib/kickbase";
 import { holeMitspieler } from "@/lib/mitspieler";
@@ -122,7 +121,10 @@ export async function POST(request) {
         if (!pl.vollstaendig) offen.push(`Spielerliste (${pl.vereine}/${pl.gesamt} Vereine)`);
       } catch (e) {
         if (e.gedrosselt) throw e;
-        offen.push("Spielerliste");
+        // Nicht nur „Spielerliste" — sonst sieht ein echter Fehler aus wie
+        // ein halber Durchlauf. Genau daran ist der Spielplan-Import schon
+        // einmal spurlos gescheitert.
+        offen.push(`Spielerliste: ${e?.message ?? "unbekannter Fehler"}`);
       }
     } else {
       offen.push("Spielerliste");
@@ -273,24 +275,11 @@ export async function POST(request) {
       }
     }
 
-    // 6c. Startelf-Chance je Spieler — ein Aufruf je Spieler, deshalb ganz
-    // zum Schluss und nur aus der Restzeit. Wer in einem Kader steht oder
-    // am Markt liegt, kommt zuerst dran; der lange Schwanz trickelt über
-    // mehrere Klicks herein.
-    if (rest() > MINDESTZEIT_MS) {
-      try {
-        const se = await importiereStartelf(token);
-        if (se.geholt > 0) {
-          erledigt.push(
-            se.offen > 0
-              ? `Startelf ${se.geholt} Spieler (${se.offen} offen)`
-              : `Startelf ${se.geholt} Spieler`
-          );
-        }
-      } catch (e) {
-        offen.push(`Startelf: ${e?.message ?? "unbekannter Fehler"}`);
-      }
-    }
+    // Die Startelf-Chance holt dieser Lauf **nicht** je Spieler ab. Sie
+    // kommt umsonst mit, wo wir ohnehin Listen holen (Vereinskader, Kader,
+    // Markt); für den Rest gibt es einen eigenen Knopf, der in einem Zug
+    // durchläuft. Zwanzig Aufrufe je Klick, die nach zwanzig Klicks fertig
+    // sind, waren teuer und trotzdem nutzlos.
 
     // 7. Historie – nur solange die Lücke nicht abgearbeitet ist
     const log = await sql`SELECT * FROM rekon_log WHERE league_id = ${leagueId}`;

@@ -100,6 +100,20 @@ werden, nicht verworfen.
 Der Lauf muss ihn dann **namentlich** nennen („ohne auswertbare Liste:
 PetzS"), nicht nur zählen — sonst weiß man nicht, wo man nachsehen soll.
 
+## KB_PROB_IM_KADER
+
+Ohne den Schalter steht `prob` **nur im Spielerprofil** — der belegte Fall,
+und der teure: ein Aufruf je Spieler.
+
+`KB_PROB_IM_KADER=1` legt es zusätzlich in den **Vereinskader**. Damit lässt
+sich der billige Weg prüfen: Der Aktualisieren-Lauf muss die Chancen dann aus
+den 18 ohnehin laufenden `teamprofile`-Abrufen mitnehmen und **null**
+Profilaufrufe machen. Nachgemessen mit `KB_ZAEHLEN=1`:
+
+```bash
+grep '^\[KB\]' dev.log | grep -cE 'competitions/1/players/[0-9]+$'   # muss 0 sein
+```
+
 ## Startelf-Chance in der Attrappe
 
 `/v4/competitions/1/players/{pid}` liefert `prob` — bewusst mit Ecken: alle fünf

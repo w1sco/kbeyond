@@ -755,6 +755,10 @@ th.kb-namensspalte { z-index: 3; }
 .kb-elf--kaum            { color: var(--kb-schlecht); }
 .kb-elf--nie             { color: var(--kb-text-schwach); }
 
+/* Der Knopf, der die fehlenden Chancen in einem Zug holt. */
+.kb-elfholen { display: grid; gap: 8px; justify-items: start; margin: 10px 0 14px; }
+.kb-elfholen .kb-legende { margin: 0; }
+
 /* Nur für Screenreader: der Klartext hinter dem Zeichen. */
 .kb-nurvorleser {
   position: absolute;

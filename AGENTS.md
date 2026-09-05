@@ -848,21 +848,46 @@ Deshalb gibt es `/startelf?league=…` (klickgesichert, rund 16 Aufrufe):
    Listen nach, die wir ohnehin holen (Markt, Kader, Vereinskader, Teamcenter),
    ob eine davon `prob` mitführt. Dann wären die Einzelaufrufe unnötig.
 
-### Der Preis: schon wieder ein Aufruf je Spieler
+### Erst umsonst, dann teuer — und nie in Häppchen
 
-Dasselbe Muster wie bei den Spielpunkten — 20 je Lauf, mit Gedächtnis und
-Zeitbudget davor, ganz am Ende des Aktualisieren-Laufs aus der Restzeit.
+Die erste Fassung hängte 20 Einzelaufrufe an jeden Aktualisieren-Lauf. Bei rund
+470 Spielern wären das **zwanzig bis dreißig Klicks je Spieltag** gewesen. Der
+Nutzer hat zu Recht abgewinkt: Das ist keine Funktion, das ist eine Aufgabe.
 
-Zwei Unterschiede:
+Zwei Hebel, in dieser Reihenfolge.
+
+**1. Der billige Weg: mitnehmen, was ohnehin kommt.**
+Drei Listen werden in jedem Lauf geholt — die 18 **Vereinskader**, die **Kader
+der Manager** und die **Marktangebote**. `ernte()` sieht in jeder nach, ob ein
+Eintrag `prob` mitführt, und schreibt alles auf einmal weg. Das kostet **keinen
+einzigen zusätzlichen Aufruf**; trägt Kickbase die Angabe dort mit, ist das
+Thema damit erledigt. Trägt es sie nicht, kommt eine leere Liste zurück und es
+ändert sich nichts. Gemessen im Prüfstand (`KB_PROB_IM_KADER=1`): 6 von 7
+Spielern über die Vereinskader, **0 Profilaufrufe**.
+
+**2. Der teure Weg: ein Klick, dann läuft es durch.**
+Was übrig bleibt, holt `/api/startelf` — und zwar **nicht** im
+Aktualisieren-Lauf, sondern über einen eigenen Knopf mit Fortschrittsanzeige.
+Warum überhaupt mehrere Anfragen: 470 Aufrufe mal 600 ms Mindestabstand sind
+über fünf Minuten, Vercel bricht nach 60 s hart ab. Ein Lauf holt deshalb, was
+in sein Zeitbudget passt (rund 60 Spieler), und meldet in `offen`, wie viel
+fehlt; **der Browser fasst selbst nach**. Für den Nutzer ist es ein Klick.
+
+Genau der Weg, den die News-Recherche schon geht — und aus demselben Grund: Ein
+Abbruch kostet nur das laufende Bündel, alles davor steht in der Datenbank. Der
+Abbrechen-Zustand steht dabei in einem **Ref**, nicht in `useState`: Die
+Schleife läuft in einem Abschluss über den Stand vom Beginn des Laufs und hätte
+eine spätere Zustandsänderung nie gesehen.
+
+Zwei Dinge bleiben wie geplant:
 
 - **Die Angabe veraltet wöchentlich.** `prob` beschreibt den kommenden Spieltag,
   nicht den Zustand. Angehängt wird sie deshalb an die **Spieltagsnummer**
   (`startelf.spieltag`), nicht an eine Uhrzeit: Ist der nächste Spieltag ein
   anderer, steht die ganze Liga wieder an.
 - **Die Reihenfolge ist nicht beliebig.** Wer in einem Kader steht oder gerade am
-  Markt liegt, wird auf den Seiten wirklich angesehen — der kommt zuerst dran.
-  Der lange Schwanz aus Ergänzungsspielern trickelt über mehrere Klicks herein.
-  Damit steht das Zeichen dort, wo man es braucht, schon nach dem ersten Klick.
+  Markt liegt, kommt zuerst dran — dann steht das Zeichen dort, wo man es
+  braucht, schon nach der ersten Runde.
 
 **`stufe = NULL` ist ein Ergebnis.** „Gefragt, Kickbase sagt nichts" wird
 gespeichert, sonst kostet derselbe Spieler bei jedem Lauf erneut einen Aufruf —
@@ -1313,6 +1338,8 @@ app/
   api/frag/route.js                Frage → Antwortstrom
   api/news/route.js                Ein Bündel Spieler recherchieren und ablegen
   api/live/route.js                Live-Endpunkt suchen und merken
+  api/startelf/route.js            Ein Bündel Startelf-Chancen holen
+  _ui/Startelfholen.jsx            "use client" — ein Klick, Browser fasst nach
   api/modelle/route.js             Modellliste beim Anbieter erfragen
   api/aktualisieren/route.js       Feed, Markt, Marktwerte, Teamwerte, Kader, Historie
   marktwert/page.js                Diagnose: welcher Endpunkt liefert die Marktwert-Historie
@@ -1345,7 +1372,7 @@ lib/
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
   gegner.js         faktoren(), heimfaktor(), gegnerScore() — Gegnerstärke, ohne DB
-  startelf.js       STUFEN, stufe(), leseChance() — Startelf-Chance, ohne DB
+  startelf.js       STUFEN, stufe(), leseChance(), ernte() — Chance, ohne DB
   startelfabruf.js  importiereStartelf(), standStartelf() — prob je Spieler holen
   spielplan.js      leseSpielplan(), leseLeistungen(), mannschaftsPunkte() — ohne DB
   spieleabruf.js    importiereSpielplan(), importiereLeistungen() — Spielplan und Punkte

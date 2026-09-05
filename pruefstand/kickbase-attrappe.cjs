@@ -314,6 +314,19 @@ function fuerPfad(pfad) {
 
   const team = pfad.match(/\/teams\/(\d+)\/teamprofile/);
   if (team) {
+    // Mit KB_PROB_IM_KADER=1 trägt der Vereinskader die Startelf-Chance
+    // schon mit. Dann ist sie umsonst da und der teure Weg über die
+    // Einzelprofile darf gar nicht erst anlaufen. Ohne den Schalter fehlt
+    // sie – wie im belegten Fall, wo `prob` nur im Profil steht.
+    if (process.env.KB_PROB_IM_KADER === "1" && process.env.KB_TEAMFEHLER !== "1") {
+      const chancen = { 101: 1, 201: 2, 301: 3, 102: 4, 302: 5, 103: 1 };
+      return {
+        it: (VEREINSKADER[team[1]] ?? []).map((sp) => ({
+          ...sp,
+          ...(chancen[sp.i] ? { prob: chancen[sp.i] } : {}),
+        })),
+      };
+    }
     // Mit KB_TEAMFEHLER=1 antwortet ein Verein nicht. Seine Spieler müssen
     // trotzdem im Pool bleiben – genau dafür wird zusammengeführt statt
     // ersetzt.

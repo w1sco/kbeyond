@@ -1,5 +1,5 @@
 // Die Startelf-Chance: liest sie das Richtige, und schweigt sie im Zweifel?
-import { STUFEN, stufe, leseChance, chanceRang, verteilung } from "../lib/startelf.js";
+import { STUFEN, stufe, leseChance, ernte, chanceRang, verteilung } from "../lib/startelf.js";
 
 let ok = 0, fehler = 0;
 const pruefe = (name, ist, soll) => {
@@ -54,6 +54,29 @@ pruefe("leeres Objekt", leseChance({}), null);
 pruefe("echtes Profil (Tah)",
   leseChance({ i: "173", ln: "Tah", tid: "2", pos: 2, mv: 35344728, mvt: 2,
                plpt: "Ligainsider", prob: 2, ts: "2026-08-31T18:32:03Z" }), 2);
+
+// ── ernte: der billige Weg über Listen, die ohnehin kommen ─────────
+//
+// Vereinskader, Marktangebote und Kader tragen die ID mal als `i`, mal als
+// `pi`. Nur Einträge MIT Chance kommen zurück — sonst stünde für jeden
+// Spieler ohne Angabe eine Zeile in der Datenbank, die nichts sagt.
+pruefe("ernte: Vereinskader mit prob",
+  ernte([{ i: "101", n: "Kane", prob: 1 }, { i: "201", n: "Tah", prob: 2 }]),
+  [{ id: "101", stufe: 1 }, { id: "201", stufe: 2 }]);
+pruefe("ernte: Liste ohne prob bleibt leer",
+  ernte([{ i: "101", n: "Kane", mv: 68800000 }, { i: "201", n: "Tah" }]), []);
+pruefe("ernte: Marktangebot führt pi als Spieler-ID",
+  ernte([{ i: "ANGEBOT-9", pi: "101", prob: 3 }]), [{ id: "101", stufe: 3 }]);
+pruefe("ernte: pi sticht i", ernte([{ i: "999", pi: "101", prob: 1 }])[0].id, "101");
+pruefe("ernte: Eintrag ohne prob fällt raus, der Rest bleibt",
+  ernte([{ i: "1", prob: 2 }, { i: "2" }, { i: "3", prob: 5 }]),
+  [{ id: "1", stufe: 2 }, { id: "3", stufe: 5 }]);
+pruefe("ernte: unsinniges prob fällt raus", ernte([{ i: "1", prob: 9 }]), []);
+pruefe("ernte: Eintrag ohne ID fällt raus", ernte([{ prob: 2 }]), []);
+pruefe("ernte: leere Liste", ernte([]), []);
+pruefe("ernte: nichts übergeben", ernte(), []);
+pruefe("ernte: Müll in der Liste", ernte([null, undefined, 7, "x", { i: "1", prob: 1 }]),
+  [{ id: "1", stufe: 1 }]);
 
 // ── Reihenfolge: sicher zuerst, unbekannt zuletzt ──────────────────
 pruefe("Rang folgt der Stufe", [1, 2, 3, 4, 5].map(chanceRang), [1, 2, 3, 4, 5]);

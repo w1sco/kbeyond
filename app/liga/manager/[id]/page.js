@@ -410,7 +410,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
               Verkauf an Kickbase ist das der Erlös, bei einem Mitspieler kann dessen Gebot
               darüber liegen.
             </p>
-            <Startelflegende stand={elfStand} />
+            <Startelflegende stand={elfStand} leagueId={leagueId} />
             <Verkaufsrechner
               kader={kader}
               konto={k.konto}

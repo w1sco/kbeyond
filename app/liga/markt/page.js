@@ -309,7 +309,7 @@ export default async function Markt({ searchParams }) {
         ))}
       </div>
 
-      <Startelflegende stand={elfStand} />
+      <Startelflegende stand={elfStand} leagueId={leagueId} />
 
       <Freieliste
         spieler={gefiltert}

@@ -408,11 +408,17 @@ Regeln:
   Zeichen wäre hier schlimmer als gar keins — danach stellt jemand auf.
 - **Die Farbe allein darf die Aussage nicht tragen.** Jede Stufe hat eine
   eigene Form, und der Titel nennt sie im Klartext.
-- **Die Angabe kostet einen Abruf je Spieler und veraltet wöchentlich**, weil
-  sie den *kommenden* Spieltag beschreibt. Geholt wird in Häppchen, und zwar
-  in dieser Reihenfolge: erst wer in einem Kader steht oder am Markt liegt,
-  dann der Rest. So steht das Zeichen dort, wo man es braucht, schon nach dem
-  ersten Aktualisieren.
+- **Die Angabe veraltet wöchentlich**, weil sie den *kommenden* Spieltag
+  beschreibt.
+- **Zuerst wird mitgenommen, was ohnehin kommt.** Vereinskader, Kader der
+  Manager und Marktangebote werden bei jedem Aktualisieren geholt; führt eine
+  dieser Listen die Angabe mit, kostet sie **keinen zusätzlichen Abruf**.
+- **Der Rest kommt auf einen Klick.** Ein eigener Knopf holt die fehlenden
+  Spieler in einem Zug und zeigt dabei den Fortschritt. Er darf nicht am
+  Aktualisieren hängen: Ein Abruf je Spieler mal einige hundert Spieler passt
+  in keine einzelne Anfrage, und in Häppchen verteilt wären es zwanzig bis
+  dreißig Klicks je Spieltag — das ist keine Funktion mehr, das ist eine
+  Aufgabe. Abbrechen ist gefahrlos; das Geholte bleibt.
 - **„Gefragt und nichts bekommen" wird gespeichert**, sonst kostet derselbe
   Spieler bei jedem Lauf erneut einen Abruf.
 
