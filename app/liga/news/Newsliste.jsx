@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { euroKurz, vorZeit, position } from "@/lib/format";
 import { TAGE_ZURUECK } from "@/lib/news";
+import Startelf from "@/app/_ui/Startelf";
 
 // Derselbe Speicher wie bei "Frag die Liga" – wer dort schon einen
 // Schlüssel hinterlegt hat, muss ihn hier nicht noch einmal eintragen.
@@ -253,6 +254,7 @@ export default function Newsliste({ leagueId, gruppen }) {
                   <li key={s.id} className="kb-newszeile">
                     <div className="kb-newskopf">
                       <strong>{s.name}</strong>
+                      <Startelf wert={s.startelf} />
                       <span className="kb-leise">
                         {posText(s.position) ? ` ${posText(s.position)}` : ""}
                         {s.marktwert > 0 ? ` · ${euroKurz(s.marktwert)}` : ""}

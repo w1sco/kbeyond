@@ -61,7 +61,7 @@ Auth: `Authorization: Bearer {token}`, Token aus dem Login.
 | `/v4/competitions/1/teams/{tid}/teamprofile` | Vereinskader mit Spieler-IDs |
 | `/v4/competitions/1/matchdays` | **Der ganze Spielplan**: 34 Spieltage, je Partie `mi`, `t1`/`t2`, `dt`, dazu `t1g`/`t2g` sobald gespielt |
 | `/v4/competitions/1/players/{pid}/performance` | **Punkte je Spiel**, 14 Saisons zurück: `mi`, `p`, `pt` (Verein zum Spielzeitpunkt) |
-| `/v4/competitions/1/players/{pid}` | Spielerprofil: `mv`, `pos`, `tid`, `prob` (Startelf-Wahrscheinlichkeit), `mdsum` (nächste drei Partien) |
+| `/v4/competitions/1/players/{pid}` | Spielerprofil: `mv`, `pos`, `tid`, **`prob`** (Startelf-Chance 1–5), `plpt` (Quelle: Ligainsider), `mdsum` (nächste drei Partien) |
 | `/v4/competitions/1/teams/{tid}/teamcenter` | Vereinskader mit Saisonpunkten je Spieler, dazu die Punkte-Rangliste aller 18 Vereine |
 
 ### Bestätigt NICHT vorhanden (404/405/500)
@@ -292,6 +292,9 @@ spiele(spieltag, heim, gast, datum, mi, tore_heim, tore_gast, stand)
 spieler_punkte(player_id, mi, team_id, spieltag, punkte)  -- PK (player_id, mi)
   team_id = Verein ZUM ZEITPUNKT DES SPIELS, ligaunabhängig
 leistung_geprueft(player_id, bis_tag, geprueft)  -- wen wir schon gefragt haben
+startelf(player_id PK, stufe, spieltag, stand)   -- ligaunabhängig
+  stufe 1–5 aus `prob`, NULL = gefragt und nichts geliefert
+  spieltag = für welchen Spieltag die Prognose gilt
 news(league_id, player_id, name, text, stimmung, quellen JSONB, stand)
   PK (league_id, player_id) — leerer text = nachgesehen, nichts gefunden
 kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis,
@@ -790,9 +793,82 @@ statt so zu tun, als wüsste die Seite nichts.
 
 ### Was noch drin steckt
 
-Der Spielplan trägt für die nächsten Spieltage **Wettquoten** (`bo.o1/ox/o2`) und
-das Spielerprofil eine **Startelf-Wahrscheinlichkeit** (`prob`). Beides ist ein
-starkes Signal für „wie schwer wird das Spiel" und noch nicht ausgewertet.
+Der Spielplan trägt für die nächsten Spieltage **Wettquoten** (`bo.o1/ox/o2`).
+Das ist ein starkes Signal für „wie schwer wird das Spiel" und noch nicht
+ausgewertet.
+
+## Steht er am Wochenende auf dem Platz?
+
+Vor jedem Spielernamen steht ein Zeichen: wie sicher er am kommenden Spieltag in
+der Startelf steht. Es gilt auf **allen** Seiten, auf denen Spieler vorkommen —
+Kader, freie Spieler, Transfermarkt, News, Live und die Aufstellungswahl.
+
+| Zeichen | `prob` | Bedeutung |
+|---|---|---|
+| ★ | 1 | Sicher in der Startelf |
+| ✔ | 2 | Sehr wahrscheinlich Stamm |
+| ? | 3 | Vielleicht Stamm |
+| ! | 4 | Eher nicht, kleine Chance |
+| ✕ | 5 | Keine Chance |
+
+**Die Farbe allein trägt die Aussage nicht.** Jedes Zeichen ist auch als Form
+unterscheidbar, und der Titel nennt die Stufe im Klartext — sonst wäre die
+Spalte für jemanden mit Farbfehlsichtigkeit eine Reihe gleicher Punkte.
+
+**Kein Zeichen heißt: keine Angabe, nicht „spielt nicht".** Dieselbe Regel wie
+beim Spielerbild — eine leere Scheibe vor jedem Namen sagt nichts aus. Und ein
+geratenes Zeichen wäre hier schlimmer als gar keins: Danach stellt jemand auf.
+
+### Gelesen wird nur `prob`, nichts anderes
+
+Belegt an echten Daten (Jonathan Tah): Das Spielerprofil trägt `prob: 2`, daneben
+`plpt: "Ligainsider"` — die Quelle der Einschätzung. `leseChance()` liest
+**ausschließlich** dieses Feld.
+
+Das ist Absicht: Im selben Objekt stehen `pos` (1–4), `mvt` (2), `st` und `day` —
+lauter kleine Zahlen, die als zweiter Kandidat zufällig passen würden. Genau so
+ist die alte Aufstellungserkennung an „ein Feld, das die richtige Anzahl Spieler
+auszeichnet" gescheitert und hat die teuerste Elf ausgegeben. 48 Fälle
+durchgerechnet (`pruefstand/startelfchance.mjs`), darunter das echte Profil und
+jeder dieser Ablenker.
+
+`lib/startelf.js` ist wie `gegner.js` und `gebot.js` **ohne Datenbank**.
+
+### Zwei Dinge sind daran noch nicht belegt
+
+Deshalb gibt es `/startelf?league=…` (klickgesichert, rund 16 Aufrufe):
+
+1. **Wie herum geht die Skala?** Dass 1 „sicher" und 5 „spielt nicht" heißt,
+   stützt sich auf **eine einzige Beobachtung**. Umgekehrt gelesen stünde vor
+   einem Stammspieler ein rotes Ausrufezeichen. Die Seite legt die eigenen
+   Spieler mit ihrem rohen `prob` daneben — wer in der App einen blauen Stern
+   trägt, muss dort ★ tragen. Stimmt es nicht, ist es eine Zeile in
+   `lib/startelf.js`.
+2. **Geht es billiger als ein Aufruf je Spieler?** Die Seite sieht in den vier
+   Listen nach, die wir ohnehin holen (Markt, Kader, Vereinskader, Teamcenter),
+   ob eine davon `prob` mitführt. Dann wären die Einzelaufrufe unnötig.
+
+### Der Preis: schon wieder ein Aufruf je Spieler
+
+Dasselbe Muster wie bei den Spielpunkten — 20 je Lauf, mit Gedächtnis und
+Zeitbudget davor, ganz am Ende des Aktualisieren-Laufs aus der Restzeit.
+
+Zwei Unterschiede:
+
+- **Die Angabe veraltet wöchentlich.** `prob` beschreibt den kommenden Spieltag,
+  nicht den Zustand. Angehängt wird sie deshalb an die **Spieltagsnummer**
+  (`startelf.spieltag`), nicht an eine Uhrzeit: Ist der nächste Spieltag ein
+  anderer, steht die ganze Liga wieder an.
+- **Die Reihenfolge ist nicht beliebig.** Wer in einem Kader steht oder gerade am
+  Markt liegt, wird auf den Seiten wirklich angesehen — der kommt zuerst dran.
+  Der lange Schwanz aus Ergänzungsspielern trickelt über mehrere Klicks herein.
+  Damit steht das Zeichen dort, wo man es braucht, schon nach dem ersten Klick.
+
+**`stufe = NULL` ist ein Ergebnis.** „Gefragt, Kickbase sagt nichts" wird
+gespeichert, sonst kostet derselbe Spieler bei jedem Lauf erneut einen Aufruf —
+dieselbe Lektion wie bei den News. Als beantwortet gilt aber **nur ein 404**:
+Bei einer Drosselung oder einem Ausfall wäre der Vermerk gelogen und der Spieler
+bliebe eine Woche ohne Angabe.
 
 ## Wann kommt ein Spieler wieder auf den Markt?
 
@@ -1224,6 +1300,9 @@ app/
   liga/news/Newsliste.jsx          "use client" — Recherche in Bündeln, Fortschritt
   liga/gegner/page.js              Gegner der nächsten fünf Spiele, Score je Verein
   spielplan/page.js                Diagnose: Spielplan und Punkte je Spieltag
+  startelf/page.js                 Diagnose: stimmt die prob-Skala, geht es billiger
+  _ui/Startelf.jsx                 das Zeichen vor dem Namen, ohne Angabe nichts
+  _ui/Startelflegende.jsx          was die fünf Zeichen heißen, plus Abrufstand
   liga/live/page.js                Live-Punkte am Spieltag, je Manager und Spieler
   liga/live/Auffrischen.jsx        "use client" — von Hand oder alle 60 s
   livepunkte/page.js               Diagnose: welcher Endpunkt liefert Live-Punkte
@@ -1266,6 +1345,8 @@ lib/
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
   gegner.js         faktoren(), heimfaktor(), gegnerScore() — Gegnerstärke, ohne DB
+  startelf.js       STUFEN, stufe(), leseChance() — Startelf-Chance, ohne DB
+  startelfabruf.js  importiereStartelf(), standStartelf() — prob je Spieler holen
   spielplan.js      leseSpielplan(), leseLeistungen(), mannschaftsPunkte() — ohne DB
   spieleabruf.js    importiereSpielplan(), importiereLeistungen() — Spielplan und Punkte
   live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
@@ -1835,6 +1916,17 @@ Liga sie überhaupt bezahlen.
   hunderte Ergänzungsspieler mit, die nie jemand kauft, und das Verhältnis sieht
   schlechter aus als es ist.
 
+#### Der Positionsfilter greift nur in die Liste
+
+Über der Tabelle steht eine Chipleiste (Alle / TW / ABW / MF / ANG) mit der Anzahl
+je Position; eine Position ohne freie Spieler ist ausgegraut statt weg — sonst
+sähe es aus, als hätte die Seite sie vergessen.
+
+**Er ändert das Verhältnis darüber nicht.** „Was kann die Liga bezahlen" ist eine
+Frage über den ganzen freien Markt, nicht über die Stürmer darin. Deshalb liegt
+der Positionsfilter im Browser (`Freieliste.jsx`) und der Marktwert-Filter, der
+sehr wohl in die Rechnung eingeht, weiter in der Adresse (`?min=`).
+
 Der Spielerpool speichert seit der Marktseite auch Marktwert und Position. Der Cache-
 Schlüssel heißt deshalb `bundesliga_v2` — alte Einträge hatten nur ID und Name.
 
@@ -1886,6 +1978,9 @@ Frag-die-Liga mit drei Anbietern.
 4. **`markt/page.js` (der alte Transfermarkt) überarbeiten** — nicht zu verwechseln mit
    `/liga/markt`.
 5. **Bietrechner:** wer kann bei welchem Spieler mitbieten — alle Zahlen dafür stehen bereit.
+6. **Die `prob`-Skala bestätigen** über `/startelf?league=…` — und dort gleich nachsehen,
+   ob eine der billigen Listen `prob` mitführt. Dann fallen die 470 Einzelaufrufe weg.
+7. **Wettquoten** (`bo.o1/ox/o2`) aus dem Spielplan in den Gegner-Score.
 
 ## Arbeitsweise
 

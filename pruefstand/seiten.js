@@ -22,6 +22,8 @@ const SEITEN = [
   ["Gegner",             `/liga/gegner?league=${LIGA}`],
   ["Spielplan-Diagnose", `/spielplan?league=${LIGA}`],
   ["Spielplan Suche",    `/spielplan?league=${LIGA}&suchen=1`],
+  ["Startelf-Diagnose", `/startelf?league=${LIGA}`],
+  ["Startelf Suche",    `/startelf?league=${LIGA}&suchen=1`],
   ["Einstellungen",      `/liga/einstellungen?league=${LIGA}`],
   ["Marktwert-Diagnose", `/marktwert?league=${LIGA}`],
   ["Endpunkt-Vergleich", `/ligamonitor?league=${LIGA}`],

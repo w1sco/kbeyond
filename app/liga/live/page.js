@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { verlangeLiga, sitzung } from "@/lib/auth";
-import { initSchema, getKader, getSettings } from "@/lib/db";
+import { initSchema, getKader, getSettings, getStartelf } from "@/lib/db";
 import { holeMitspieler } from "@/lib/mitspieler";
 import { holeNamen } from "@/lib/spielernamen";
 import {
@@ -10,6 +10,7 @@ import {
 import { zeitpunkt, posRang, normalisiereSpieler } from "@/lib/format";
 import Hinweis from "@/app/_ui/Hinweis";
 import Auffrischen from "./Auffrischen";
+import Startelf from "@/app/_ui/Startelf";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,8 @@ export default async function Live({ searchParams }) {
     ? await gespeicherteSpielerPunkte(leagueId)
     : null;
 
+  const elf = await getStartelf();
+
   const zeilen = manager
     .map((m) => {
       const id = String(m.i);
@@ -76,6 +79,7 @@ export default async function Live({ searchParams }) {
           id: spielerId,
           name: bekannt?.name ?? namen.get(spielerId) ?? `Spieler #${spielerId}`,
           position: bekannt?.position ?? null,
+          startelf: elf.get(spielerId) ?? null,
           // In der Live-Aufstellung stehen heißt aufgestellt. Ohne diese
           // Liste bleibt nur unser Kader — und wen der nicht kennt, der
           // bekommt kein Zeichen statt eines geratenen.
@@ -321,6 +325,7 @@ export default async function Live({ searchParams }) {
                                 </span>
                                 <span className="kb-leise">{s.position ?? "?"}</span>
                                 <span className="kb-livename">{s.name}</span>
+                                <Startelf wert={s.startelf} />
                                 {s.punkte != null && <strong>{s.punkte}</strong>}
                               </li>
                             ))}

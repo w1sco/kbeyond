@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getKader, getNews } from "@/lib/db";
+import { initSchema, getSettings, getKader, getNews, getStartelf } from "@/lib/db";
 import { sitzung, verlangeLiga, nutzerSchluessel } from "@/lib/auth";
 import { normalisiereSpieler } from "@/lib/format";
 import { holePool } from "@/lib/rekonstruktion";
@@ -49,6 +49,7 @@ export default async function News({ searchParams }) {
   }
 
   const news = await getNews(leagueId);
+  const elf = await getStartelf();
 
   const bauen = (liste) =>
     liste
@@ -57,6 +58,7 @@ export default async function News({ searchParams }) {
         name: s.name ?? `Spieler #${s.id}`,
         marktwert: Number(s.marktwert ?? 0),
         position: s.position ?? null,
+        startelf: elf.get(String(s.id)) ?? null,
         verein: vereine.get(String(s.id)) ?? null,
         meldung: news.get(String(s.id)) ?? null,
       }))

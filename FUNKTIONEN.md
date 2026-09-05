@@ -376,11 +376,45 @@ Liga sie überhaupt bezahlen?*
   geladene Kader gilt jeder Spieler als frei — die Seite muss das dann
   deutlich sagen, statt einen leeren Markt vorzutäuschen.
 - **Marktwert-Filter**: alle / ab 500 Tsd / 1 / 3 / 5 / 10 / 15 / 20 Mio.
+- **Positionsfilter**: Alle / TW / ABW / MF / ANG, jeweils mit Anzahl. Er
+  filtert **nur die Liste**, nicht das Verhältnis darunter: „Was kann die Liga
+  bezahlen" ist eine Frage über den ganzen freien Markt, nicht über die
+  Stürmer darin. Eine Position ohne freie Spieler ist ausgegraut, nicht weg.
 - **Verhältnis** = Summe aller Kontostände ÷ Marktwert der freien Spieler im
   gewählten Bereich. Der Filter ist dabei das eigentliche Werkzeug: ohne ihn
   zählen hunderte Ergänzungsspieler mit, die nie jemand kauft.
 - Liste sortier- und durchsuchbar, je Spieler mit Rückkehrprognose (7.7).
 - **Kaufrechner** oben (7.8).
+
+### 7.6b Startelf-Chance — das Zeichen vor jedem Namen
+
+Auf **allen** Seiten, auf denen Spieler vorkommen (Kader, freie Spieler,
+Transfermarkt, News, Live, Aufstellungswahl), steht hinter dem Namen ein
+Zeichen: wie sicher der Spieler am kommenden Spieltag in der Startelf steht.
+Kickbase liefert das im Spielerprofil als Zahl (`prob`), die Einschätzung
+selbst kommt von Ligainsider.
+
+| Zeichen | Wert | Bedeutung |
+|---|---|---|
+| ★ | 1 | Sicher in der Startelf |
+| ✔ | 2 | Sehr wahrscheinlich Stamm |
+| ? | 3 | Vielleicht Stamm |
+| ! | 4 | Eher nicht, kleine Chance |
+| ✕ | 5 | Keine Chance |
+
+Regeln:
+
+- **Kein Zeichen heißt „keine Angabe", nicht „spielt nicht".** Ein geratenes
+  Zeichen wäre hier schlimmer als gar keins — danach stellt jemand auf.
+- **Die Farbe allein darf die Aussage nicht tragen.** Jede Stufe hat eine
+  eigene Form, und der Titel nennt sie im Klartext.
+- **Die Angabe kostet einen Abruf je Spieler und veraltet wöchentlich**, weil
+  sie den *kommenden* Spieltag beschreibt. Geholt wird in Häppchen, und zwar
+  in dieser Reihenfolge: erst wer in einem Kader steht oder am Markt liegt,
+  dann der Rest. So steht das Zeichen dort, wo man es braucht, schon nach dem
+  ersten Aktualisieren.
+- **„Gefragt und nichts bekommen" wird gespeichert**, sonst kostet derselbe
+  Spieler bei jedem Lauf erneut einen Abruf.
 
 ### 7.7 Wann kommt ein Spieler wieder auf den Markt?
 

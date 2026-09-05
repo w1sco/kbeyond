@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { getBesitz, getKader, getSettings, getTeamwerte, initSchema } from "@/lib/db";
+import { getBesitz, getKader, getSettings, getTeamwerte, initSchema, getStartelf } from "@/lib/db";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { normalisiereSpieler, findeSpielerListe, findeBild } from "@/lib/format";
 import { holeNamen, benenne } from "@/lib/spielernamen";
@@ -59,6 +59,7 @@ export default async function Transfermarkt({ searchParams }) {
   for (const z of kader.zeilen) besitzerVon.set(String(z.player_id), managerName.get(String(z.manager_id)) ?? null);
   for (const [pid, name] of besitz.besitzer) if (!besitzerVon.has(pid)) besitzerVon.set(pid, name);
 
+  const elf = await getStartelf();
   const liste = roh ? findeSpielerListe(roh) : [];
   const angebote = liste.map((eintrag) => {
     const s = normalisiereSpieler(eintrag);
@@ -71,6 +72,7 @@ export default async function Transfermarkt({ searchParams }) {
       id,
       name: benenne(s, namen),
       position: s.position,
+      startelf: elf.get(id) ?? null,
       marktwert,
       trend: s.trend == null ? null : Number(s.trend),
       punkte,
@@ -136,7 +138,8 @@ export default async function Transfermarkt({ searchParams }) {
             konto={ich ? ich.konto : null}
             teamwert={meinTeamwert}
             ligaAufschlag={aufLiga.relativ}
-            eigenerKader={ich ? kader.proManager.get(String(ich.id)) ?? [] : []}
+            eigenerKader={(ich ? kader.proManager.get(String(ich.id)) ?? [] : [])
+              .map((s) => ({ ...s, startelf: elf.get(String(s.id)) ?? null }))}
             boni={boni}
           />
 

@@ -1,7 +1,8 @@
 "use client";
 import { useState, useMemo } from "react";
-import { euro, euroKurz, zeitpunkt } from "@/lib/format";
+import { euro, euroKurz, zeitpunkt, POS_ORDNUNG } from "@/lib/format";
 import Kaufrechner from "../../_ui/Kaufrechner";
+import Startelf from "../../_ui/Startelf";
 
 const SPALTEN = [
   { key: "name", label: "Spieler", text: true },
@@ -63,12 +64,20 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
   const [sortKey, setSortKey] = useState("marktwert");
   const [absteigend, setAbsteigend] = useState(true);
   const [suche, setSuche] = useState("");
+  const [pos, setPos] = useState("alle");
+
+  // Wie viele freie Spieler es je Position gibt. Steht auf den Chips, damit
+  // man vor dem Klick sieht, ob sich einer lohnt.
+  const jePosition = useMemo(() => {
+    const z = new Map();
+    for (const s of spieler) z.set(s.position, (z.get(s.position) ?? 0) + 1);
+    return z;
+  }, [spieler]);
 
   const zeilen = useMemo(() => {
     const s = suche.trim().toLowerCase();
-    const gefiltert = s
-      ? spieler.filter((x) => (x.name ?? "").toLowerCase().includes(s))
-      : spieler;
+    let gefiltert = pos === "alle" ? spieler : spieler.filter((x) => x.position === pos);
+    if (s) gefiltert = gefiltert.filter((x) => (x.name ?? "").toLowerCase().includes(s));
 
     const kopie = [...gefiltert];
     kopie.sort((a, b) => {
@@ -90,7 +99,7 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
         : Number(a[sortKey] ?? 0) - Number(b[sortKey] ?? 0);
     });
     return kopie;
-  }, [spieler, sortKey, absteigend, suche]);
+  }, [spieler, sortKey, absteigend, suche, pos]);
 
   function klick(key) {
     if (key === sortKey) setAbsteigend(!absteigend);
@@ -126,6 +135,26 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
           aufLeeren={() => setGewaehlt(new Set())}
         />
       )}
+
+      {/* Die Position filtert nur die Liste, nicht das Verhältnis darüber:
+          „Was kann die Liga bezahlen" ist eine Frage über den ganzen freien
+          Markt, nicht über die Stürmer darin. */}
+      <div className="kb-sortleiste kb-sortleiste--immer" style={{ marginTop: 12 }}>
+        {[["alle", "Alle"], ...POS_ORDNUNG.map((k) => [k, k])].map(([wert, label]) => {
+          const anzahl = wert === "alle" ? spieler.length : (jePosition.get(wert) ?? 0);
+          return (
+            <button
+              key={wert}
+              type="button"
+              className={`kb-sortchip${pos === wert ? " kb-sortchip--aktiv" : ""}`}
+              disabled={anzahl === 0}
+              onClick={() => setPos(wert)}
+            >
+              {label} <span className="kb-chipzahl">{anzahl}</span>
+            </button>
+          );
+        })}
+      </div>
 
       <input
         className="kb-eingabe kb-eingabe--voll"
@@ -181,6 +210,7 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
                   )}
                   <td className="kb-namensspalte">
                     <span className="kb-spielername">{s.name}</span>
+                    <Startelf wert={s.startelf} />
                   </td>
                   <td className="kb-sek">{s.position ?? "–"}</td>
                   <td>
@@ -201,7 +231,10 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
         </div>
       )}
 
-      <p className="kb-legende">{zeilen.length} Spieler angezeigt</p>
+      <p className="kb-legende">
+        {zeilen.length} von {spieler.length} Spielern angezeigt
+        {pos !== "alle" && ` · nur ${pos}`}
+      </p>
     </>
   );
 }

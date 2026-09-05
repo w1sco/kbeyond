@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { euroKurz, POS_ORDNUNG } from "@/lib/format";
+import Startelf from "@/app/_ui/Startelf";
 
 const REIHEN = [
   { kurz: "ANG", titel: "Sturm" },
@@ -224,6 +225,7 @@ export default function Aufstellung({ kader }) {
                       title={an ? "Aus der Aufstellung nehmen" : "Aufstellen"}
                     >
                       {s.name}
+                      <Startelf wert={s.startelf} />
                       <span className="kb-leise"> {euroKurz(s.marktwert)}</span>
                     </button>
                   );

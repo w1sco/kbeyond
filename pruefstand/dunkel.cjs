@@ -25,6 +25,7 @@ const SEITEN = [
   ["Alter Markt", `/markt?league=${LIGA}`],
   ["Live-Diagnose", `/livepunkte?league=${LIGA}`],
   ["Marktwert-Diag.", `/marktwert?league=${LIGA}`],
+  ["Startelf-Diag.", `/startelf?league=${LIGA}`],
   ["Aufstellung-Diag.", `/aufstellung?league=${LIGA}`],
   ["Feed-Diagnose", `/feed?league=${LIGA}`],
   ["Rekonstruiert", `/rk?league=${LIGA}`],

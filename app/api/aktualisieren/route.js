@@ -9,6 +9,7 @@ import { rekonstruiere, holePool, aktualisierePool } from "@/lib/rekonstruktion"
 import { speichereMarkt } from "@/lib/marktbeobachtung";
 import { ergaenzeMarktwerte } from "@/lib/marktwerte";
 import { importiereSpielplan, importiereLeistungen } from "@/lib/spieleabruf";
+import { importiereStartelf } from "@/lib/startelfabruf";
 import { pruefeApi, sitzung } from "@/lib/auth";
 import { bremseZuruecksetzen } from "@/lib/kickbase";
 import { holeMitspieler } from "@/lib/mitspieler";
@@ -269,6 +270,25 @@ export async function POST(request) {
         // Der Lauf soll daran nicht scheitern — aber ein stiller Ausfall
         // sieht aus wie „nichts zu tun". Deshalb wird er benannt.
         offen.push(`Spielplan: ${e?.message ?? "unbekannter Fehler"}`);
+      }
+    }
+
+    // 6c. Startelf-Chance je Spieler — ein Aufruf je Spieler, deshalb ganz
+    // zum Schluss und nur aus der Restzeit. Wer in einem Kader steht oder
+    // am Markt liegt, kommt zuerst dran; der lange Schwanz trickelt über
+    // mehrere Klicks herein.
+    if (rest() > MINDESTZEIT_MS) {
+      try {
+        const se = await importiereStartelf(token);
+        if (se.geholt > 0) {
+          erledigt.push(
+            se.offen > 0
+              ? `Startelf ${se.geholt} Spieler (${se.offen} offen)`
+              : `Startelf ${se.geholt} Spieler`
+          );
+        }
+      } catch (e) {
+        offen.push(`Startelf: ${e?.message ?? "unbekannter Fehler"}`);
       }
     }
 

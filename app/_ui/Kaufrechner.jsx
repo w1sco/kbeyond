@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { euro, euroKurz, prozent } from "@/lib/format";
 import { erlaubtesMinus } from "@/lib/gebot";
+import Startelf from "./Startelf";
 
 // Was passiert mit meinem Konto, wenn ich diese Spieler kaufe — und wenn ich
 // dafür andere verkaufe?
@@ -195,6 +196,7 @@ export default function Kaufrechner({
                   aria-pressed={aktiv}
                 >
                   {s.name}
+                  <Startelf wert={s.startelf} />
                   <span className="kb-leise"> {euroKurz(s.marktwert)}</span>
                 </button>
               );

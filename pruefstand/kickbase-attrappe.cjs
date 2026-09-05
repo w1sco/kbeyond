@@ -282,6 +282,30 @@ function fuerPfad(pfad) {
     };
   }
 
+  // Das Spielerprofil. Interessant ist hier nur `prob` – die
+  // Startelf-Wahrscheinlichkeit (1 sicher … 5 spielt nicht).
+  //
+  // Bewusst mit Ecken: alle fünf Stufen, ein Spieler **ohne** das Feld
+  // (Kickbase weiß nichts – das ist ein Ergebnis und muss gespeichert
+  // werden) und einer, den es gar nicht gibt.
+  const profil = pfad.match(/\/competitions\/1\/players\/(\d+)$/);
+  if (profil) {
+    const pid = profil[1];
+    if (pid === "303") {
+      const fehler = new Error("API-Fehler: 404");
+      fehler.status = 404;
+      throw fehler;
+    }
+    const chancen = { 101: 1, 201: 2, 301: 3, 102: 4, 302: 5 };
+    const tid = Object.keys(VEREINSKADER).find((t) =>
+      (VEREINSKADER[t] ?? []).some((x) => String(x.i ?? x.pi) === pid)) ?? "7";
+    return {
+      i: pid, tid, pos: 2, mv: 1000000,
+      plpt: "Ligainsider",
+      ...(chancen[pid] ? { prob: chancen[pid] } : {}),
+    };
+  }
+
   if (pfad.includes("/competitions/1/table")) {
     // Mit Vereinsnamen: Der Pool soll den Namen tragen, nicht die Team-ID.
     const namen = { 7: "FC Bayern München", 2: "VfB Stuttgart", 3: "Bayer 04 Leverkusen" };

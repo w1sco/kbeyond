@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getKader, getBesitz, getTeamwerte } from "@/lib/db";
+import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, getStartelf } from "@/lib/db";
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holePool } from "@/lib/rekonstruktion";
@@ -12,6 +12,8 @@ import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt } from "@/lib/format";
 import Freieliste from "./Freieliste";
 import Hinweis from "../../_ui/Hinweis";
+import Startelflegende from "../../_ui/Startelflegende";
+import { standStartelf } from "@/lib/startelfabruf";
 import { holeMitspieler } from "@/lib/mitspieler";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +70,10 @@ export default async function Markt({ searchParams }) {
     (k) => (meineUid && String(k.id) === meineUid) || (meinName && k.name === meinName)
   ) ?? null;
   const meinTeamwert = ich ? tw.map.get(String(ich.id))?.teamwert ?? 0 : 0;
-  const meinKader = ich ? kader.proManager.get(String(ich.id)) ?? [] : [];
+  const elf = await getStartelf();
+  const elfStand = await standStartelf();
+  const meinKader = (ich ? kader.proManager.get(String(ich.id)) ?? [] : [])
+    .map((s) => ({ ...s, startelf: elf.get(String(s.id)) ?? null }));
 
   // Der gemessene Liga-Aufschlag als Vorschlag für den Regler
   const aufLiga = werteAus(await holeAufschlaege(leagueId, settings.stichtag));
@@ -92,6 +97,7 @@ export default async function Markt({ searchParams }) {
     .map((s) => ({
       ...s,
       marktwert: s.marktwert == null ? null : Number(s.marktwert),
+      startelf: elf.get(String(s.id)) ?? null,
       prognose: prognostiziere({
         auftritte: auftritteJe.get(String(s.id)) ?? [],
         verkauftAm: verkauft.get(String(s.id)) ?? null,
@@ -302,6 +308,8 @@ export default async function Markt({ searchParams }) {
           </Link>
         ))}
       </div>
+
+      <Startelflegende stand={elfStand} />
 
       <Freieliste
         spieler={gefiltert}

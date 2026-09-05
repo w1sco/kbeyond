@@ -100,6 +100,15 @@ werden, nicht verworfen.
 Der Lauf muss ihn dann **namentlich** nennen („ohne auswertbare Liste:
 PetzS"), nicht nur zählen — sonst weiß man nicht, wo man nachsehen soll.
 
+## Startelf-Chance in der Attrappe
+
+`/v4/competitions/1/players/{pid}` liefert `prob` — bewusst mit Ecken: alle fünf
+Stufen kommen vor (101→1 … 302→5), ein Spieler trägt das Feld **gar nicht**
+(103) und einen gibt es nicht (303 → 404). Damit laufen alle drei Wege durch:
+Angabe da, Kickbase weiß nichts, Spieler unbekannt. Die letzten beiden müssen
+als `stufe = NULL` in `startelf` landen — sonst kostet derselbe Spieler bei
+jedem Lauf erneut einen Aufruf.
+
 ## Was er nicht leistet
 
 Er prüft, ob Seiten **rendern** — nicht, ob die Zahlen stimmen. Dafür sind

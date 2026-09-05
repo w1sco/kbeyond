@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getTeamwerte, getMwTrend, getKader, sql } from "@/lib/db";
+import { initSchema, getSettings, getTeamwerte, getMwTrend, getKader, getStartelf, sql } from "@/lib/db";
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { holeNamen, benenne } from "@/lib/spielernamen";
@@ -11,6 +11,8 @@ import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerLi
 import Verkaufsrechner from "./Verkaufsrechner";
 import Aufstellung from "./Aufstellung";
 import Blaettern from "./Blaettern";
+import Startelflegende from "@/app/_ui/Startelflegende";
+import { standStartelf } from "@/lib/startelfabruf";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holeMitspieler } from "@/lib/mitspieler";
 
@@ -154,6 +156,12 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
       kaderFehler = e.message;
     }
   }
+
+  // Die Startelf-Chance hängt am Spieler, nicht am Manager — sie kommt
+  // deshalb erst hier dazu, egal aus welcher Quelle der Kader stammt.
+  const elf = await getStartelf();
+  const elfStand = await standStartelf();
+  kader = kader.map((s) => ({ ...s, startelf: elf.get(String(s.id)) ?? null }));
 
   const kaderGroesse = kader.length > 0 ? kader.length : kaderGerechnet;
   const kaderWert = kader.reduce((s, x) => s + Number(x.marktwert ?? 0), 0);
@@ -402,6 +410,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
               Verkauf an Kickbase ist das der Erlös, bei einem Mitspieler kann dessen Gebot
               darüber liegen.
             </p>
+            <Startelflegende stand={elfStand} />
             <Verkaufsrechner
               kader={kader}
               konto={k.konto}

@@ -723,6 +723,48 @@ th.kb-namensspalte { z-index: 3; }
   color: var(--kb-auf-akzent);
 }
 
+/* Die Leiste trägt mal Links (Marktwert-Schwelle) und mal Knöpfe
+   (Positionsfilter). Ein <button> erbt die Schrift nicht von selbst. */
+.kb-sortleiste .kb-sortchip { font: inherit; font-size: 12px; }
+.kb-sortleiste .kb-sortchip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Die Anzahl auf dem Chip ist Beiwerk, nicht die Aussage. */
+.kb-chipzahl { opacity: 0.7; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------
+   Startelf-Chance: fünf Stufen, ein Zeichen
+
+   Die Farbe allein trägt die Aussage nicht — jedes Zeichen ist auch als
+   Form unterscheidbar (Stern, Haken, Frage, Ruf, Kreuz), und der Titel
+   nennt sie im Klartext. Sonst wäre die Angabe für jemanden mit
+   Farbfehlsichtigkeit eine Reihe gleicher Punkte.
+   ------------------------------------------------------------------ */
+
+.kb-elf {
+  display: inline-block;
+  margin-left: 5px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  vertical-align: baseline;
+}
+
+.kb-elf--sicher          { color: var(--kb-akzent); }
+.kb-elf--wahrscheinlich  { color: var(--kb-gut); }
+.kb-elf--fraglich        { color: var(--kb-warn); }
+.kb-elf--kaum            { color: var(--kb-schlecht); }
+.kb-elf--nie             { color: var(--kb-text-schwach); }
+
+/* Nur für Screenreader: der Klartext hinter dem Zeichen. */
+.kb-nurvorleser {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .kb-minus     { color: var(--kb-schlecht); }
 .kb-gedaempft { color: var(--kb-text-schwach); }
 .kb-korrwert  { color: var(--kb-korrektur); }

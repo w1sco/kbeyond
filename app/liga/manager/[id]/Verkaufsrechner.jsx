@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { euro, euroKurz, prozent, posRang } from "@/lib/format";
 import { erlaubtesMinus } from "@/lib/gebot";
+import Startelf from "@/app/_ui/Startelf";
 
 // Kader zum Durchspielen: Spieler anklicken heißt "verkaufen", und oben
 // steht sofort, was das mit Kontostand und Max-Gebot macht.
@@ -225,6 +226,7 @@ export default function Verkaufsrechner({ kader, konto, teamwert, boni = null, a
                       aria-label={`${s.name} verkaufen`}
                     />
                     {" "}<span className="kb-spielername">{s.name}</span>
+                    <Startelf wert={s.startelf} />
                     {/* Zwei kleine Zeichen sagen das Wichtigste: steht er in
                         der Aufstellung, und steht er gerade am Markt? */}
                     <span

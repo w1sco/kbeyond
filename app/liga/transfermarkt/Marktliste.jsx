@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { euro, euroKurz, restzeit } from "@/lib/format";
 import Kaufrechner from "../../_ui/Kaufrechner";
+import Startelf from "../../_ui/Startelf";
 
 const QUELLEN = [
   { schluessel: "alle", label: "Alle" },
@@ -88,6 +89,7 @@ export default function Marktliste({ angebote, konto = null, teamwert = 0, ligaA
               <img className="kb-spielerbild" src={a.bild} alt="" loading="lazy" />
             )}
             <span className="kb-spielername">{a.name}</span>
+            <Startelf wert={a.startelf} />
           </span>
         );
       case "position":
