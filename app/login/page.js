@@ -17,8 +17,12 @@ export default async function Login({ searchParams }) {
         weitergereicht und hier nicht gespeichert — abgelegt wird nur das
         Sitzungs-Token in einem httpOnly-Cookie.
       </p>
+      <p className="kb-unter" style={{ marginBottom: 20 }}>
+        <strong>KBeyond ist nicht offen.</strong> Die erste Anmeldung stellt eine
+        Anfrage; benutzen lässt es sich erst, wenn der Betreiber sie freigibt.
+      </p>
 
-      <Formular abgelaufen={p.abgelaufen === "1"} />
+      <Formular abgelaufen={p.abgelaufen === "1"} zugang={p.zugang ?? null} />
 
       {/* Kickbase untersagt gewerbliche Nutzung und Datamining ohne
           Zustimmung. Das gehört dorthin, wo man sich verbindet — nicht in

@@ -12,6 +12,10 @@ sleep 1
 export DATABASE_URL="postgres://postgres@localhost:5433/postgres"
 export NODE_OPTIONS="--require $(pwd)/pruefstand/kickbase-attrappe.cjs"
 
-# Schema anlegen lassen und Daten säen
-curl -s --noproxy '*' -o /dev/null "http://localhost:$PORT/" 2>/dev/null || true
+# Schema anlegen lassen und Daten säen.
+#
+# Mit Cookie, sonst kommt der Aufruf nicht an der Freigabeliste vorbei und
+# initSchema läuft nie — die Tabellen für die Saat gäbe es dann gar nicht.
+curl -s --noproxy '*' -o /dev/null -b "kb_token=pruef" \
+  "http://localhost:$PORT/liga?league=1" 2>/dev/null || true
 echo "Prüfstand: Postgres auf 5433, Server auf $PORT"

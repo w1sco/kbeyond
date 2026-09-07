@@ -226,6 +226,31 @@ Korrektur ausgeglichen, nicht im Code.
 
 ## 7. Die Seiten im Einzelnen
 
+### 7.0 Freigabe — wer darf die App überhaupt benutzen
+
+Die Anmeldung geht an Kickbase. Jeder mit einem Kickbase-Konto käme damit
+herein, sobald er die Adresse kennt. Davor liegt deshalb eine Freigabeliste:
+
+- Eine **unbekannte E-Mail** stellt beim Anmelden eine **Anfrage**. Sie bekommt
+  **keine Sitzung** — nicht eine leere Oberfläche, sondern gar keinen Zugang.
+  Die Anmeldeseite sagt das im Klartext.
+- Der **Betreiber** sieht offene Anfragen als Zahl neben dem Zugang-Knopf und
+  gibt sie auf einer eigenen Seite frei oder sperrt sie.
+- Eine **Sperre wirkt sofort**: Die offenen Fenster dieses Menschen fliegen mit
+  heraus, statt bis zum Ablauf seines Kickbase-Tokens weiterzulaufen.
+- Ein **Betreiber lässt sich nicht sperren** — sonst könnte am Ende niemand mehr
+  freigeben.
+
+Entscheidend ist, **woran** die Freigabe hängt: am Kickbase-Token, nicht an
+einer Kennung im Cookie. Ein Cookie kommt vom Browser und ließe sich fälschen;
+ein fremdes Token bekommt man nur, indem man sich wirklich mit diesem Konto
+anmeldet. Gespeichert wird dabei nur ein Fingerabdruck des Tokens, nie das
+Token selbst.
+
+Wer Betreiber ist, steht in einer Umgebungsvariablen. Fehlt sie, wird der erste
+Mensch überhaupt zum Betreiber — sonst könnte niemand die erste Freigabe
+erteilen.
+
 ### 7.1 Anmeldung
 
 - E-Mail und Passwort werden an Kickbase weitergereicht und **nicht

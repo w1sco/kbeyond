@@ -100,6 +100,24 @@ werden, nicht verworfen.
 Der Lauf muss ihn dann **namentlich** nennen („ohne auswertbare Liste:
 PetzS"), nicht nur zählen — sonst weiß man nicht, wo man nachsehen soll.
 
+## zugang.mjs
+
+`node pruefstand/zugang.mjs 3300` prüft die Freigabeliste gegen den laufenden
+Server. Keine Rechnung, sondern eine Zusage: **ein Fremder kommt nicht herein.**
+
+Der wichtigste Fall ist ein **fremdes, gültiges Token**: Wer sich bei Kickbase
+anmelden kann, hat damit noch keinen Zugang zu dieser App. Dazu: kein
+`Set-Cookie` ohne Freigabe, keine zweite Anfrage durch andere Schreibweise, eine
+Sperre wirft die offene Sitzung sofort hinaus, und freigegeben heißt nicht
+Betreiber.
+
+Das Skript räumt seine eigenen Zeilen (`…@pruefzugang.test`) hinterher weg.
+
+**Die Saat enthält die Freigabe für das Prüfstands-Token.** Ohne sie käme der
+ganze Prüfstand auf keine einzige Seite — genau das ist ja der Sinn der Liste.
+Der Fingerabdruck wird in `saat.sql` gerechnet (`encode(sha256('pruef'), 'hex')`)
+statt abgeschrieben, damit er nicht von `lib/zugang.js` abdriften kann.
+
 ## KB_PROB_IM_KADER
 
 Ohne den Schalter steht `prob` **nur im Spielerprofil** — der belegte Fall,

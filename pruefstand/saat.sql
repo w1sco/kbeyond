@@ -5,7 +5,22 @@
 
 TRUNCATE events, liga_settings, korrektur, import_log, teamwerte,
          teamwert_verlauf, kader, markt_beobachtung, marktwert_verlauf,
-         marktwert_geprueft, pool_cache, rekon_log;
+         marktwert_geprueft, pool_cache, rekon_log, zugang, zugang_sitzung;
+
+-- Zugang: Der Prüfstand meldet sich mit dem Token "pruef" an. Ohne
+-- Freigabe käme er auf keine einzige Seite — genau das ist der Sinn der
+-- Liste. Der Fingerabdruck wird hier gerechnet statt abgeschrieben,
+-- damit er nicht von lib/zugang.js abdriften kann.
+INSERT INTO zugang (kennung, name, status, admin)
+VALUES ('pruef@kbeyond.test', 'Prüfstand', 'frei', TRUE);
+
+INSERT INTO zugang_sitzung (finger, kennung)
+VALUES (encode(sha256('pruef'::bytea), 'hex'), 'pruef@kbeyond.test');
+
+-- Und einer, der wartet: Damit die Verwaltungsseite eine offene Anfrage
+-- zu zeigen hat und der Freigabe-Knopf überhaupt gerendert wird.
+INSERT INTO zugang (kennung, name, status, versuche, zuletzt)
+VALUES ('fremd@kbeyond.test', 'Fremder', 'offen', 3, NOW());
 
 INSERT INTO liga_settings (league_id, user_id, stichtag, startbudget, punkte_bonus, login_aktiv)
 VALUES ('1', '1', '2026-08-07 00:41+02', 200000000, 10000, TRUE),

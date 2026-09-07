@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { kbLogin, tokenAblauf } from "@/lib/kickbase";
+import { pruefeAnmeldung, FREI } from "@/lib/zugang";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,15 @@ export async function POST(request) {
     const { token, userId, userName } = await kbLogin(email, password, {
       angemeldetBleiben: !!bleiben,
     });
+
+    // Die Kickbase-Anmeldung sagt nur, dass es diesen Menschen gibt —
+    // nicht, dass er diese App benutzen darf. Wer neu ist, stellt hier
+    // eine Anfrage und bekommt **kein** Cookie: ohne Sitzung kommt er auf
+    // keine einzige Seite.
+    const zugang = await pruefeAnmeldung({ email, token, name: userName, uid: userId });
+    if (zugang.status !== FREI) {
+      return Response.json({ ok: false, zugang: zugang.status }, { status: 403 });
+    }
 
     // Das Cookie soll nicht länger leben als das Token, das es trägt —
     // sonst sieht der Nutzer eine angemeldete Oberfläche, hinter der jeder

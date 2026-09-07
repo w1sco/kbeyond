@@ -22,6 +22,7 @@ const SEITEN = [
   ["Gegner", `/liga/gegner?league=${LIGA}`],
   ["News", `/liga/news?league=${LIGA}`],
   ["Einstellungen", `/liga/einstellungen?league=${LIGA}`],
+  ["Zugang", "/zugang"],
   ["Alter Markt", `/markt?league=${LIGA}`],
   ["Live-Diagnose", `/livepunkte?league=${LIGA}`],
   ["Marktwert-Diag.", `/marktwert?league=${LIGA}`],

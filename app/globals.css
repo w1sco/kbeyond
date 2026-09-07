@@ -759,6 +759,10 @@ th.kb-namensspalte { z-index: 3; }
 .kb-elfholen { display: grid; gap: 8px; justify-items: start; margin: 10px 0 14px; }
 .kb-elfholen .kb-legende { margin: 0; }
 
+/* Freigeben und Sperren nebeneinander, auf dem Handy untereinander. */
+.kb-zugangknoepfe { display: flex; gap: 6px; flex-wrap: wrap; }
+.kb-warntext { color: var(--kb-warn-text); font-weight: 600; }
+
 /* Nur für Screenreader: der Klartext hinter dem Zeichen. */
 .kb-nurvorleser {
   position: absolute;

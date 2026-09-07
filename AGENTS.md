@@ -270,6 +270,11 @@ events(id PK, league_id, type, dt, buyer, seller, price, player_id, player_name,
   + Index (league_id, dt DESC)
   IDs: Feed = Kickbase-Event-ID, Rekonstruktion = rk_{liga}_{spieler}_{ts}
 
+zugang(kennung PK, name, kb_uid, status, admin, angefragt, entschieden, von,
+       versuche, zuletzt)          -- kennung = E-Mail, klein geschrieben
+  status: offen | frei | gesperrt
+zugang_sitzung(finger PK, kennung, angelegt)
+  finger = SHA-256 des Kickbase-Tokens; das Token selbst wird nie gespeichert
 liga_settings(league_id PK, stichtag, startbudget, punkte_bonus, login_aktiv,
               login_start, spieltag_start, admin_zeigen, notiz)
 korrektur(league_id, manager, betrag, grund)          -- PK (league_id, manager)
@@ -1053,7 +1058,82 @@ täglichen Bewegungen wären unsichtbar. Das steht auch im Hinweis auf der Seite
 
 ---
 
-## Zugriffsschutz
+## Wer darf überhaupt herein?
+
+Die Anmeldung geht an Kickbase — **jeder mit einem Kickbase-Konto käme damit
+herein**, sobald er die Adresse kennt. Deshalb liegt vor der Anmeldung eine
+Freigabeliste: Eine neue E-Mail stellt eine **Anfrage**, und erst eine Freigabe
+durch den Betreiber macht daraus eine Sitzung.
+
+### Geprüft wird am Token, nicht an einem Cookie
+
+Ein Cookie mit der Nutzerkennung wäre der naheliegende Weg — und der falsche:
+Cookies kommen vom Browser, wer eine freigegebene Adresse errät, trüge sie
+einfach ein. Das **Token** dagegen bekommt man nur, indem man sich wirklich bei
+Kickbase mit diesem Konto anmeldet.
+
+Die Anmeldung legt deshalb einen **Fingerabdruck des Tokens** ab
+(`zugang_sitzung.finger`) und hängt ihn an die Freigabe. `sitzung()` schlägt bei
+jedem Aufruf darüber nach — eine Stelle, durch die ohnehin jede Seite und jede
+Route läuft.
+
+Das Token selbst steht **nirgends** in der Datenbank: gespeichert wird nur sein
+SHA-256, aus dem es sich nicht zurückrechnen lässt.
+
+Drei Folgen, alle beabsichtigt:
+
+- **Ohne Freigabe wird kein Cookie gesetzt.** Wer wartet, hat keine Sitzung und
+  kommt auf keine einzige Seite — nicht „er sieht eine leere Oberfläche".
+- **Eine Sperre wirkt sofort.** Sie löscht die Sitzungen dieses Menschen, statt
+  bis zum Ablauf seines Kickbase-Tokens weiterzulaufen.
+- **Alte Cookies von vor der Liste gelten nicht mehr.** Sie haben keinen
+  Fingerabdruck und führen zur Anmeldung.
+
+### Der erste ist der Betreiber — besser: die Umgebung
+
+`ZUGANG_ADMINS` (kommagetrennte E-Mail-Adressen) legt fest, wer freigeben darf.
+**Ist die Variable leer, wird der erste Mensch überhaupt zum Betreiber** — sonst
+könnte niemand die erste Freigabe erteilen und die App wäre für alle zu, auch
+für den Besitzer.
+
+Das ist ein Wettlauf zwischen Deploy und der ersten Anmeldung. Die
+Verwaltungsseite sagt das deshalb ausdrücklich, solange die Variable fehlt.
+
+**Ein Betreiber lässt sich nicht sperren.** Sonst stünde am Ende eine App, die
+niemand mehr freigeben kann.
+
+### `/zugang`
+
+Die Verwaltungsseite: alle Anmeldungen mit Stand, Freigeben und Sperren. Offene
+Anfragen stehen zusätzlich als Zahl im Knopf auf der Ligaseite — man soll nicht
+danach suchen müssen.
+
+**Die Server Action prüft selbst**, ob der Aufrufer Betreiber ist. Sie ist eine
+eigene Adresse und lässt sich ohne die Seite aufrufen; dieselbe Regel wie bei
+den Einstellungen.
+
+### Warum das Schema in `lib/zugang.js` steht und nicht in `initSchema()`
+
+Weil es früher da sein muss. `sitzung()` läuft als **erste** Zeile jeder Seite —
+noch vor `initSchema()`. Läge die Tabelle dort, fragte die Freigabeprüfung eine
+Tabelle ab, die es beim allerersten Aufruf noch nicht gibt. `zugang.js` legt sie
+deshalb selbst an, einmal je Prozess gemerkt.
+
+### 21 Fälle durchgeprüft — gegen den laufenden Server
+
+`pruefstand/zugang.mjs` ist keine Rechnung, sondern eine Zusage: „ein Fremder
+kommt nicht herein". Geprüft wird deshalb über echtes HTTP, unter anderem:
+
+- ohne Token und mit einem **fremden gültigen Token** führt jede Seite zur
+  Anmeldung — auch `/liga`, `/zugang` und die API-Routen
+- die erste Anmeldung liefert 403 und **kein** `Set-Cookie`
+- Groß- und Kleinschreibung erzeugen keine zweite Anfrage
+- eine Sperre wirft die offene Sitzung sofort hinaus
+- freigegeben heißt nicht Betreiber: `/zugang` bleibt zu, die Liga offen
+
+---
+
+## Zugriffsschutz auf Ligaebene
 
 Die Datenbank ist für **alle** Nutzer dieselbe: Events, Einstellungen und Korrekturen
 hängen an der Liga-ID, nicht am Nutzer. Ohne Prüfung könnte jeder Angemeldete mit einer
@@ -1305,7 +1385,8 @@ app/
   _ui/Rahmen.jsx                   Kopfleiste mit Logo, Fußzeile „created by wisco"
   page.js                          Startseite → leitet auf /liga um
   globals.css                      Design-Tokens, Komponentenklassen, Breakpoints
-  login/page.js                    Login: Server-Teil, liest ?abgelaufen
+  login/page.js                    Login: Server-Teil, liest ?abgelaufen und ?zugang
+  zugang/page.js                   Wer darf herein: freigeben und sperren
   login/Formular.jsx               "use client" — Formular, „Angemeldet bleiben“
   liga/page.js                     Hauptseite: Auswahl, Kalibrierung, Status, Datenlücke
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
@@ -1378,6 +1459,7 @@ lib/
   spieleabruf.js    importiereSpielplan(), importiereLeistungen() — Spielplan und Punkte
   live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
   liveabruf.js      holeLivestand(), sucheLivePfad() — Live-Stand holen und merken
+  zugang.js         pruefeAnmeldung(), zugangZuToken(), entscheide() — Freigabeliste
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
                     holeLigen(), istAbgelaufen() — Zugriffsschutz
   kader.js          ladeKader(), ladeAufstellungen() — Kader und Startelf

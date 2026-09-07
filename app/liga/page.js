@@ -8,6 +8,7 @@ import Frag from "./Frag";
 import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga, holeLigen, istWeiterleitung } from "@/lib/auth";
+import { offeneAnfragen } from "@/lib/zugang";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holeMitspieler } from "@/lib/mitspieler";
 import Logo from "@/app/_ui/Logo";
@@ -15,7 +16,10 @@ import Logo from "@/app/_ui/Logo";
 export const dynamic = "force-dynamic";
 
 export default async function Liga({ searchParams }) {
-  const { token, nutzer, name: meinName, uid: meineUid, ablauf } = await sitzung();
+  const { token, nutzer, name: meinName, uid: meineUid, ablauf, admin } = await sitzung();
+
+  // Wartende Zugangsanfragen sollen auffallen, ohne dass man danach sucht.
+  const anfragen = admin ? await offeneAnfragen() : 0;
 
   const p = await searchParams;
   const leagueId = p.league;
@@ -248,6 +252,11 @@ export default async function Liga({ searchParams }) {
           <a href={`/liga/news?league=${leagueId}`} className="kb-btn">News</a>
           <a href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Einstellungen</a>
           <Link href="/liga" className="kb-btn">Liga wechseln</Link>
+          {admin && (
+            <Link href="/zugang" className={`kb-btn${anfragen ? " kb-btn--haupt" : ""}`}>
+              Zugang{anfragen ? ` (${anfragen})` : ""}
+            </Link>
+          )}
         </div>
       </header>
 

@@ -2,12 +2,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function Formular({ abgelaufen = false }) {
+export default function Formular({ abgelaufen = false, zugang = null }) {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   // Vorbelegt: Wer sich anmeldet, will in aller Regel angemeldet bleiben.
   const [bleiben, setBleiben] = useState(true);
   const [err, setErr] = useState("");
+  const [stand, setStand] = useState(zugang);
   const [laeuft, setLaeuft] = useState(false);
   const router = useRouter();
 
@@ -21,8 +22,15 @@ export default function Formular({ abgelaufen = false }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password: pw, bleiben }),
       });
-      if (res.ok) router.push("/liga");
-      else setErr("Anmeldung fehlgeschlagen");
+      if (res.ok) { router.push("/liga"); return; }
+
+      // Drei verschiedene Gründe, drei verschiedene Sätze. „Anmeldung
+      // fehlgeschlagen" bei einer wartenden Anfrage schickt jemanden auf
+      // die Suche nach einem Tippfehler, den es nicht gibt.
+      const daten = await res.json().catch(() => ({}));
+      if (daten.zugang === "offen") setStand("offen");
+      else if (daten.zugang === "gesperrt") setStand("gesperrt");
+      else setErr("Anmeldung fehlgeschlagen — E-Mail oder Passwort stimmt nicht");
     } catch {
       setErr("Keine Verbindung zu Kickbase");
     } finally {
@@ -35,6 +43,26 @@ export default function Formular({ abgelaufen = false }) {
       {abgelaufen && (
         <div className="kb-hinweis kb-hinweis--warn" style={{ marginBottom: 16 }}>
           Sitzung abgelaufen — bitte neu anmelden.
+        </div>
+      )}
+
+      {stand === "offen" && (
+        <div className="kb-hinweis kb-hinweis--info" style={{ marginBottom: 16 }}>
+          <strong>Deine Anfrage liegt beim Betreiber.</strong> Deine Kickbase-Anmeldung
+          hat geklappt — KBeyond ist aber nicht offen zugänglich. Sobald die Freigabe
+          da ist, kommst du mit denselben Zugangsdaten herein.
+        </div>
+      )}
+
+      {stand === "gesperrt" && (
+        <div className="kb-hinweis kb-hinweis--fehler" style={{ marginBottom: 16 }}>
+          <strong>Kein Zugang.</strong> Für diese Adresse ist KBeyond gesperrt.
+        </div>
+      )}
+
+      {stand === "unbekannt" && (
+        <div className="kb-hinweis kb-hinweis--warn" style={{ marginBottom: 16 }}>
+          Diese Sitzung gilt nicht mehr — bitte neu anmelden.
         </div>
       )}
 
