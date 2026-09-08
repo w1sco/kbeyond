@@ -33,6 +33,10 @@ export default async function Login({ searchParams }) {
         automatisierte Auslesen von Daten ohne Zustimmung — nutze das Werkzeug
         privat und für deine eigenen Ligen.
       </p>
+
+      {/* Wer hier landet, steht vor einer verschlossenen Tür. Ein Gruß sagt,
+          dass dahinter jemand sitzt. */}
+      <p className="kb-gruss">Schöne Grüße von Kickbase King W1zco</p>
     </main>
   );
 }

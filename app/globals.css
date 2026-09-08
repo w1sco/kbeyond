@@ -763,6 +763,15 @@ th.kb-namensspalte { z-index: 3; }
 .kb-zugangknoepfe { display: flex; gap: 6px; flex-wrap: wrap; }
 .kb-warntext { color: var(--kb-warn-text); font-weight: 600; }
 
+/* Der Gruß am Fuß der Anmeldeseite — eine Unterschrift, kein Hinweis. */
+.kb-gruss {
+  margin-top: 22px;
+  text-align: right;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--kb-text-leise);
+}
+
 /* Nur für Screenreader: der Klartext hinter dem Zeichen. */
 .kb-nurvorleser {
   position: absolute;
