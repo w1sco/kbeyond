@@ -19,7 +19,6 @@ const SEITEN = [
   ["Live-Punkte",        `/liga/live?league=${LIGA}`],
   ["Live-Diagnose",      `/livepunkte?league=${LIGA}`],
   ["Live-Diagnose Suche", `/livepunkte?league=${LIGA}&suchen=1`],
-  ["Gegner",             `/liga/gegner?league=${LIGA}`],
   ["Spielplan-Diagnose", `/spielplan?league=${LIGA}`],
   ["Spielplan Suche",    `/spielplan?league=${LIGA}&suchen=1`],
   ["Startelf-Diagnose", `/startelf?league=${LIGA}`],

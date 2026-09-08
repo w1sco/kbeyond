@@ -1,7 +1,8 @@
-// Spielplan und Punkte je Spiel — an echten Antwortformen geprüft.
-import {
-  leseSpielplan, aktuelleSaison, leseLeistungen, mannschaftsPunkte,
-} from "../lib/spielplan.js";
+// Der Spielplan — an echten Antwortformen geprüft.
+//
+// Die Leistungsreihe je Spieler stand hier auch einmal. Sie trug allein
+// die Gegner-Seite und ist mit ihr rausgeflogen.
+import { leseSpielplan } from "../lib/spielplan.js";
 
 let ok = 0, fehler = 0;
 const pruefe = (name, ist, soll) => {
@@ -47,49 +48,6 @@ pruefe("0:0 zaehlt als gewertet", null_zu_null[0].gewertet, true);
 
 pruefe("leere Antwort", leseSpielplan({}), []);
 pruefe("Muell faellt raus", leseSpielplan({ it: [{ it: [{ mi: "1" }] }] }), []);
-
-// ── Die Saison ─────────────────────────────────────────────────────
-const REIHE = {
-  it: [
-    { sid: "25", ti: "2024/2025", ph: [{ mi: "7302", day: 1, p: 156, pt: "7" }] },
-    { sid: "42", ti: "2026/2027", ph: [
-      { mi: "11914", day: 1, p: 35, pt: "2", cur: true },
-      { mi: "11944", day: 2, pt: "2", cur: false },
-    ] },
-  ],
-};
-pruefe("laufende Saison an cur erkannt", aktuelleSaison(REIHE).ti, "2026/2027");
-pruefe("ohne cur die letzte", aktuelleSaison({ it: [{ ti: "a", ph: [] }, { ti: "b", ph: [] }] }).ti, "b");
-pruefe("gar keine Saison", aktuelleSaison({}), null);
-
-const l = leseLeistungen(REIHE);
-pruefe("nur die laufende Saison", l.length, 2);
-pruefe("Punkte und Verein", [l[0].punkte, l[0].team], [35, "2"]);
-// **Ohne p bleibt null** – bei einer kommenden Partie ist 0 eine Behauptung.
-pruefe("kommendes Spiel ohne Punkte", l[1].punkte, null);
-pruefe("Eintrag ohne Verein faellt raus",
-  leseLeistungen({ it: [{ ph: [{ mi: "1", p: 5 }] }] }), []);
-
-// ── Mannschaftspunkte ──────────────────────────────────────────────
-// Zwei Spieler von Verein 2, einer von Verein 9, ein gewertetes Spiel.
-const LEISTUNGEN = [
-  { mi: "11914", team: "2", punkte: 35 },
-  { mi: "11914", team: "2", punkte: 65 },
-  { mi: "11914", team: "9", punkte: 12 },
-  // Ein Spieler ohne Punkte in einem gespielten Spiel: er hat nichts
-  // beigetragen – das ist eine 0, kein fehlender Wert.
-  { mi: "11914", team: "9", punkte: null },
-  // Und ein kommendes Spiel, das nicht mitzählen darf.
-  { mi: "11965", team: "9", punkte: null },
-];
-const summen = mannschaftsPunkte(LEISTUNGEN, plan);
-pruefe("nur gewertete Partien", summen.length, 2);
-pruefe("Heimsumme", summen[0].punkteHeim, 100);
-pruefe("Gastsumme, fehlender Wert zaehlt als 0", summen[0].punkteGast, 12);
-pruefe("Partie ohne Leistungen bleibt leer",
-  [summen[1].punkteHeim, summen[1].punkteGast], [null, null]);
-pruefe("kommende Partie kommt nicht vor",
-  summen.some((s) => s.mi === "11965"), false);
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

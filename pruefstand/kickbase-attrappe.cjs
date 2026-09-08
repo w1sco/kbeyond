@@ -259,28 +259,9 @@ function fuerPfad(pfad) {
     return { it, day: 3 };
   }
 
-  // Die Leistungsreihe eines Spielers: je Saison eine Liste, darin je
-  // Spiel seine Punkte und **sein Verein zu diesem Zeitpunkt** (`pt`).
-  const leistung = pfad.match(/\/players\/(\d+)\/performance/);
-  if (leistung) {
-    const pid = leistung[1];
-    // Der Verein des Spielers aus dem Vereinskader.
-    const tid = Object.keys(VEREINSKADER).find((t) =>
-      (VEREINSKADER[t] ?? []).some((s) => String(s.i ?? s.pi) === pid)) ?? "7";
-    return {
-      it: [
-        { sid: "40", ti: "2025/2026", n: "Bundesliga", ph: [
-          { mi: "8000", day: 1, p: 99, pt: tid, cur: false },
-        ] },
-        { sid: "42", ti: "2026/2027", n: "Bundesliga", ph: [
-          { mi: "9000", day: 1, p: 40, pt: tid, cur: true },
-          { mi: "9001", day: 2, p: 20, pt: tid, cur: false },
-          // Kommende Spiele stehen mit drin, aber ohne Punkte.
-          { mi: "9002", day: 3, pt: tid, cur: false },
-        ] },
-      ],
-    };
-  }
+  // Die Leistungsreihe je Spieler ist mit der Gegner-Seite raus.
+  // Ein Aufruf darauf ist jetzt ein 404 wie jeder andere unbekannte
+  // Pfad — genau das soll er sein.
 
   // Das Spielerprofil. Interessant ist hier nur `prob` – die
   // Startelf-Wahrscheinlichkeit (1 sicher … 5 spielt nicht).

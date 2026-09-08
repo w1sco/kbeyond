@@ -6,39 +6,39 @@ import { schluesselBaum } from "@/lib/aufstellung";
 
 export const dynamic = "force-dynamic";
 
-// Zwei Fragen, die für die Gegner-Auswertung beantwortet sein müssen:
+// Wer spielt an welchem Spieltag gegen wen?
 //
-// 1. **Der Spielplan.** Wer spielt an welchem Spieltag gegen wen, zu
-//    Hause oder auswärts? Ohne das gibt es weder Historie noch die
-//    nächsten fünf Gegner.
-// 2. **Punkte je Spieltag.** Kickbase-Punkte einer Mannschaft in einem
-//    einzelnen Spiel. `kader.punkte` ist die Saisonsumme und taugt dafür
-//    nicht; `mdp` aus dem Live-Endpunkt hängt am Manager, nicht am Verein.
+// Belegt ist `/v4/competitions/1/matchdays` — alle 34 Spieltage in einem
+// Aufruf. Daran hängt inzwischen nur noch eine Sache, aber eine wichtige:
+// **für welchen Spieltag die Startelf-Prognose gilt.** Ändert Kickbase
+// die Form, sagt der Aktualisieren-Lauf zwar, dass es klemmt — woran, sagt
+// erst diese Seite.
 //
-// Beides ist in diesem Projekt **nicht belegt**. Deshalb erst probieren,
-// dann bauen — wie bei Marktwert-Historie, Aufstellung und Live-Punkten.
+// Ihre zweite Hälfte suchte einmal die **Punkte je Spieltag** für die
+// Gegner-Auswertung. Die Seite ist raus, die Suche danach auch.
 export default async function Spielplan({ searchParams }) {
   const { token } = await sitzung();
   const p = await searchParams;
   const leagueId = p.league;
-  if (!leagueId) return <LigaFehlt titel="Spielplan und Spieltagspunkte" />;
+  if (!leagueId) return <LigaFehlt titel="Spielplan" />;
 
   await verlangeLiga(leagueId, token);
 
-  // Diese Seite probiert über ein Dutzend Endpunkte durch. Das kostet
-  // Aufrufe, also erst auf Klick — dieselbe Regel wie bei /livepunkte.
+  // Auch das kostet ein Dutzend Aufrufe, also erst auf Klick — dieselbe
+  // Regel wie bei /livepunkte und /startelf.
   if (p.suchen !== "1") {
     return (
       <main className="kb-seite kb-seite--schmal">
-        <DiagnoseKopf titel="Spielplan und Spieltagspunkte" leagueId={leagueId} />
+        <DiagnoseKopf titel="Spielplan" leagueId={leagueId} />
         <section className="kb-karte">
           <p>
-            Gesucht werden zwei Dinge, die für die Gegner-Auswertung fehlen: der
-            <strong> Spielplan</strong> (wer spielt wann gegen wen) und die
-            <strong> Punkte einer Mannschaft je Spieltag</strong>.
+            Gesucht wird der <strong>Spielplan</strong>: wer spielt an welchem
+            Spieltag gegen wen, zu Hause oder auswärts, und wie ist es
+            ausgegangen. Daran hängt, für welchen Spieltag die Startelf-Prognose
+            gilt.
           </p>
           <p className="kb-leise">
-            Rund <strong>16 Kickbase-Aufrufe</strong>. Läuft deshalb erst auf Klick.
+            Rund <strong>zwölf Kickbase-Aufrufe</strong>. Läuft deshalb erst auf Klick.
           </p>
           <p>
             <Link href={`/spielplan?league=${leagueId}&suchen=1`} className="kb-btn">
@@ -50,21 +50,15 @@ export default async function Spielplan({ searchParams }) {
     );
   }
 
-  // Für die spielerbezogenen Kandidaten eine echte Spieler-ID besorgen.
-  let pid = p.pid ?? null;
+  // Ein paar Kandidaten hängen an einer Vereins-ID.
   let tid = p.tid ?? null;
   try {
     const tabelle = await kbFetch("/v4/competitions/1/table", token);
     const ersteListe = Object.values(tabelle ?? {}).find(Array.isArray) ?? [];
     tid = tid ?? String(ersteListe[0]?.tid ?? ersteListe[0]?.i ?? "");
-    if (!pid && tid) {
-      const profil = await kbFetch(`/v4/competitions/1/teams/${tid}/teamprofile`, token);
-      const spieler = Object.values(profil ?? {}).find(Array.isArray) ?? [];
-      pid = String(spieler[0]?.i ?? spieler[0]?.pi ?? "");
-    }
   } catch { /* dann eben ohne – die Pfade ohne ID gehen trotzdem */ }
 
-  const spielplanPfade = [
+  const plan = await probiere([
     "/v4/competitions/1/matches",
     "/v4/competitions/1/matchdays",
     "/v4/competitions/1/matchday",
@@ -77,70 +71,43 @@ export default async function Spielplan({ searchParams }) {
       `/v4/competitions/1/teams/${tid}/matches`,
       `/v4/competitions/1/teams/${tid}/teamcenter`,
     ] : []),
-  ];
-
-  const punktePfade = pid ? [
-    `/v4/competitions/1/players/${pid}/performance`,
-    `/v4/leagues/${leagueId}/players/${pid}/performance`,
-    `/v4/leagues/${leagueId}/players/${pid}/stats`,
-    `/v4/competitions/1/players/${pid}`,
-    `/v4/leagues/${leagueId}/players/${pid}`,
-  ] : [];
-
-  const [plan, punkte] = await Promise.all([
-    probiere(spielplanPfade, token),
-    probiere(punktePfade, token),
-  ]);
+  ], token);
 
   return (
     <main className="kb-seite">
       <DiagnoseKopf
-        titel="Spielplan und Spieltagspunkte"
-        unter={`Verein ${tid ?? "?"} · Spieler ${pid ?? "?"} · ${
-          [...plan, ...punkte].filter((r) => r.ok).length} von ${plan.length + punkte.length} antworten`}
+        titel="Spielplan"
+        unter={`Verein ${tid ?? "?"} · ${plan.filter((r) => r.ok).length} von ${plan.length} antworten`}
         leagueId={leagueId}
       />
 
-      <Gruppe
-        titel="1 · Spielplan: wer spielt wann gegen wen"
-        erklaerung="Gesucht ist eine Liste mit Spieltag, zwei Mannschaften und – für die Historie – dem Ergebnis. Ohne Heim/Auswärts fehlt der Heimvorteil."
-        ergebnisse={plan}
-      />
-
-      <Gruppe
-        titel="2 · Punkte je Spieltag"
-        erklaerung="Gesucht ist eine Reihe je Spieltag mit den Punkten dieses einen Spiels. Die Summe über alle Spieler eines Vereins ergibt dann die Mannschaftspunkte."
-        ergebnisse={punkte}
-      />
+      <section className="kb-karte">
+        <h2 className="kb-abschnitt-titel">Wer spielt wann gegen wen</h2>
+        <p className="kb-info">
+          Gesucht ist eine Liste mit Spieltag, zwei Mannschaften und — sobald
+          gespielt — dem Ergebnis. Gewertet ist, was Tore trägt; eine kommende
+          Partie lässt sie einfach weg.
+        </p>
+        {plan.map((r) => (
+          <div key={r.pfad}>
+            <h3 className="kb-pfad">
+              <span className={r.ok ? "kb-marke--exakt" : "kb-minus"}>{r.ok ? "OK" : r.fehler}</span>{" "}
+              {r.pfad}
+            </h3>
+            {r.ok && (
+              <>
+                {/* Der Aufbau zuerst: Daran sieht man in einer Zeile, ob
+                    überhaupt etwas Passendes drinsteht. */}
+                <pre className="kb-roh">
+                  {schluesselBaum(r.daten).slice(0, 40)
+                    .map((z) => `${z.pfad} = ${z.wert}`).join("\n")}
+                </pre>
+                <Rohdaten daten={r.daten} />
+              </>
+            )}
+          </div>
+        ))}
+      </section>
     </main>
-  );
-}
-
-function Gruppe({ titel, erklaerung, ergebnisse }) {
-  return (
-    <section className="kb-karte">
-      <h2 className="kb-abschnitt-titel">{titel}</h2>
-      <p className="kb-info">{erklaerung}</p>
-      {ergebnisse.length === 0 && <p className="kb-leise">Keine Kandidaten (fehlende ID).</p>}
-      {ergebnisse.map((r) => (
-        <div key={r.pfad}>
-          <h3 className="kb-pfad">
-            <span className={r.ok ? "kb-marke--exakt" : "kb-minus"}>{r.ok ? "OK" : r.fehler}</span>{" "}
-            {r.pfad}
-          </h3>
-          {r.ok && (
-            <>
-              {/* Der Aufbau zuerst: Daran sieht man in einer Zeile, ob
-                  überhaupt etwas Passendes drinsteht. */}
-              <pre className="kb-roh">
-                {schluesselBaum(r.daten).slice(0, 40)
-                  .map((z) => `${z.pfad} = ${z.wert}`).join("\n")}
-              </pre>
-              <Rohdaten daten={r.daten} />
-            </>
-          )}
-        </div>
-      ))}
-    </section>
   );
 }

@@ -868,6 +868,9 @@ Ohne Technik, nur die Inhalte:
 | **Marktwert-Historie** | Je Spieler und Kalendertag (vom Anbieter geholt, Grundlage der Aufschläge) |
 | **Marktbeobachtungen** | Je Liga, Spieler und Angebotsablauf: wann gesehen, welcher Marktwert |
 | **News** | Je Liga und Spieler: Text, Stimmung, Quellen, Stand. Leerer Text = nachgesehen, nichts gefunden |
+| **Spielplan** | Alle 34 Spieltage mit Ansetzung und Ergebnis — ligaunabhängig. Daran hängt, welcher Spieltag der nächste ist |
+| **Startelf-Chance** | Je Spieler die Stufe 1–5 und der Spieltag, für den sie gilt. Keine Angabe wird ebenfalls festgehalten — sonst kostet derselbe Spieler jeden Lauf erneut einen Abruf |
+| **Freigaben** | Je E-Mail: Stand (offen, frei, gesperrt), Name, wann angefragt, wer entschieden hat. Dazu je angemeldeter Sitzung ein Fingerabdruck — das Kickbase-Token selbst wird nie gespeichert |
 
 > **Marktwert-Ablesungen und Marktwert-Historie bewusst getrennt halten.** Die
 > einen sind Marktwert-Tage aus eigener Ablesung (Grenze 22:04), die anderen

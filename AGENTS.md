@@ -60,7 +60,6 @@ Auth: `Authorization: Bearer {token}`, Token aus dem Login.
 | `/v4/competitions/1/table` | Alle 18 Team-IDs |
 | `/v4/competitions/1/teams/{tid}/teamprofile` | Vereinskader mit Spieler-IDs |
 | `/v4/competitions/1/matchdays` | **Der ganze Spielplan**: 34 Spieltage, je Partie `mi`, `t1`/`t2`, `dt`, dazu `t1g`/`t2g` sobald gespielt |
-| `/v4/competitions/1/players/{pid}/performance` | **Punkte je Spiel**, 14 Saisons zurück: `mi`, `p`, `pt` (Verein zum Spielzeitpunkt) |
 | `/v4/competitions/1/players/{pid}` | Spielerprofil: `mv`, `pos`, `tid`, **`prob`** (Startelf-Chance 1–5), `plpt` (Quelle: Ligainsider), `mdsum` (nächste drei Partien) |
 | `/v4/competitions/1/teams/{tid}/teamcenter` | Vereinskader mit Saisonpunkten je Spieler, dazu die Punkte-Rangliste aller 18 Vereine |
 
@@ -294,9 +293,6 @@ markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, pla
   + Index (league_id, player_id)
 spiele(spieltag, heim, gast, datum, mi, tore_heim, tore_gast, stand)
   PK (spieltag, heim, gast), UNIQUE (mi) — ligaunabhängig, aus /matchdays
-spieler_punkte(player_id, mi, team_id, spieltag, punkte)  -- PK (player_id, mi)
-  team_id = Verein ZUM ZEITPUNKT DES SPIELS, ligaunabhängig
-leistung_geprueft(player_id, bis_tag, geprueft)  -- wen wir schon gefragt haben
 startelf(player_id PK, stufe, spieltag, stand)   -- ligaunabhängig
   stufe 1–5 aus `prob`, NULL = gefragt und nichts geliefert
   spieltag = für welchen Spieltag die Prognose gilt
@@ -659,148 +655,53 @@ Die **Aufstellung stammt aus der Datenbank**. Wer seine Elf seit dem letzten
 Aktualisieren geändert hat, steht hier noch mit der alten; die Seite sagt das
 unter der Tabelle.
 
-## Gegner der nächsten Spiele
+## Der Spielplan
 
-`/liga/gegner` beantwortet die Frage, auf welche Spieler man setzen sollte — über den
-Gegner. Gegen eine durchlässige Mannschaft holen Spieler mehr Punkte als gegen eine zähe.
+`/v4/competitions/1/matchdays` liefert alle 34 Spieltage in **einem** Aufruf,
+je Partie `mi` (Spiel-ID), `t1`/`t2` (Heim/Gast), `dt` und — sobald gespielt —
+`t1g`/`t2g`. So billig, dass er in jedem Aktualisieren-Lauf mitläuft.
 
-### Gemessen wird, was ein Verein zugesteht
-
-Nicht, wie viele Punkte er selbst macht. Wer auf Spieler setzen will, sucht den
-durchlässigen Gegner, nicht den schwachen Angriff. `zugestanden()` summiert deshalb die
-Punkte, die die **jeweils andere Seite** gegen ihn geholt hat.
-
-### Der Score: 5 : 4 : 3 : 2 : 1
-
-Die nächsten fünf Spiele werden linear absteigend gewichtet — das nächste trägt damit ein
-Drittel. Linear und nicht exponentiell, weil sich 5:4:3:2:1 jedem erklären lässt.
-
-Ergebnis ist ein Index: **100 = Ligaschnitt**, 118 heißt „die kommenden Gegner sind
-zusammen rund 18 % durchlässiger als üblich".
-
-**Wenige Spiele werden gedämpft** (`RUECKHALT = 3`). Am zweiten Spieltag hat jede
-Mannschaft ein einziges Spiel; ein Ausreißer bestimmte sonst die ganze Bewertung. Der
-Schnitt wird zum Ligaschnitt hingezogen, als hätte jede Mannschaft drei zusätzliche,
-genau durchschnittliche Spiele bestritten. Nach zehn Spielen zählt das Gemessene zu drei
-Vierteln.
-
-**Der Heimvorteil ist eine Zahl für die ganze Liga**, nicht eine je Mannschaft. Je
-Mannschaft wären es am zweiten Spieltag ein bis zwei Spiele — daraus lässt sich nichts
-ableiten. Über alle Partien zusammen schon.
-
-**Ein Gegner ohne Daten wird nicht geraten.** Er fällt aus der Rechnung, die übrigen
-Gewichte tragen ihn mit, und die Zeile weist ihn aus — solange mindestens drei der fünf
-bekannt sind, siehe unten. 49 Fälle durchgerechnet (`pruefstand/gegner.mjs`), darunter die
-Probe, dass das nächste Spiel wirklich ein Drittel trägt und dass ein einzelner Ausreißer
-gedämpft wird.
-
-`lib/gegner.js` ist wie `gebot.js` und `loginbonus.js` **ohne Datenbank** — sonst ließe es
-sich nicht ohne Postgres durchrechnen.
-
-### Woher die Daten kommen — beide Endpunkte sind belegt
-
-**Der Spielplan: ein Aufruf für die ganze Saison.**
-`/v4/competitions/1/matchdays` liefert alle 34 Spieltage auf einmal, je Partie
-`mi` (Spiel-ID), `t1`/`t2` (Heim/Gast), `dt` und — sobald gespielt — `t1g`/`t2g`.
-So billig, dass er in jedem Aktualisieren-Lauf mitläuft.
-
-**Gewertet ist, was Tore trägt.** Kommende Partien lassen `t1g`/`t2g` einfach weg.
-Das ist die Form, an der man sie erkennt, und sie ist verlässlicher als ein
+**Gewertet ist, was Tore trägt.** Kommende Partien lassen `t1g`/`t2g` einfach
+weg. Das ist die Form, an der man sie erkennt, und sie ist verlässlicher als ein
 Statuscode, dessen Bedeutung nirgends steht. Ein **0:0 ist gewertet** — die Null
 ist dort ein Ergebnis, kein fehlender Wert.
 
-**Die Punkte: `/v4/competitions/1/players/{pid}/performance`.**
-Je Spieler eine Reihe über **vierzehn Saisons**, darin je Spiel `mi`, `p` (seine
-Punkte) und `pt`. `pt` ist der Grund, warum das trägt: **es ist sein Verein zum
-Zeitpunkt des Spiels**, nicht der heutige. Ein Winterwechsel zählt damit für
-beide Vereine richtig — mit dem heutigen Kader gerechnet wäre die halbe Saison
-falsch zugeordnet.
+Die Tabelle `spiele` ist **ligaunabhängig**: Die Bundesliga ist für alle
+dieselbe.
 
-Die Mannschaftspunkte werden **nicht gespeichert, sondern gerechnet** (Summe der
-Einzelleistungen je Spiel und Verein). So kann die Summe nicht veralten, während
-im Hintergrund weitere Spieler nachgeladen werden.
+**Wozu er noch da ist:** Er sagt, welcher Spieltag der nächste ist — und damit,
+für welchen Spieltag die Startelf-Prognose gilt (`naechsterSpieltag()` in
+`db.js`). Das ist der einzige verbliebene Abnehmer, aber ein tragender.
 
-#### Der Preis: ein Aufruf je Spieler
+### Ein stiller Ausfall sieht aus wie „nichts zu tun"
 
-Das ist der teuerste Posten im Projekt — die Bundesliga hat rund 470 Spieler.
-Deshalb dasselbe Muster wie bei der Rekonstruktion: **25 je Lauf, mit Gedächtnis**
-(`leistung_geprueft.bis_tag`) und einem Zeitbudget davor. Nach etwa zwanzig
-Klicks ist die Liga vollständig; nach jedem Spieltag läuft es erneut, weil jeder
-Spieler eine neue Zeile bekommen hat.
+Der Schritt hängt in einem `try`, damit ein Ausfall den Lauf nicht mitreißt. Ein
+leeres `catch` hat den ersten Import aber **spurlos** verschluckt: Die
+Rückmeldung sagte nichts, die Tabelle blieb leer, und es sah aus, als wäre gar
+nichts angestanden. Der Fehler (`date/time field value out of range`) wurde erst
+sichtbar, als der `catch` ihn unter „offen" nennt. Er tut es jetzt — und aus
+demselben Grund nennt auch der Pool-Schritt seinen Fehler im Wortlaut.
 
-> **Die billige Abkürzung wurde geprüft und verworfen.** `/v4/competitions/1/table`
-> trägt `sp` — die Saisonpunkte je Verein, alle 18 in einem Aufruf. Aus der
-> Differenz zweier Ablesungen ließe sich der Spieltag ableiten. Das hängt aber
-> daran, dass zwischen zwei Ablesungen genau ein Spieltag liegt: Wer eine Woche
-> nicht aktualisiert, bekäme zwei Spieltage in einer Zahl und könnte sie keinem
-> Gegner mehr zuordnen. Genau die Klasse Fehler, die beim Marktwert-Tag schon
-> einmal zugeschlagen hat. Die Spielerreihe ist teurer, aber **exakt und
-> rückwirkend** — sie trägt die Spiel-ID mit.
+`/spielplan?league=…` bleibt als Diagnose stehen, falls Kickbase die Form
+ändert. Wie alle teuren Diagnoseseiten läuft sie erst auf Klick.
 
-#### Ein stiller Ausfall sieht aus wie „nichts zu tun"
+### Die Gegner-Seite gab es einmal
 
-Der Spielplan-Schritt hängt in einem `try`, damit ein Ausfall den Lauf nicht
-mitreißt. Ein leeres `catch` hat den ersten Import aber **spurlos** verschluckt:
-Die Rückmeldung sagte nichts, die Tabelle blieb leer, und es sah aus, als wäre
-gar nichts angestanden. Der Fehler (`date/time field value out of range`) wurde
-erst sichtbar, als der `catch` ihn unter „offen" nennt. Er tut es jetzt.
+`/liga/gegner` hat gezeigt, wie viele Punkte ein Verein seinen Gegnern
+zugesteht, und daraus einen gewichteten Score über die nächsten fünf Spiele
+gebildet. Sie ist **komplett entfernt** — mit ihr die Einzelleistungen je
+Spieler (`spieler_punkte`, `leistung_geprueft`, `importiereLeistungen`,
+`lib/gegner.js`).
 
-`/spielplan?league=…` bleibt als Diagnose stehen: Sie probiert die Kandidaten
-durch und zeigt zu jeder Antwort erst den Aufbau, dann die Rohdaten — falls
-Kickbase die Form ändert. Wie alle teuren Diagnoseseiten läuft sie erst auf Klick.
+Der Grund ist der Preis: **ein Aufruf je Spieler, rund 470, nach jedem
+Spieltag erneut.** Das war der teuerste Posten im ganzen Projekt, und er stand
+gegen einen Score, der schon einmal 202 gegen 23 bei einer einzigen gewerteten
+Partie ausgewiesen hatte. Drei Sicherungen später war er ehrlich, aber immer
+noch teuer.
 
-Die Tabellen `spiele` und `spieler_punkte` sind **ligaunabhängig**: Die Bundesliga
-ist für alle dieselbe. `punkte` bleibt `NULL`, wo Kickbase kein `p` liefert; ob
-daraus eine 0 wird, entscheidet erst die Auswertung — und nur bei einer
-gewerteten Partie.
-
-### Drei Sicherungen gegen Zahlen, die genauer aussehen als sie sind
-
-Die erste Fassung stand live und zeigte **202 gegen 23** über achtzehn Vereine —
-bei *einer* gewerteten Partie. Jede der drei Ursachen ist für sich harmlos und
-zusammen ergaben sie eine Tabelle, die aussah wie eine Auswertung.
-
-**1. Eine halb geladene Mannschaft hat keine Punktzahl.**
-Während die 470 Spieler in Häppchen hereinkommen, ist die Summe eines Vereins
-zu niedrig — und eine zu niedrige Summe sieht aus wie ein schwacher Auftritt,
-nicht wie eine Datenlücke. `nurVollstaendige()` vergleicht deshalb die Zahl
-geladener Leistungen mit der Kadergröße im Pool und verwirft alles darunter.
-**Eine unvollständige Seite verwirft die ganze Partie**: Die andere Mannschaft
-allein sagt nichts über das Spiel. Dasselbe Prinzip wie beim Kaderwert im
-Verlauf — „ein leerer Kader ist 0, ein unbekannter ist nichts".
-
-**2. Ein Heimvorteil aus einer Handvoll Spiele ist keiner.**
-Gemessen an einer einzigen Partie kamen **63 %** heraus, und dieser Faktor trug
-danach den halben Score: Ein Verein mit Faktor 1,16 stand mit 202 da, weil
-1,16 × 1,72 knapp über 2 liegt. Unter `MIN_SPIELE_HEIM = 9` (ein voller
-Spieltag) gilt jetzt **kein Heimvorteil**, und die Kachel zeigt „–" statt einer
-Zahl.
-
-**3. Ein bekannter Gegner ist kein gewichteter Schnitt.**
-Sind von den fünf Gegnern vier unbekannt, ist `summe / gewicht` schlicht der
-Faktor des einen — und es kam **dieselbe Zahl** heraus, egal ob er am nächsten
-oder am fünften Spieltag dran war. Die ganze Gewichtung war Fiktion. Unter
-`MIN_GEGNER = 3` steht deshalb kein Score, sondern „x von 3 Gegnern".
-
-> Alle drei sind Varianten desselben Fehlers, und alle drei hätte die Prüfung
-> fangen können: **Die Tests rechneten nur mit vollständigen, ausgewogenen
-> Daten.** Erst ein Fall mit *einer* Partie und *einem* bekannten Gegner hat sie
-> sichtbar gemacht. 49 Fälle durchgerechnet, darunter genau diese.
-
-### Drei Zustände, drei Anzeigen
-
-Kein Spielplan, Spielplan ohne Punkte, alles da. Der mittlere ist der wichtige:
-Die **Ansetzungen stimmen dann schon**, nur der Score fehlt noch. Die Seite sagt
-das mit Zählerstand — und zwar auf **Vereinsebene** („140 von 470 Spielern
-abgeholt, davon 6 von 18 Vereinen vollständig"), weil erst ein vollständiger
-Kader eine Partie zählbar macht. Die nächsten fünf Gegner stehen trotzdem da —
-statt so zu tun, als wüsste die Seite nichts.
-
-### Was noch drin steckt
-
-Der Spielplan trägt für die nächsten Spieltage **Wettquoten** (`bo.o1/ox/o2`).
-Das ist ein starkes Signal für „wie schwer wird das Spiel" und noch nicht
-ausgewertet.
+**Vorhandene Tabellen werden nicht gelöscht.** Ein `DROP` ist nicht rückholbar,
+und leere Tabellen kosten nichts; die `CREATE`-Anweisungen sind nur aus
+`initSchema()` verschwunden, damit eine neue Datenbank sie nicht mehr bekommt.
 
 ## Steht er am Wochenende auf dem Platz?
 
@@ -837,7 +738,7 @@ auszeichnet" gescheitert und hat die teuerste Elf ausgegeben. 48 Fälle
 durchgerechnet (`pruefstand/startelfchance.mjs`), darunter das echte Profil und
 jeder dieser Ablenker.
 
-`lib/startelf.js` ist wie `gegner.js` und `gebot.js` **ohne Datenbank**.
+`lib/startelf.js` ist wie `gebot.js` und `loginbonus.js` **ohne Datenbank**.
 
 ### Zwei Dinge sind daran noch nicht belegt
 
@@ -1451,8 +1352,7 @@ app/
   liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
   liga/news/page.js                Spieler-News: eigener Kader und Transfermarkt
   liga/news/Newsliste.jsx          "use client" — Recherche in Bündeln, Fortschritt
-  liga/gegner/page.js              Gegner der nächsten fünf Spiele, Score je Verein
-  spielplan/page.js                Diagnose: Spielplan und Punkte je Spieltag
+  spielplan/page.js                Diagnose: wer spielt wann gegen wen
   startelf/page.js                 Diagnose: stimmt die prob-Skala, geht es billiger
   _ui/Startelf.jsx                 das Zeichen vor dem Namen, ohne Angabe nichts
   _ui/Startelflegende.jsx          was die fünf Zeichen heißen, plus Abrufstand
@@ -1499,11 +1399,10 @@ lib/
   tagesverlauf.js   rekonstruiereVerlauf(), schreibeRekonstruktion() — bis zum Reset
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
-  gegner.js         faktoren(), heimfaktor(), gegnerScore() — Gegnerstärke, ohne DB
   startelf.js       STUFEN, stufe(), leseChance(), ernte() — Chance, ohne DB
   startelfabruf.js  importiereStartelf(), standStartelf() — prob je Spieler holen
-  spielplan.js      leseSpielplan(), leseLeistungen(), mannschaftsPunkte() — ohne DB
-  spieleabruf.js    importiereSpielplan(), importiereLeistungen() — Spielplan und Punkte
+  spielplan.js      leseSpielplan() — den Spielplan lesen, ohne DB
+  spieleabruf.js    importiereSpielplan() — die 34 Spieltage in einem Aufruf
   live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
   liveabruf.js      holeLivestand(), sucheLivePfad() — Live-Stand holen und merken
   zugang.js         pruefeAnmeldung(), zugangZuToken(), entscheide() — Freigabeliste
@@ -2137,7 +2036,6 @@ Frag-die-Liga mit drei Anbietern.
 5. **Bietrechner:** wer kann bei welchem Spieler mitbieten — alle Zahlen dafür stehen bereit.
 6. **Die `prob`-Skala bestätigen** über `/startelf?league=…` — und dort gleich nachsehen,
    ob eine der billigen Listen `prob` mitführt. Dann fallen die 470 Einzelaufrufe weg.
-7. **Wettquoten** (`bo.o1/ox/o2`) aus dem Spielplan in den Gegner-Score.
 
 ## Arbeitsweise
 
