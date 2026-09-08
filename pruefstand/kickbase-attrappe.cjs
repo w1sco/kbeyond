@@ -369,8 +369,31 @@ function fuerPfad(pfad) {
 
 const echterFetch = globalThis.fetch;
 
+// Der Mailversand geht auch nicht raus. Was er senden WÜRDE, landet in
+// einer Datei — nur so lässt sich prüfen, dass eine neue Anfrage wirklich
+// eine Nachricht auslöst und eine zweite Anmeldung derselben Person nicht.
+//
+// Mit KB_MAIL_FEHLER=1 lehnt der Versender ab. Dann muss der Fehler in der
+// Datenbank stehen und auf der Verwaltungsseite auftauchen — ein stiller
+// Ausfall sähe aus wie „es hat eben niemand angefragt".
+const MAIL_LOG = "/tmp/pruefstand-mail.log";
+
 globalThis.fetch = async function (eingabe, init) {
   const url = typeof eingabe === "string" ? eingabe : eingabe?.url ?? String(eingabe);
+
+  if (url.includes("api.resend.com")) {
+    const koerper = init?.body ? JSON.parse(init.body) : {};
+    require("fs").appendFileSync(MAIL_LOG,
+      JSON.stringify({ an: koerper.to, betreff: koerper.subject }) + "\n");
+    if (process.env.KB_MAIL_FEHLER === "1") {
+      return new Response(JSON.stringify({ message: "domain not verified" }), {
+        status: 403, headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ id: "test" }), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    });
+  }
 
   if (!url.includes("api.kickbase.com")) return echterFetch(eingabe, init);
 

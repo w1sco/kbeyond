@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { kbLogin, tokenAblauf } from "@/lib/kickbase";
-import { pruefeAnmeldung, FREI } from "@/lib/zugang";
+import { pruefeAnmeldung, merkeMeldung, FREI, OFFEN } from "@/lib/zugang";
+import { meldeAnfrage } from "@/lib/benachrichtigung";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,18 @@ export async function POST(request) {
     // eine Anfrage und bekommt **kein** Cookie: ohne Sitzung kommt er auf
     // keine einzige Seite.
     const zugang = await pruefeAnmeldung({ email, token, name: userName, uid: userId });
+
+    // Nur eine **neue** Anfrage meldet sich beim Betreiber. Bei jedem
+    // weiteren Versuch derselben Person käme sonst eine weitere Mail.
+    //
+    // Abgewartet, nicht nebenher: Nach der Antwort friert Vercel die
+    // Funktion ein, offene Arbeit liefe ins Leere. Es kostet rund eine
+    // Zehntelsekunde, und der Ausgang wird vermerkt.
+    if (zugang.neu && zugang.status === OFFEN) {
+      const post = await meldeAnfrage({ kennung: zugang.kennung, name: userName });
+      await merkeMeldung(zugang.kennung, post.fehler);
+    }
+
     if (zugang.status !== FREI) {
       return Response.json({ ok: false, zugang: zugang.status }, { status: 403 });
     }

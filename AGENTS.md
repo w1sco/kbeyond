@@ -271,7 +271,7 @@ events(id PK, league_id, type, dt, buyer, seller, price, player_id, player_name,
   IDs: Feed = Kickbase-Event-ID, Rekonstruktion = rk_{liga}_{spieler}_{ts}
 
 zugang(kennung PK, name, kb_uid, status, admin, angefragt, entschieden, von,
-       versuche, zuletzt)          -- kennung = E-Mail, klein geschrieben
+       versuche, zuletzt, gemeldet, melde_fehler)  -- kennung = E-Mail, klein
   status: offen | frei | gesperrt
 zugang_sitzung(finger PK, kennung, angelegt)
   finger = SHA-256 des Kickbase-Tokens; das Token selbst wird nie gespeichert
@@ -1102,6 +1102,51 @@ Verwaltungsseite sagt das deshalb ausdrücklich, solange die Variable fehlt.
 **Ein Betreiber lässt sich nicht sperren.** Sonst stünde am Ende eine App, die
 niemand mehr freigeben kann.
 
+### Die Anfrage kommt zum Betreiber, nicht er zu ihr
+
+Eine neue Anfrage geht per Mail raus. Drei Dinge daran sind Absicht:
+
+**Nur bei einer neuen Anfrage.** Meldet sich dieselbe Person ein zweites Mal
+an, kommt keine zweite Mail — sonst würde jeder Versuch das Postfach füllen.
+Dafür wird der Upsert in Einfügen und Aktualisieren getrennt: Ein
+`ON CONFLICT`-Upsert sagt nicht, ob die Zeile neu war.
+
+**Abgewartet, nicht nebenher.** Nach der Antwort friert Vercel die Funktion
+ein; offene Arbeit liefe ins Leere. Es kostet rund eine Zehntelsekunde.
+
+**Ein Fehlschlag reißt die Anmeldung nicht mit** — die Anfrage steht ohnehin
+schon in der Datenbank. Er wird aber **vermerkt** (`zugang.melde_fehler`) und
+auf der Verwaltungsseite an der Zeile genannt, mit dem Grund im Wortlaut. Ohne
+das sähe „keine Mail bekommen" genauso aus wie „es hat eben niemand
+angefragt" — derselbe stille Ausfall, der bei den News schon einmal 70 Spieler
+fälschlich als erledigt abgelegt hat.
+
+### Warum hier doch ein Schlüssel auf dem Server liegt
+
+Das Projekt hält bewusst **keinen** eigenen LLM-Schlüssel vor: Bei „Frag die
+Liga" und den News zahlt jeder Nutzer selbst. Hier ist es umgekehrt — die
+Nachricht geht **an** den Betreiber, über seinen Zugang, für seine eigene App.
+Der Grundsatz bleibt: *Nichts, was ein Nutzer auslöst, kostet den Betreiber
+LLM-Guthaben.* Eine Anfrage-Mail ist keine LLM-Anfrage.
+
+Versendet wird über **Resend, mit nacktem `fetch`** — kein npm-Paket, ein
+HTTP-POST reicht. Ohne verifizierte Domain darf Resend nur an die Adresse des
+Kontoinhabers senden; genau dieser Fall.
+
+| Variable | wofür |
+|---|---|
+| `RESEND_API_KEY` | der Schlüssel |
+| `ZUGANG_MAIL_AN` | wohin (Vorgabe: erste Adresse aus `ZUGANG_ADMINS`) |
+| `ZUGANG_MAIL_VON` | Absender (Vorgabe: `KBeyond <onboarding@resend.dev>`) |
+| `ZUGANG_URL` | für den Link in der Mail (sonst aus Vercels Domain) |
+
+**Fehlt etwas davon, sagt die Verwaltungsseite es im Klartext** samt Grund —
+statt so zu tun, als käme schon eine Mail.
+
+Namen kommen von Kickbase-Nutzern und werden in der HTML-Mail **maskiert** —
+dieselbe Regel wie bei der Frage-Funktion: Text von außen ist Text, keine
+Anweisung.
+
 ### `/zugang`
 
 Die Verwaltungsseite: alle Anmeldungen mit Stand, Freigeben und Sperren. Offene
@@ -1119,7 +1164,7 @@ noch vor `initSchema()`. Läge die Tabelle dort, fragte die Freigabeprüfung ein
 Tabelle ab, die es beim allerersten Aufruf noch nicht gibt. `zugang.js` legt sie
 deshalb selbst an, einmal je Prozess gemerkt.
 
-### 21 Fälle durchgeprüft — gegen den laufenden Server
+### 24 Fälle durchgeprüft — gegen den laufenden Server
 
 `pruefstand/zugang.mjs` ist keine Rechnung, sondern eine Zusage: „ein Fremder
 kommt nicht herein". Geprüft wird deshalb über echtes HTTP, unter anderem:
@@ -1130,6 +1175,8 @@ kommt nicht herein". Geprüft wird deshalb über echtes HTTP, unter anderem:
 - Groß- und Kleinschreibung erzeugen keine zweite Anfrage
 - eine Sperre wirft die offene Sitzung sofort hinaus
 - freigegeben heißt nicht Betreiber: `/zugang` bleibt zu, die Liga offen
+- eine neue Anfrage löst **genau eine** Nachricht aus, auch bei zwei
+  Anmeldeversuchen — und ein Fehlschlag steht danach in der Datenbank
 
 ---
 
@@ -1460,6 +1507,7 @@ lib/
   live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
   liveabruf.js      holeLivestand(), sucheLivePfad() — Live-Stand holen und merken
   zugang.js         pruefeAnmeldung(), zugangZuToken(), entscheide() — Freigabeliste
+  benachrichtigung.js meldeAnfrage(), mailStand() — Anfrage per Mail an den Betreiber
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
                     holeLigen(), istAbgelaufen() — Zugriffsschutz
   kader.js          ladeKader(), ladeAufstellungen() — Kader und Startelf

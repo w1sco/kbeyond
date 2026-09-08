@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { sitzung } from "@/lib/auth";
 import { alleZugaenge, entscheide, OFFEN, FREI, GESPERRT } from "@/lib/zugang";
 import { zeitpunkt } from "@/lib/format";
+import { mailStand } from "@/lib/benachrichtigung";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function Zugang() {
   const liste = await alleZugaenge();
   const offen = liste.filter((z) => z.status === OFFEN);
   const ohneUmgebung = !process.env.ZUGANG_ADMINS;
+  const post = mailStand();
 
   return (
     <main className="kb-seite kb-seite--schmal">
@@ -56,6 +58,21 @@ export default async function Zugang() {
           E-Mail-Adressen. Dann steht es fest, egal wer wann zuerst da war.
         </div>
       )}
+
+      {/* Ob eine Mail kommt, darf man nicht annehmen müssen. Ein stiller
+          Ausfall sähe hier aus wie „es hat eben niemand angefragt". */}
+      <div className={`kb-hinweis ${post.bereit ? "kb-hinweis--gut" : "kb-hinweis--warn"}`}>
+        {post.bereit ? (
+          <>Neue Anfragen gehen per Mail an <strong>{post.an}</strong>.</>
+        ) : (
+          <>
+            <strong>Keine Benachrichtigung eingerichtet</strong> ({post.grund}) — neue
+            Anfragen siehst du nur hier. Dafür braucht es in den
+            Vercel-Einstellungen <code>RESEND_API_KEY</code> und{" "}
+            <code>ZUGANG_MAIL_AN</code>.
+          </>
+        )}
+      </div>
 
       <div className={`kb-hinweis${offen.length ? " kb-hinweis--info" : ""}`}>
         {offen.length === 0
@@ -86,6 +103,11 @@ export default async function Zugang() {
                       {z.versuche} {z.versuche === 1 ? "Anmeldung" : "Anmeldungen"}
                       {z.zuletzt ? `, zuletzt ${zeitpunkt(z.zuletzt)}` : ""}
                     </div>
+                    {z.melde_fehler && (
+                      <div className="kb-minus">
+                        Benachrichtigung ging nicht raus: {z.melde_fehler}
+                      </div>
+                    )}
                   </td>
                   <td>
                     <span className={

@@ -113,6 +113,26 @@ Betreiber.
 
 Das Skript räumt seine eigenen Zeilen (`…@pruefzugang.test`) hinterher weg.
 
+**Der Mailversand geht auch nicht raus.** Die Attrappe fängt `api.resend.com`
+mit ab und schreibt nach `/tmp/pruefstand-mail.log`, was sie senden *würde*.
+Damit lässt sich prüfen, dass eine neue Anfrage **genau eine** Nachricht
+auslöst — und ein zweiter Anmeldeversuch derselben Person keine weitere.
+
+```bash
+RESEND_API_KEY=test ZUGANG_MAIL_AN=betreiber@kbeyond.test npx next dev -p 3300 &
+RESEND_API_KEY=test ZUGANG_MAIL_AN=betreiber@kbeyond.test node pruefstand/zugang.mjs 3300
+```
+
+Ohne die beiden Variablen überspringt das Skript den Abschnitt und sagt das.
+
+## KB_MAIL_FEHLER
+
+`KB_MAIL_FEHLER=1` lässt den Versender ablehnen. Die Anmeldung darf daran
+**nicht** scheitern — die Anfrage steht ohnehin in der Datenbank —, aber der
+Grund muss danach in `zugang.melde_fehler` stehen und auf der
+Verwaltungsseite an der Zeile auftauchen. Sonst sähe „keine Mail bekommen"
+aus wie „es hat eben niemand angefragt".
+
 **Die Saat enthält die Freigabe für das Prüfstands-Token.** Ohne sie käme der
 ganze Prüfstand auf keine einzige Seite — genau das ist ja der Sinn der Liste.
 Der Fingerabdruck wird in `saat.sql` gerechnet (`encode(sha256('pruef'), 'hex')`)

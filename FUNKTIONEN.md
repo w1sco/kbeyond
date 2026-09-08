@@ -234,8 +234,14 @@ herein, sobald er die Adresse kennt. Davor liegt deshalb eine Freigabeliste:
 - Eine **unbekannte E-Mail** stellt beim Anmelden eine **Anfrage**. Sie bekommt
   **keine Sitzung** — nicht eine leere Oberfläche, sondern gar keinen Zugang.
   Die Anmeldeseite sagt das im Klartext.
-- Der **Betreiber** sieht offene Anfragen als Zahl neben dem Zugang-Knopf und
-  gibt sie auf einer eigenen Seite frei oder sperrt sie.
+- Der **Betreiber** bekommt eine **E-Mail**, sobald jemand Neues anfragt — und
+  zwar nur beim ersten Mal, nicht bei jedem weiteren Anmeldeversuch derselben
+  Person. Zusätzlich stehen offene Anfragen als Zahl neben dem Zugang-Knopf.
+- **Geht die Mail nicht raus, wird das gesagt**, mit Grund an der betreffenden
+  Zeile. Eine Anmeldung scheitert daran nicht — die Anfrage ist ja gespeichert.
+  Ohne diesen Vermerk sähe „keine Mail bekommen" aus wie „es hat eben niemand
+  angefragt".
+- Der Betreiber gibt auf einer eigenen Seite frei oder sperrt.
 - Eine **Sperre wirkt sofort**: Die offenen Fenster dieses Menschen fliegen mit
   heraus, statt bis zum Ablauf seines Kickbase-Tokens weiterzulaufen.
 - Ein **Betreiber lässt sich nicht sperren** — sonst könnte am Ende niemand mehr

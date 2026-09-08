@@ -5,6 +5,7 @@
 // nicht „eine Zahl stimmt nicht", sondern „jeder darf mit".
 import pg from "pg";
 import { createHash } from "crypto";
+import { existsSync, readFileSync, rmSync } from "fs";
 
 const BASIS = `http://localhost:${process.argv[2] ?? 3300}`;
 const finger = (t) => createHash("sha256").update(t).digest("hex");
@@ -47,6 +48,7 @@ const weg = async () => {
   await db.query(`DELETE FROM zugang WHERE kennung LIKE '%@pruefzugang.test'`);
 };
 await weg();
+try { rmSync("/tmp/pruefstand-mail.log"); } catch { /* war nicht da */ }
 
 // ── 1. Ohne Sitzung kommt niemand herein ───────────────────────────
 for (const pfad of ["/liga", "/liga?league=1", "/liga/markt?league=1", "/zugang"]) {
@@ -81,6 +83,31 @@ pruefe("dieselbe Adresse, eine Zeile", anzahl, 1);
 const [{ versuche }] = (await db.query(
   `SELECT versuche FROM zugang WHERE kennung = 'neu@pruefzugang.test'`)).rows;
 pruefe("beide Versuche gezählt", versuche, 2);
+
+// ── 3b. Die Anfrage erreicht den Betreiber ─────────────────────────
+//
+// Nur wenn der Versand eingerichtet ist — sonst prüft dieser Abschnitt
+// nichts und sagt das auch.
+const MAIL_LOG = "/tmp/pruefstand-mail.log";
+const posten = () => existsSync(MAIL_LOG)
+  ? readFileSync(MAIL_LOG, "utf8").trim().split("\n").filter(Boolean).map(JSON.parse)
+  : [];
+
+if (process.env.RESEND_API_KEY) {
+  const raus = posten().filter((m) => String(m.betreff).includes("neu@pruefzugang.test"));
+  pruefe("neue Anfrage löst genau eine Nachricht aus", raus.length, 1);
+  pruefe("Nachricht geht an den Betreiber", raus[0]?.an, [process.env.ZUGANG_MAIL_AN]);
+
+  const [{ gemeldet, melde_fehler: mf }] = (await db.query(
+    `SELECT gemeldet, melde_fehler FROM zugang WHERE kennung = 'neu@pruefzugang.test'`)).rows;
+  if (process.env.KB_MAIL_FEHLER === "1") {
+    pruefe("Fehlschlag wird vermerkt", [gemeldet, Boolean(mf)], [null, true]);
+  } else {
+    pruefe("Erfolg wird vermerkt", [Boolean(gemeldet), mf], [true, null]);
+  }
+} else {
+  console.log("  (Mailversand nicht eingerichtet — Abschnitt übersprungen)");
+}
 
 // ── 4. Nach der Freigabe geht es ───────────────────────────────────
 await db.query(`UPDATE zugang SET status = 'frei' WHERE kennung = 'neu@pruefzugang.test'`);
