@@ -759,8 +759,43 @@ th.kb-namensspalte { z-index: 3; }
 .kb-elfholen { display: grid; gap: 8px; justify-items: start; margin: 10px 0 14px; }
 .kb-elfholen .kb-legende { margin: 0; }
 
-/* Freigeben und Sperren nebeneinander, auf dem Handy untereinander. */
-.kb-zugangknoepfe { display: flex; gap: 6px; flex-wrap: wrap; }
+/* ── Wer darf herein: eine Liste aus Karten, keine Tabelle ──────────
+   Als Tabelle (min-width 560px) standen die Knöpfe auf dem Handy weit
+   rechts außerhalb des Bildschirms — erreichbar nur durch seitliches
+   Wischen im Tabellenrahmen, worauf nichts hinweist. Eine Entscheidung,
+   die man nicht findet, kann man nicht treffen. */
+.kb-zugangliste { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+
+.kb-zugangkarte {
+  background: var(--kb-flaeche);
+  border: 1px solid var(--kb-rand);
+  border-radius: var(--kb-radius);
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+/* Was auf eine Entscheidung wartet, soll auffallen. */
+.kb-zugangkarte--offen {
+  border-color: var(--kb-warn-rand);
+  background: var(--kb-warn-weich);
+}
+
+.kb-zugangkopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+/* Der Stand rutscht nach rechts, solange Platz ist – und auf dem Handy
+   in die nächste Zeile, statt den Namen zu quetschen. */
+.kb-zugangkopf > :last-child { margin-left: auto; }
+
+/* Freigeben und Ablehnen nebeneinander, auf schmalen Displays
+   untereinander und über die volle Breite: ein Knopf, den man sicher
+   trifft, statt zweier Winzlinge am Rand. */
+.kb-zugangknoepfe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.kb-zugangknoepfe .kb-btn { flex: 1 1 140px; text-align: center; justify-content: center; }
 .kb-warntext { color: var(--kb-warn-text); font-weight: 600; }
 
 /* Der Gruß am Fuß der Anmeldeseite — eine Unterschrift, kein Hinweis. */

@@ -1050,13 +1050,39 @@ Anweisung.
 
 ### `/zugang`
 
-Die Verwaltungsseite: alle Anmeldungen mit Stand, Freigeben und Sperren. Offene
+Die Verwaltungsseite: alle Anmeldungen mit Stand, Freigeben und Ablehnen. Offene
 Anfragen stehen zusätzlich als Zahl im Knopf auf der Ligaseite — man soll nicht
 danach suchen müssen.
 
 **Die Server Action prüft selbst**, ob der Aufrufer Betreiber ist. Sie ist eine
 eigene Adresse und lässt sich ohne die Seite aufrufen; dieselbe Regel wie bei
 den Einstellungen.
+
+**Ablehnen und Sperren sind derselbe Status, aber nicht dasselbe Wort.** Eine
+offene Anfrage wird abgelehnt; wer schon drin war, wird gesperrt. „Sperren"
+neben einer Anfrage, die nie freigegeben war, liest sich wie eine Strafe für
+etwas, das gar nicht passiert ist.
+
+#### Eine Aktion, die man nicht findet, gibt es nicht
+
+Die Liste stand als Tabelle da — mit `min-width: 560px`, wie jede Tabelle im
+Projekt. Auf einem 390 px breiten Handy lagen „Freigeben" und „Ablehnen" damit
+bei **587 px**, also rund 120 px rechts neben dem Bildschirm: erreichbar nur,
+indem man die Tabelle seitlich wischt, und nichts deutete darauf hin. Der
+Nutzer sah die Anfrage und fand keinen Weg, sie zu entscheiden.
+
+Es ist deshalb **keine Tabelle mehr**, sondern eine Liste aus Karten: Name und
+Stand oben, darunter die Knöpfe über die volle Breite. Eine Tabelle war hier
+ohnehin die falsche Form — die Zeilen tragen keine vergleichbaren Spalten,
+sondern Name, Werdegang und zwei Entscheidungen.
+
+**Der Prüfstand hat das nicht gesehen, obwohl er bei 390 px misst.** Er prüfte
+den Überlauf der **Seite**, und die war in Ordnung: Der Rahmen um die Tabelle
+scrollte sauber für sich. `pruefstand/seiten.js` misst jetzt zusätzlich, ob ein
+**Knopf in einem Formular** rechts aus dem Fenster ragt — Formularknöpfe
+schicken etwas ab, im Gegensatz zu Sortierüberschriften, deren Tabelle mit
+Absicht scrollt. Gegengeprüft: Mit der alten Fassung meldet er
+`außer Reichweite: „Freigeben" bei 587px`.
 
 ### Warum das Schema in `lib/zugang.js` steht und nicht in `initSchema()`
 

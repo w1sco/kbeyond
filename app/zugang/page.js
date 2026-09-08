@@ -83,61 +83,60 @@ export default async function Zugang() {
       {liste.length === 0 ? (
         <p className="kb-info">Noch niemand hat sich angemeldet.</p>
       ) : (
-        <div className="kb-tabellenrahmen">
-          <table className="kb-tabelle kb-tabelle--schmal">
-            <thead>
-              <tr>
-                <th className="kb-namensspalte">Wer</th>
-                <th>Stand</th>
-                <th aria-label="Aktionen" />
-              </tr>
-            </thead>
-            <tbody>
-              {liste.map((z, i) => (
-                <tr key={z.kennung} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
-                  <td className="kb-namensspalte">
-                    <span className="kb-spielername">{z.name || z.kennung}</span>
-                    {z.admin && <span className="kb-leise"> · Betreiber</span>}
-                    <div className="kb-leise">
-                      {z.name ? `${z.kennung} · ` : ""}
-                      {z.versuche} {z.versuche === 1 ? "Anmeldung" : "Anmeldungen"}
-                      {z.zuletzt ? `, zuletzt ${zeitpunkt(z.zuletzt)}` : ""}
-                    </div>
-                    {z.melde_fehler && (
-                      <div className="kb-minus">
-                        Benachrichtigung ging nicht raus: {z.melde_fehler}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <span className={
-                      z.status === FREI ? "kb-plus"
-                        : z.status === GESPERRT ? "kb-minus" : "kb-warntext"
-                    }>
-                      {TEXT[z.status] ?? z.status}
-                    </span>
-                  </td>
-                  <td>
-                    <form action={entscheiden} className="kb-zugangknoepfe">
-                      <input type="hidden" name="kennung" value={z.kennung} />
-                      {z.status !== FREI && (
-                        <button className="kb-btn kb-btn--haupt kb-btn--klein"
-                                name="status" value={FREI}>
-                          Freigeben
-                        </button>
-                      )}
-                      {z.status !== GESPERRT && !z.admin && (
-                        <button className="kb-btn kb-btn--klein" name="status" value={GESPERRT}>
-                          Sperren
-                        </button>
-                      )}
-                    </form>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        // Bewusst **keine Tabelle**. Als Tabelle mit Mindestbreite lagen
+        // „Freigeben" und „Ablehnen" auf dem Handy 120 px rechts neben dem
+        // Bildschirmrand — sichtbar erst nach seitlichem Wischen im Rahmen,
+        // worauf nichts hindeutet. Der Nutzer sah die Anfrage und fand
+        // keinen Weg, sie zu entscheiden. Eine Aktion, die man nicht
+        // findet, gibt es nicht.
+        <ul className="kb-zugangliste">
+          {liste.map((z) => (
+            <li key={z.kennung}
+                className={`kb-zugangkarte${z.status === OFFEN ? " kb-zugangkarte--offen" : ""}`}>
+              <div className="kb-zugangkopf">
+                <span className="kb-spielername">{z.name || z.kennung}</span>
+                {z.admin && <span className="kb-leise"> · Betreiber</span>}
+                <span className={
+                  z.status === FREI ? "kb-plus"
+                    : z.status === GESPERRT ? "kb-minus" : "kb-warntext"
+                }>
+                  {TEXT[z.status] ?? z.status}
+                </span>
+              </div>
+
+              <div className="kb-leise">
+                {z.name ? `${z.kennung} · ` : ""}
+                {z.versuche} {z.versuche === 1 ? "Anmeldung" : "Anmeldungen"}
+                {z.zuletzt ? `, zuletzt ${zeitpunkt(z.zuletzt)}` : ""}
+                {z.entschieden ? ` · entschieden ${zeitpunkt(z.entschieden)}` : ""}
+              </div>
+
+              {z.melde_fehler && (
+                <div className="kb-minus">
+                  Benachrichtigung ging nicht raus: {z.melde_fehler}
+                </div>
+              )}
+
+              <form action={entscheiden} className="kb-zugangknoepfe">
+                <input type="hidden" name="kennung" value={z.kennung} />
+                {z.status !== FREI && (
+                  <button className="kb-btn kb-btn--haupt" name="status" value={FREI}>
+                    Freigeben
+                  </button>
+                )}
+                {/* Eine offene Anfrage wird **abgelehnt**, ein Freigegebener
+                    wird **gesperrt**. Dahinter steht derselbe Status — aber
+                    „Sperren" neben einer Anfrage, die nie offen war, liest
+                    sich wie eine Strafe. */}
+                {z.status !== GESPERRT && !z.admin && (
+                  <button className="kb-btn" name="status" value={GESPERRT}>
+                    {z.status === OFFEN ? "Ablehnen" : "Sperren"}
+                  </button>
+                )}
+              </form>
+            </li>
+          ))}
+        </ul>
       )}
 
       <p className="kb-legende">

@@ -241,7 +241,10 @@ herein, sobald er die Adresse kennt. Davor liegt deshalb eine Freigabeliste:
   Zeile. Eine Anmeldung scheitert daran nicht — die Anfrage ist ja gespeichert.
   Ohne diesen Vermerk sähe „keine Mail bekommen" aus wie „es hat eben niemand
   angefragt".
-- Der Betreiber gibt auf einer eigenen Seite frei oder sperrt.
+- Der Betreiber entscheidet auf einer eigenen Seite (**Zugang**, erreichbar
+  über den Knopf auf der Ligaseite): **Freigeben** oder **Ablehnen**, je
+  Anfrage zwei Knöpfe direkt an der Zeile. Wer schon freigegeben war, lässt
+  sich dort auch wieder **sperren**.
 - Eine **Sperre wirkt sofort**: Die offenen Fenster dieses Menschen fliegen mit
   heraus, statt bis zum Ablauf seines Kickbase-Tokens weiterzulaufen.
 - Ein **Betreiber lässt sich nicht sperren** — sonst könnte am Ende niemand mehr

@@ -82,13 +82,35 @@ const SEITEN = [
       const ueberlauf = await p.evaluate(() =>
         document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
+      // Eine Aktion, die man nicht findet, gibt es nicht.
+      //
+      // Der Seitenüberlauf oben reicht dafür nicht: Auf /zugang lagen
+      // „Freigeben" und „Ablehnen" 120 px rechts neben dem Bildschirm —
+      // **innerhalb** eines Rahmens, der sauber für sich scrollt. Die
+      // Seite war damit formal in Ordnung und die Entscheidung trotzdem
+      // unerreichbar. Der Nutzer hat es gemeldet, nicht der Prüfstand.
+      //
+      // Geprüft werden nur Knöpfe in einem Formular: Die schicken etwas
+      // ab. Sortierüberschriften in einer scrollenden Tabelle sind etwas
+      // anderes — die Tabelle scrollt dort mit Absicht.
+      const versteckt = await p.evaluate(() =>
+        [...document.querySelectorAll("form button, form input[type=submit]")]
+          .filter((el) => el.offsetParent !== null)
+          .map((el) => ({ text: (el.textContent || el.value || "?").trim().slice(0, 20),
+                          rechts: Math.round(el.getBoundingClientRect().right) }))
+          .filter((k) => k.rechts > innerWidth));
+
+      const unerreichbar = versteckt.length > 0;
       console.log(
-        `  ${kaputt ? "✗" : "✓"} ${name.padEnd(22)} HTTP ${status}` +
+        `  ${kaputt || unerreichbar ? "✗" : "✓"} ${name.padEnd(22)} HTTP ${status}` +
         (ueberlauf > 0 ? `  Überlauf +${ueberlauf}` : "") +
+        (unerreichbar
+          ? `  außer Reichweite: ${versteckt.map((k) => `„${k.text}" bei ${k.rechts}px`).join(", ")}`
+          : "") +
         (konsole.length ? `  ${konsole[0].slice(0, 90)}` : "") +
         (kaputt && !konsole.length ? `  ${text.replace(/\n/g, " ").slice(0, 90)}` : "")
       );
-      if (kaputt) fehler++;
+      if (kaputt || unerreichbar) fehler++;
     } catch (e) {
       console.log(`  ✗ ${name.padEnd(22)} ${e.message.slice(0, 80)}`);
       fehler++;
