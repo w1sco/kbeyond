@@ -2025,3 +2025,21 @@ th.kb-namensspalte { z-index: 3; }
 :root[data-theme="dark"]  .kb-thema-mond  { display: none; }
 :root[data-theme="light"] .kb-thema-sonne { display: none; }
 :root[data-theme="light"] .kb-thema-mond  { display: block; }
+
+/* ── Wessen Zahlen sind privat ──────────────────────────────────────
+   Ein Schloss steht dort, wo eine Zahl stünde, die jemand nicht zeigt.
+   Bewusst **kein** „–": Der Strich heißt in diesem Projekt überall
+   „nicht bekannt", hier ist die Zahl bekannt und wird nur nicht
+   gezeigt. Zwei verschiedene Dinge dürfen nicht gleich aussehen. */
+.kb-verborgen { color: var(--kb-text-schwach); font-size: 13px; }
+
+/* Der Schalter auf der Zugangsseite: Text links, Knopf rechts. */
+.kb-zugangprivat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid var(--kb-rand);
+}
+.kb-zugangprivat .kb-btn { margin-left: auto; }

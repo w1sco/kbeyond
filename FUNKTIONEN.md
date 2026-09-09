@@ -260,6 +260,28 @@ Wer Betreiber ist, steht in einer Umgebungsvariablen. Fehlt sie, wird der erste
 Mensch überhaupt zum Betreiber — sonst könnte niemand die erste Freigabe
 erteilen.
 
+### 7.0b Wessen Zahlen sieht wer
+
+Diese App macht die Kontostände aller Manager sichtbar. Sobald ein zweiter
+Mensch sie benutzt, gilt das auch für die eigenen. Deshalb kann jede Person
+ihre **Finanzzahlen verbergen** — Schalter auf der Zugangsseite.
+
+- **Verborgen** sind Kontostand, Limit, Max-Gebot, Gesamtwert, Liquidität und
+  Anpassungen. Wo sonst eine Zahl stünde, steht ein Schloss.
+- **Sichtbar bleiben** Teamwert, Punkte, Platz, Kader und MW-Trend. Die sieht
+  man in Kickbase ohnehin; sie zu verstecken wäre Theater.
+- Es gilt **überall**: Tabelle, Managerseite, Verlaufsdiagramm,
+  Platzierungspfeile, die Summen der Marktseite und der Datensatz für „Frag die
+  Liga". Wer verborgen ist, zählt auch nicht in die Kaufkraft der Liga — sonst
+  ließe sich sein Kontostand aus der Summe zurückrechnen.
+- **Sich selbst sieht man immer.**
+- Vorbelegt ist der Betreiber auf verborgen, alle anderen auf sichtbar.
+
+> **Das ist keine Geheimhaltung.** Der Kontostand lässt sich aus dem Liga-Feed
+> rekonstruieren, und den kann jedes Liga-Mitglied bei Kickbase selbst abrufen.
+> Wer die Rechnung nachbaut, kommt zum selben Ergebnis. Verborgen heißt hier:
+> nicht auf dem Silbertablett.
+
 ### 7.1 Anmeldung
 
 - E-Mail und Passwort werden an Kickbase weitergereicht und **nicht
@@ -873,7 +895,7 @@ Ohne Technik, nur die Inhalte:
 | **News** | Je Liga und Spieler: Text, Stimmung, Quellen, Stand. Leerer Text = nachgesehen, nichts gefunden |
 | **Spielplan** | Alle 34 Spieltage mit Ansetzung und Ergebnis — ligaunabhängig. Daran hängt, welcher Spieltag der nächste ist |
 | **Startelf-Chance** | Je Spieler die Stufe 1–5 und der Spieltag, für den sie gilt. Keine Angabe wird ebenfalls festgehalten — sonst kostet derselbe Spieler jeden Lauf erneut einen Abruf |
-| **Freigaben** | Je E-Mail: Stand (offen, frei, gesperrt), Name, wann angefragt, wer entschieden hat. Dazu je angemeldeter Sitzung ein Fingerabdruck — das Kickbase-Token selbst wird nie gespeichert |
+| **Freigaben** | Je E-Mail: Stand (offen, frei, gesperrt), Name, ob die eigenen Finanzzahlen verborgen sind, wann angefragt, wer entschieden hat. Dazu je angemeldeter Sitzung ein Fingerabdruck — das Kickbase-Token selbst wird nie gespeichert |
 
 > **Marktwert-Ablesungen und Marktwert-Historie bewusst getrennt halten.** Die
 > einen sind Marktwert-Tage aus eigener Ablesung (Grenze 22:04), die anderen

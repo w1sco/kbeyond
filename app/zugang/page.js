@@ -2,7 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sitzung } from "@/lib/auth";
-import { alleZugaenge, entscheide, OFFEN, FREI, GESPERRT } from "@/lib/zugang";
+import { alleZugaenge, entscheide, setzePrivat, OFFEN, FREI, GESPERRT } from "@/lib/zugang";
 import { zeitpunkt } from "@/lib/format";
 import { mailStand } from "@/lib/benachrichtigung";
 
@@ -23,6 +23,20 @@ async function entscheiden(formData) {
   const wie = String(formData.get("status") ?? "");
   await entscheide(wen, wie, kennung);
   revalidatePath("/zugang");
+}
+
+// Wessen Zahlen sind für die anderen sichtbar?
+//
+// Prüft **selbst**, wie jede Server Action: Sie ist eine eigene Adresse
+// und lässt sich ohne die Seite aufrufen.
+async function privatSchalten(formData) {
+  "use server";
+  const { admin } = await sitzung();
+  if (!admin) redirect("/liga");
+
+  await setzePrivat(String(formData.get("kennung") ?? ""), formData.get("privat") === "1");
+  revalidatePath("/zugang");
+  revalidatePath("/liga");
 }
 
 const TEXT = {
@@ -134,10 +148,37 @@ export default async function Zugang() {
                   </button>
                 )}
               </form>
+
+              {/* Nur bei Freigegebenen: Wer nicht hereinkommt, steht in
+                  keiner Ligatabelle und hat dort nichts zu verbergen. */}
+              {z.status === FREI && (
+                <form action={privatSchalten} className="kb-zugangprivat">
+                  <input type="hidden" name="kennung" value={z.kennung} />
+                  <input type="hidden" name="privat" value={z.zahlen_privat ? "0" : "1"} />
+                  <span className="kb-leise">
+                    {z.zahlen_privat
+                      ? "🔒 Finanzzahlen für andere verborgen"
+                      : "Finanzzahlen für alle sichtbar"}
+                  </span>
+                  <button className="kb-btn kb-btn--klein">
+                    {z.zahlen_privat ? "Zeigen" : "Verbergen"}
+                  </button>
+                </form>
+              )}
             </li>
           ))}
         </ul>
       )}
+
+      <p className="kb-legende">
+        <strong>Verborgene Finanzzahlen</strong> heißt: Kontostand, Limit, Max-Gebot,
+        Gesamtwert, Liquidität und Anpassungen sind für alle anderen zu — in der
+        Tabelle, auf der Managerseite, im Verlauf, in den Summen der Marktseite und im
+        Datensatz für „Frag die Liga“. Teamwert, Punkte und Kader bleiben sichtbar; die
+        stehen in Kickbase ohnehin. Und es ist keine Geheimhaltung: Wer die Rechnung
+        dieses Projekts selbst nachbaut, kommt über den Liga-Feed zum selben Ergebnis.
+        Vorbelegt ist der Betreiber auf verborgen, alle anderen auf sichtbar.
+      </p>
 
       <p className="kb-legende">
         Eine Sperre wirkt sofort — die offenen Fenster dieses Menschen fliegen

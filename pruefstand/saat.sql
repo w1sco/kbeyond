@@ -22,6 +22,14 @@ VALUES (encode(sha256('pruef'::bytea), 'hex'), 'pruef@kbeyond.test');
 INSERT INTO zugang (kennung, name, status, versuche, zuletzt)
 VALUES ('fremd@kbeyond.test', 'Fremder', 'offen', 3, NOW());
 
+-- Ein Mitspieler, der seine Finanzzahlen verbirgt (Manager 3, PetzS).
+-- Damit steht auf jeder Seite mindestens ein Schloss, wo sonst eine Zahl
+-- stünde — sonst prüfte weder der Seiten- noch der Kontrastlauf diesen
+-- Zustand je. `zugang.mjs` benutzt für seine eigene Probe Manager 2 und
+-- kommt sich damit nicht in die Quere.
+INSERT INTO zugang (kennung, name, kb_uid, status, zahlen_privat, versuche, zuletzt)
+VALUES ('petz@kbeyond.test', 'PetzS', '3', 'frei', TRUE, 2, NOW());
+
 INSERT INTO liga_settings (league_id, user_id, stichtag, startbudget, punkte_bonus, login_aktiv)
 VALUES ('1', '1', '2026-08-07 00:41+02', 200000000, 10000, TRUE),
        ('1', '',  '2026-08-07 00:41+02', 200000000, 10000, TRUE);

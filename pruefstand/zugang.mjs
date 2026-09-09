@@ -142,6 +142,82 @@ pruefe("kein Betreiber: /zugang ist zu",
 pruefe("kein Betreiber: die Liga bleibt offen",
   (await seite("/liga?league=1", token)).status, 200);
 
+// ── 7. Wessen Zahlen sieht wer? ────────────────────────────────────
+//
+// Die Zusage ist nicht „ausgegraut", sondern: **Die Zahl steht nicht in
+// dem, was der Server ausliefert.** Ein Ausgrauen im Browser wäre keins —
+// der Wert stünde im Seitenzustand und wäre mit zwei Klicks zu lesen.
+//
+// Geprüft wird gegen die Struktur, nicht gegen einen Zahlentext: Die
+// Prüfdaten sind gestaffelt, und ein Betrag des einen Managers taucht
+// zufällig in der Kurve eines anderen auf. Eine Textsuche hätte das als
+// Leck gemeldet, das keins ist — und umgekehrt ein echtes übersehen.
+async function html(pfad) {
+  const res = await fetch(BASIS + pfad, { headers: { cookie: "kb_token=pruef; kb_uid=1" } });
+  return await res.text();
+}
+// Welche Manager haben in diesem Verlaufsmaß eine Linie?
+function reihenVon(text, mass) {
+  const i = text.indexOf(`schluessel\\":\\"${mass}`);
+  if (i < 0) return null;
+  const stueck = text.slice(i, i + 4000).replaceAll("\\", "");
+  const k = stueck.indexOf('"reihen":{');
+  if (k < 0) return null;
+  const bis = stueck.indexOf("}", stueck.indexOf("]", k));
+  return [...stueck.slice(k, bis).matchAll(/"(\d+)":\[/g)].map((m) => m[1]);
+}
+const kontoImVortag = (text, id) => {
+  const i = text.indexOf('vortag\\":');
+  const stueck = text.slice(i, i + 400).replaceAll("\\", "");
+  const m = stueck.match(new RegExp(`"${id}":\\{[^}]*"konto":([^,}]+)`));
+  return m ? m[1] : "fehlt";
+};
+
+// Der Prüfstand meldet sich als Manager 1 an. Manager 2 verbirgt seine
+// Zahlen — Manager 3 nicht, als Gegenprobe.
+await db.query(
+  `INSERT INTO zugang (kennung, name, kb_uid, status, admin, zahlen_privat, versuche)
+   VALUES ('yannick@pruefzugang.test', 'yannick15', '2', 'frei', false, true, 1)
+   ON CONFLICT (kennung) DO UPDATE SET zahlen_privat = true, status = 'frei'`);
+
+const liga = await html("/liga?league=1");
+pruefe("Tabelle zeigt Schlösser statt Zahlen",
+  (liga.match(/kb-verborgen/g) ?? []).length > 0, true);
+pruefe("Kontostand im Vortag ist weg (Platzierungspfeile)", kontoImVortag(liga, 2), "null");
+pruefe("eigener Vortag bleibt", kontoImVortag(liga, 1) !== "null", true);
+
+pruefe("keine Kontolinie im Verlauf", reihenVon(liga, "kontostand")?.includes("2"), false);
+pruefe("keine Gesamtwertlinie (Konto wäre eine Subtraktion weit weg)",
+  reihenVon(liga, "gesamtwert")?.includes("2"), false);
+// Was Kickbase selbst zeigt, bleibt stehen — sonst wäre es Theater.
+pruefe("Kaderwertlinie bleibt", reihenVon(liga, "kaderwert")?.includes("2"), true);
+pruefe("Punktelinie bleibt", reihenVon(liga, "punkte")?.includes("2"), true);
+
+const seite2 = await html("/liga/manager/2?league=1");
+pruefe("Managerseite sagt es statt zu rechnen",
+  seite2.includes("zeigt die eigenen Finanzzahlen nicht"), true);
+pruefe("Managerseite ohne Verkaufsrechner",
+  seite2.includes("rechnet mit dem Kontostand"), true);
+
+const markt = await html("/liga/markt?league=1");
+pruefe("Marktseite rechnet ohne ihn", markt.includes("der sichtbaren Manager"), true);
+
+// ── Die Gegenprobe ─────────────────────────────────────────────────
+//
+// Ohne sie bewiese das alles nichts: Die Zahlen könnten auch fehlen,
+// weil es sie gar nicht gibt. Schalter um — und sie sind wieder da.
+await db.query(
+  `UPDATE zugang SET zahlen_privat = false WHERE kennung = 'yannick@pruefzugang.test'`);
+const offen = await html("/liga?league=1");
+pruefe("Gegenprobe: Kontolinie ist wieder da", reihenVon(offen, "kontostand")?.includes("2"), true);
+pruefe("Gegenprobe: Vortag ist wieder da", kontoImVortag(offen, 2) !== "null", true);
+// (Manager 3 verbirgt in der Saat dauerhaft — deshalb wird hier nicht
+// die Zahl der Schlösser gezählt, sondern Manager 2 gezielt geprüft.)
+
+// Und man sieht immer sich selbst — auch als Betreiber, der vorbelegt
+// auf „verborgen" steht.
+pruefe("sich selbst sieht man immer", kontoImVortag(offen, 1) !== "null", true);
+
 await weg();
 await db.end();
 console.log(fehler ? `\n${ok} ok, ${fehler} Fehler` : `\n${ok} ok, 0 Fehler`);

@@ -8,7 +8,8 @@ import Frag from "./Frag";
 import Verlauf from "./Verlauf";
 import Hinweis from "../_ui/Hinweis";
 import { sitzung, verlangeLiga, holeLigen, istWeiterleitung } from "@/lib/auth";
-import { offeneAnfragen } from "@/lib/zugang";
+import { offeneAnfragen, geheimeZugaenge } from "@/lib/zugang";
+import { wenVerbergen, verbergeKonten, verbergeTagesstand } from "@/lib/privatsphaere";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holeMitspieler } from "@/lib/mitspieler";
 import Logo from "@/app/_ui/Logo";
@@ -93,7 +94,7 @@ export default async function Liga({ searchParams }) {
   const tw = await getTeamwerte(leagueId);
   const trend = await getMwTrend(leagueId);
   // Der jüngste Stand vor heute – Grundlage der Platzierungspfeile.
-  const vortag = await getVortag(leagueId);
+  const roherVortag = await getVortag(leagueId);
 
   // Wer einen gespeicherten Kader hat, spielt mit — auch ein Admin. Das
   // fängt den Fall ab, den Teamwert und Punkte nicht abdecken: direkt nach
@@ -125,7 +126,29 @@ export default async function Liga({ searchParams }) {
     );
   }
 
-  const konten = await berechneKonten(leagueId, spieler, settings);
+  const roheKonten = await berechneKonten(leagueId, spieler, settings);
+
+  // ── Wessen Zahlen darf dieser Betrachter sehen? ──────────────────
+  //
+  // Geschnitten wird **hier**, vor allem Ableiten und vor allem Rendern.
+  // Ein Ausgrauen in der Tabelle wäre keins: Der Kontostand stünde
+  // trotzdem im ausgelieferten Seitenzustand.
+  const geheim = wenVerbergen({
+    zugaenge: await geheimeZugaenge(),
+    spieler,
+    betrachterId: treffer.i,
+  });
+  const konten = verbergeKonten(roheKonten, geheim);
+  const verborgene = konten.filter((k) => k.finanzenGeheim);
+
+  // Auch der Vortag: Aus ihm entstehen die Platzierungspfeile, und er
+  // geht dafür vollständig in den Browser. Ein Kontostand von gestern
+  // ist kein anderer Kontostand.
+  const vortag = {
+    tag: roherVortag.tag,
+    map: new Map([...roherVortag.map].map(([id, v]) =>
+      [id, geheim.has(id) ? { ...v, konto: null } : v])),
+  };
 
   for (const k of konten) {
     const t = tw.map.get(String(k.id));
@@ -142,6 +165,9 @@ export default async function Liga({ searchParams }) {
     k.trendGefallen = t2?.gefallen ?? null;
     k.trendSpieler = t2?.spieler ?? null;
     // (Teamwert + Konto) × 0,33 – der Kontostand steckt in der Basis.
+    // Ohne Kontostand gibt es beides nicht: `null + Zahl` wäre eine Zahl,
+    // und die sähe aus wie ein Ergebnis.
+    if (k.finanzenGeheim) continue;
     k.limit = erlaubtesMinus(k.teamwert, k.konto);
     k.maxGebot = k.konto + k.limit;
   }
@@ -181,7 +207,7 @@ export default async function Liga({ searchParams }) {
   // Kontostand und Punkte. Gemessene Tage stehen dort neben
   // zurückgerechneten — bis zum Liga-Reset zurück, ohne einen einzigen
   // Kickbase-Aufruf.
-  const tagesZeilen = await getTagesverlauf(leagueId);
+  const tagesZeilen = verbergeTagesstand(await getTagesverlauf(leagueId), geheim);
 
   const verlaufTage = [...new Set(tagesZeilen.map((z) => fuerTag(z.tag)))].sort();
 
@@ -295,6 +321,29 @@ export default async function Liga({ searchParams }) {
       {/* Die Tabelle steht bewusst ganz oben: sie ist das Werkzeug, wegen
           dem man die Seite aufruft. Status, Kalibrierung und Verlauf sind
           Belege und Beiwerk und stehen darunter. */}
+      {verborgene.length > 0 && (
+        <Hinweis
+          art="info"
+          kurz={`🔒 ${verborgene.map((k) => k.name).join(", ")} ${verborgene.length === 1 ? "zeigt" : "zeigen"} keine Finanzzahlen`}
+          titel="Verborgene Zahlen"
+        >
+          <p>
+            <strong>{verborgene.map((k) => k.name).join(", ")}</strong>{" "}
+            {verborgene.length === 1 ? "zeigt seine" : "zeigen ihre"} Finanzzahlen nicht:
+            Kontostand, Limit, Max-Gebot, Gesamtwert, Liquidität und Anpassungen bleiben
+            zu. Teamwert, Punkte, Kader und MW-Trend stehen weiter da — die sieht man in
+            Kickbase ohnehin.
+          </p>
+          <p>
+            Die Zahlen stehen auch nicht im Seitenquelltext, im Verlaufsdiagramm oder im
+            Datensatz für „Frag die Liga“; geschnitten wird auf dem Server. Und die
+            Kaufkraft auf der Marktseite rechnet ohne{" "}
+            {verborgene.length === 1 ? "ihn" : "sie"} — sonst wäre der fehlende Betrag eine
+            Subtraktion weit weg.
+          </p>
+        </Hinweis>
+      )}
+
       <Tabelle
         konten={JSON.parse(JSON.stringify(konten))}
         vortag={Object.fromEntries(vortag.map)}

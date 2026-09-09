@@ -3,6 +3,8 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, getStartelf } from "@/lib/db";
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
+import { geheimeZugaenge } from "@/lib/zugang";
+import { wenVerbergen, verbergeKonten } from "@/lib/privatsphaere";
 import { erlaubtesMinus } from "@/lib/gebot";
 import { holePool } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
@@ -45,7 +47,11 @@ export default async function Markt({ searchParams }) {
   const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
   const manager = await holeMitspieler(leagueId, ranking, settings);
 
-  const konten = await berechneKonten(leagueId, manager, settings);
+  const meineId = manager.find(
+    (m) => (meineUid && String(m.i) === meineUid) || (meinName && m.n === meinName))?.i ?? null;
+  const konten = verbergeKonten(
+    await berechneKonten(leagueId, manager, settings),
+    wenVerbergen({ zugaenge: await geheimeZugaenge(), spieler: manager, betrachterId: meineId }));
   const tw = await getTeamwerte(leagueId);
   const kader = await getKader(leagueId);
   const besitz = await getBesitz(leagueId);
@@ -79,8 +85,16 @@ export default async function Markt({ searchParams }) {
   const aufLiga = werteAus(await holeAufschlaege(leagueId, settings.stichtag));
 
   // Kaufkraft der Liga: Kontostände plus das erlaubte Minus (Teamwert ÷ 3)
-  const summeKonten = konten.reduce((s, k) => s + k.konto, 0);
-  const summeLimit = konten.reduce((s, k) => {
+  //
+  // **Wer seine Zahlen verbirgt, zählt hier nicht mit.** Eine Summe über
+  // alle wäre das Loch im Zaun: Die übrigen Kontostände stehen einzeln in
+  // der Ligatabelle, eine Subtraktion später stünde der verborgene da.
+  // Lieber eine ehrliche Summe über weniger Leute als eine vollständige,
+  // die sich rückwärts auflösen lässt.
+  const zaehlbar = konten.filter((k) => !k.finanzenGeheim);
+  const ohneZahlen = konten.length - zaehlbar.length;
+  const summeKonten = zaehlbar.reduce((s, k) => s + k.konto, 0);
+  const summeLimit = zaehlbar.reduce((s, k) => {
     const t = tw.map.get(String(k.id));
     return s + erlaubtesMinus(t?.teamwert ?? 0, k.konto);
   }, 0);
@@ -184,6 +198,26 @@ export default async function Markt({ searchParams }) {
         </Hinweis>
       )}
 
+      {ohneZahlen > 0 && (
+        <Hinweis
+          art="info"
+          kurz={`${ohneZahlen} ${ohneZahlen === 1 ? "Manager zählt" : "Manager zählen"} nicht in die Summen`}
+          titel="Wer seine Zahlen nicht zeigt"
+        >
+          <p>
+            {ohneZahlen === 1 ? "Ein Manager" : `${ohneZahlen} Manager`} in dieser Liga
+            {ohneZahlen === 1 ? " zeigt seinen" : " zeigen ihren"} Kontostand nicht.
+            {ohneZahlen === 1 ? " Er fehlt" : " Sie fehlen"} damit in der Kaufkraft und im
+            Verhältnis darunter — beides fällt entsprechend niedriger aus.
+          </p>
+          <p>
+            <strong>Das ist Absicht.</strong> Stünde hier die Summe über alle, ließe sich
+            der fehlende Kontostand ausrechnen: Die übrigen stehen einzeln in der
+            Ligatabelle, eine Subtraktion später wäre er wieder da.
+          </p>
+        </Hinweis>
+      )}
+
       {ohneWert > 0 && (
         <Hinweis art="warn" kurz={`${ohneWert} freie Spieler ohne Marktwert`} titel="Fehlende Marktwerte">
           <p>
@@ -215,8 +249,15 @@ export default async function Markt({ searchParams }) {
           <strong>{euro(summeFrei)}</strong>
         </div>
         <div>
-          <span className="kb-label">Kontostände aller Manager</span>
+          <span className="kb-label">
+            Kontostände {ohneZahlen > 0 ? "der sichtbaren Manager" : "aller Manager"}
+          </span>
           <strong className={summeKonten < 0 ? "kb-minus" : undefined}>{euro(summeKonten)}</strong>
+          {ohneZahlen > 0 && (
+            <span className="kb-leise">
+              {" "}ohne {ohneZahlen}, {ohneZahlen === 1 ? "der seine" : "die ihre"} Zahlen nicht zeigt
+            </span>
+          )}
         </div>
         <div>
           <span className="kb-label">Rhythmus</span>

@@ -270,8 +270,9 @@ events(id PK, league_id, type, dt, buyer, seller, price, player_id, player_name,
   IDs: Feed = Kickbase-Event-ID, Rekonstruktion = rk_{liga}_{spieler}_{ts}
 
 zugang(kennung PK, name, kb_uid, status, admin, angefragt, entschieden, von,
-       versuche, zuletzt, gemeldet, melde_fehler)  -- kennung = E-Mail, klein
-  status: offen | frei | gesperrt
+       versuche, zuletzt, gemeldet, melde_fehler, zahlen_privat)
+  kennung = E-Mail, klein; status: offen | frei | gesperrt
+  zahlen_privat: NULL = nicht entschieden, fällt auf `admin` zurück
 zugang_sitzung(finger PK, kennung, angelegt)
   finger = SHA-256 des Kickbase-Tokens; das Token selbst wird nie gespeichert
 liga_settings(league_id PK, stichtag, startbudget, punkte_bonus, login_aktiv,
@@ -1105,6 +1106,107 @@ kommt nicht herein". Geprüft wird deshalb über echtes HTTP, unter anderem:
 - eine neue Anfrage löst **genau eine** Nachricht aus, auch bei zwei
   Anmeldeversuchen — und ein Fehlschlag steht danach in der Datenbank
 
+### Wessen Zahlen sieht wer?
+
+Der Zweck dieses Projekts ist, die Kontostände **aller** Manager sichtbar zu
+machen. Sobald aber ein zweiter Mensch die App benutzt, gilt das auch für die
+eigenen — und der Betreiber will seinen Mitspielern nicht zwangsläufig sein
+Budget zeigen. Deshalb kann jede Person ihre **Finanzzahlen** verbergen.
+
+**Verborgen wird, was diese App errechnet und Kickbase nicht preisgibt:**
+Kontostand, Limit, Max-Gebot, Gesamtwert, Liquidität, Kauf- und
+Verkaufssummen, Strafen, Korrektur, Login- und Punkte-Bonus.
+
+**Sichtbar bleibt, was in Kickbase ohnehin jeder sieht:** Teamwert, Punkte,
+Platz, Kader, Marktwerte, MW-Trend. Alles andere wäre Theater — die Zahlen
+stehen eine App weiter offen.
+
+> **Das ist keine Geheimhaltung.** Der Kontostand lässt sich aus dem Liga-Feed
+> rekonstruieren, und den kann jedes Liga-Mitglied über Kickbases eigene
+> Schnittstelle abrufen. Wer diese Rechnung nachbaut, kommt zum selben
+> Ergebnis. Verborgen heißt: nicht auf dem Silbertablett — nicht: unerreichbar.
+> Genau so steht es auch auf der Zugangsseite, statt ein Versprechen zu geben,
+> das die Sache nicht hält.
+
+#### Geschnitten wird auf dem Server, an einer Stelle
+
+Ein Ausgrauen in der Tabelle wäre keins: Die Zahl stünde trotzdem im
+ausgelieferten Seitenzustand und wäre mit zwei Klicks zu lesen. `lib/privatsphaere.js`
+setzt die Felder deshalb direkt hinter `berechneKonten()` auf **null** — bevor
+irgendetwas daraus abgeleitet oder gerendert wird.
+
+**Auf null, nicht auf 0.** Eine 0 wäre eine Aussage („er hat kein Geld"),
+null ist keine. Dieselbe Regel wie beim Kaderwert im Verlauf.
+
+Und aus null wird nichts weitergerechnet: `null + Zahl` ergäbe eine Zahl, und
+die sähe aus wie ein Ergebnis. Limit, Max-Gebot, Gesamtwert und Liquidität
+entfallen deshalb ausdrücklich, statt sich zu ergeben.
+
+#### Vier Lecks, die ein Ausgrauen offen gelassen hätte
+
+Die Zahl steht nicht nur in ihrer Zelle. Jedes davon war ein eigener Schnitt:
+
+| Wo | Warum es leckt |
+|---|---|
+| **Verlaufsdiagramm** | Derselbe Kontostand, nur als Linie — `tagesstand` geht vollständig in den Browser |
+| **Gesamtwert-Linie** | Teamwert + Konto. Der Teamwert ist sichtbar, also wäre das Konto eine Subtraktion weit weg |
+| **Platzierungspfeile** | Sie entstehen aus dem Vortag, und der trägt denselben Kontostand von gestern |
+| **Kaufkraft der Marktseite** | Eine Summe über **alle** minus die einzeln sichtbaren ergibt exakt den verborgenen |
+
+Die Marktseite rechnet deshalb ohne die Betreffenden und **sagt das** —
+„Kontostände der sichtbaren Manager, ohne 1". Eine ehrliche Summe über weniger
+Leute ist besser als eine vollständige, die sich rückwärts auflösen lässt.
+
+Und **„Frag die Liga" bekommt die Zahlen ebenfalls nicht.** Sonst wäre das
+Schloss ein Witz: „Wie viel Geld hat W1zco?" und das Modell sagt es. Im
+Datensatz steht stattdessen ausdrücklich, dass die Zahlen fehlen und **nicht
+geschätzt** werden dürfen — ein erfundener Kontostand wäre hier schlimmer als
+ein offener.
+
+#### Ein Schloss, kein Strich
+
+„–" heißt in diesem Projekt überall **„nicht bekannt"**. Hier ist die Zahl
+bekannt und wird nur nicht gezeigt. Zwei verschiedene Dinge dürfen nicht gleich
+aussehen, deshalb `app/_ui/Schloss.jsx`. Wie bei den Startelf-Zeichen trägt das
+Symbol die Aussage nicht allein: Titel und Vorlesetext nennen sie im Klartext.
+
+In einer Geldspalte sortieren verborgene Zeilen **immer ans Ende**, in beide
+Richtungen. Als `?? 0` gelesen stünden sie mitten in der Tabelle, und ihre
+Nachbarn verrieten die Größenordnung.
+
+#### Zuordnung Mensch → Manager, und die Vorgabe
+
+Die Freigabeliste kennt E-Mails, die Ligatabelle kennt Manager. Verbunden wird
+über `zugang.kb_uid`, ersatzweise über den Anzeigenamen — dieselbe Reihenfolge
+wie bei der Selbstzuordnung auf der Ligaseite. **Bei einem doppelten Namen
+werden alle Treffer verborgen:** Einmal zu viel ist hier der harmlose Fehler.
+
+`zahlen_privat` ist **NULL-bar und ohne Vorgabewert**. NULL heißt „nicht
+entschieden" und fällt auf `admin` zurück: Der Betreiber steht vorbelegt auf
+privat, alle anderen offen — sonst wäre der Zweck dieser App beim ersten
+Mitspieler erledigt. Sobald jemand den Schalter auf `/zugang` anfasst, steht
+dort ein echtes true/false und die Vorgabe greift nie wieder.
+
+**Sich selbst sieht man immer.**
+
+#### Geprüft wird gegen die Struktur, nicht gegen einen Zahlentext
+
+`pruefstand/privatsphaere.mjs` rechnet 25 Fälle durch (Zuordnung, doppelte
+Namen, welche Felder fallen und welche bleiben). Die eigentliche Zusage prüft
+aber `pruefstand/zugang.mjs` gegen den laufenden Server: Welche Manager haben im
+Verlauf noch eine Kontolinie, steht im Vortag ein Kontostand, sagt die
+Managerseite es statt zu rechnen.
+
+**Eine Textsuche nach dem Betrag wäre dafür untauglich.** Die Prüfdaten sind
+gestaffelt, und der Kontostand des einen Managers taucht zufällig in der Kurve
+eines anderen auf — die Suche hätte ein Leck gemeldet, das keins ist.
+
+Dazu die **Gegenprobe**: Schalter aus, und die Zahlen sind wieder da. Ohne sie
+bewiese der ganze Lauf nichts — die Werte könnten auch fehlen, weil es sie gar
+nicht gibt. In `pruefstand/saat.sql` verbirgt außerdem dauerhaft ein Manager
+seine Zahlen, damit der Seiten- und der Kontrastlauf diesen Zustand überhaupt
+je zu sehen bekommen.
+
 ---
 
 ## Zugriffsschutz auf Ligaebene
@@ -1381,6 +1483,7 @@ app/
   spielplan/page.js                Diagnose: wer spielt wann gegen wen
   startelf/page.js                 Diagnose: stimmt die prob-Skala, geht es billiger
   _ui/Startelf.jsx                 das Zeichen vor dem Namen, ohne Angabe nichts
+  _ui/Schloss.jsx                  steht, wo eine Zahl stünde, die jemand nicht zeigt
   _ui/Startelflegende.jsx          was die fünf Zeichen heißen, plus Abrufstand
   liga/live/page.js                Live-Punkte am Spieltag, je Manager und Spieler
   liga/live/Auffrischen.jsx        "use client" — von Hand oder alle 60 s
@@ -1431,7 +1534,10 @@ lib/
   spieleabruf.js    importiereSpielplan() — die 34 Spieltage in einem Aufruf
   live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
   liveabruf.js      holeLivestand(), sucheLivePfad() — Live-Stand holen und merken
-  zugang.js         pruefeAnmeldung(), zugangZuToken(), entscheide() — Freigabeliste
+  zugang.js         pruefeAnmeldung(), zugangZuToken(), entscheide(),
+                    geheimeZugaenge(), setzePrivat() — Freigabeliste
+  privatsphaere.js  wenVerbergen(), verbergeKonten(), verbergeTagesstand()
+                    — wessen Zahlen wer sieht, ohne DB
   benachrichtigung.js meldeAnfrage(), mailStand() — Anfrage per Mail an den Betreiber
   auth.js           sitzung(), istMitglied(), verlangeLiga(), pruefeApi(),
                     holeLigen(), istAbgelaufen() — Zugriffsschutz

@@ -3,6 +3,9 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getTeamwerte, getMwTrend, getKader, getStartelf, sql } from "@/lib/db";
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
+import { geheimeZugaenge } from "@/lib/zugang";
+import { wenVerbergen, verbergeKonten } from "@/lib/privatsphaere";
+import Schloss from "@/app/_ui/Schloss";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { holeNamen, benenne } from "@/lib/spielernamen";
 import { holeAufschlaege, aktuellAmMarkt } from "@/lib/marktbeobachtung";
@@ -66,7 +69,11 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
   const binIch =
     (meineUid && String(manager.i) === meineUid) || (meinName && manager.n === meinName);
 
-  const konten = await berechneKonten(leagueId, alle, settings);
+  const meineId = alle.find(
+    (m) => (meineUid && String(m.i) === meineUid) || (meinName && m.n === meinName))?.i ?? null;
+  const konten = verbergeKonten(
+    await berechneKonten(leagueId, alle, settings),
+    wenVerbergen({ zugaenge: await geheimeZugaenge(), spieler: alle, betrachterId: meineId }));
   const tw = await getTeamwerte(leagueId);
   const mw = await getMwTrend(leagueId);
   const trend = mw.map.get(String(id)) ?? null;
@@ -78,7 +85,10 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
     .map((x) => ({
       id: String(x.id),
       name: x.name,
-      gesamt: x.konto + (tw.map.get(String(x.id))?.teamwert ?? 0),
+      // Ohne Kontostand gibt es keinen Gesamtwert. Sortiert wird dann
+      // nach dem Teamwert allein — die Reihenfolge muss vollständig
+      // bleiben, sonst fehlte der Betreffende beim Blättern.
+      gesamt: (x.konto ?? 0) + (tw.map.get(String(x.id))?.teamwert ?? 0),
     }))
     .sort((a, b) => b.gesamt - a.gesamt);
   const stelle = reihenfolge.findIndex((x) => x.id === String(id));
@@ -91,10 +101,14 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
   // Käufe − Verkäufe, nicht dashboard.t (das zählt alle Transfers).
   // Ist der Kader live abrufbar, gewinnt dessen echte Länge.
   const kaderGerechnet = k.anzKauf - k.anzVerkauf;
-  const limit = erlaubtesMinus(teamwert, k.konto);
-  const maxGebot = k.konto + limit;
-  const gesamtwert = k.konto + teamwert;
-  const quote = teamwert > 0 ? k.konto / gesamtwert : null;
+  // Verbirgt dieser Mensch seine Zahlen vor dem Betrachter? Dann gibt es
+  // hier nichts abzuleiten — `null + Zahl` wäre eine Zahl, und die sähe
+  // aus wie ein Ergebnis.
+  const geheim = k.finanzenGeheim === true;
+  const limit = geheim ? null : erlaubtesMinus(teamwert, k.konto);
+  const maxGebot = geheim ? null : k.konto + limit;
+  const gesamtwert = geheim ? null : k.konto + teamwert;
+  const quote = geheim || teamwert <= 0 ? null : k.konto / gesamtwert;
 
   // Datenlücke: trägt nur noch die „ca.“-Marke am Namen. Der erklärende
   // Kasten stand auf jeder Managerseite und sagte dasselbe wie der
@@ -244,19 +258,21 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
       <div className="kb-status">
         <div>
           <span className="kb-label">Gesamtwert</span>
-          <strong>{teamwert > 0 ? euro(gesamtwert) : "–"}</strong>
+          {geheim ? <Schloss /> : <strong>{teamwert > 0 ? euro(gesamtwert) : "–"}</strong>}
         </div>
         <div>
           <span className="kb-label">Max-Gebot</span>
-          {teamwert > 0 ? euro(maxGebot) : "–"}
+          {geheim ? <Schloss /> : teamwert > 0 ? euro(maxGebot) : "–"}
         </div>
         <div>
           <span className="kb-label">Kontostand</span>
-          <span className={k.konto < 0 ? "kb-minus" : undefined}>{euro(k.konto)}</span>
+          {geheim
+            ? <Schloss />
+            : <span className={k.konto < 0 ? "kb-minus" : undefined}>{euro(k.konto)}</span>}
         </div>
         <div>
           <span className="kb-label">Liquidität</span>
-          {prozent(quote)}
+          {geheim ? <Schloss /> : prozent(quote)}
         </div>
         <div>
           <span className="kb-label">Teamwert</span>
@@ -361,6 +377,15 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
 
       <section className="kb-karte">
         <h2 className="kb-abschnitt-titel">Finanzen</h2>
+        {geheim ? (
+          <p className="kb-info">
+            <span aria-hidden="true">🔒 </span>
+            <strong>{k.name}</strong> zeigt die eigenen Finanzzahlen nicht. Kader,
+            Teamwert und Punkte stehen weiter unten — die sieht man in Kickbase
+            ohnehin.
+          </p>
+        ) : (
+        <>
         <table className="kb-liste">
           <tbody>
             {posten.map((z) => (
@@ -379,6 +404,8 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
           Der Login-Bonus ist für alle Manager gleich hochgerechnet ({k.tageGezaehlt} Tage ab{" "}
           {k.bonusQuelle}) – Kickbase liefert im Feed nur den eigenen.
         </p>
+        </>
+        )}
       </section>
 
       <section className="kb-karte">
@@ -403,7 +430,14 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
           </p>
         )}
 
-        {kader.length > 0 && (
+        {kader.length > 0 && geheim && (
+          <p className="kb-info">
+            Der Verkaufsrechner rechnet mit dem Kontostand — und der ist hier nicht
+            sichtbar. Der Kader steht darunter.
+          </p>
+        )}
+
+        {kader.length > 0 && !geheim && (
           <>
             <p className="kb-info">
               Spieler anklicken heißt „verkaufen“. Gerechnet wird mit dem Marktwert — beim

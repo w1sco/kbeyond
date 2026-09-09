@@ -125,6 +125,24 @@ RESEND_API_KEY=test ZUGANG_MAIL_AN=betreiber@kbeyond.test node pruefstand/zugang
 
 Ohne die beiden Variablen überspringt das Skript den Abschnitt und sagt das.
 
+## Wessen Zahlen sieht wer
+
+`zugang.mjs` prüft im selben Lauf, dass verborgene Finanzzahlen wirklich weg
+sind — und zwar **strukturell**: Welche Manager haben im Verlauf noch eine
+Kontolinie, steht im Vortag ein Kontostand, rechnet die Marktseite ohne sie.
+
+Eine Textsuche nach dem Betrag wäre untauglich: Die Saat ist gestaffelt, und
+der Kontostand des einen Managers taucht zufällig in der Kurve eines anderen
+auf.
+
+Dazu die **Gegenprobe** — Schalter aus, Zahlen wieder da. Ohne sie bewiese der
+Lauf nichts: Die Werte könnten auch fehlen, weil es sie gar nicht gibt.
+
+In `saat.sql` verbirgt **Manager 3 (PetzS) dauerhaft** seine Zahlen, damit
+`seiten.js` und `dunkel.cjs` diesen Zustand überhaupt je zu sehen bekommen.
+`zugang.mjs` benutzt für seine eigene Probe Manager 2 und kommt sich damit
+nicht in die Quere.
+
 ## KB_MAIL_FEHLER
 
 `KB_MAIL_FEHLER=1` lässt den Versender ablehnen. Die Anmeldung darf daran

@@ -3,6 +3,8 @@ import { Fragment, useState, useMemo } from "react";
 import Link from "next/link";
 import { euro, euroKurz, prozent } from "@/lib/format";
 import { erlaubtesMinus } from "@/lib/gebot";
+import { GELDSPALTEN } from "@/lib/privatsphaere";
+import Schloss from "@/app/_ui/Schloss";
 
 // Auf schmalen Displays ist nur Platz für den Namen und drei Zahlen.
 // Welche drei, entscheidet die Sortierung: Gesamtwert und Kontostand
@@ -64,6 +66,11 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId, vortag = 
 
   const sortiert = useMemo(() => {
     const kopie = konten.map((k) => {
+      // Wer seine Zahlen verbirgt, hat hier keine — und aus null darf
+      // nichts abgeleitet werden, was wie ein Ergebnis aussieht.
+      if (k.finanzenGeheim) {
+        return { ...k, gesamtwert: null, anpassungen: null, quote: null };
+      }
       const gesamtwert = k.konto + k.teamwert;
       return {
         ...k,
@@ -78,6 +85,13 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId, vortag = 
     kopie.sort((a, b) => {
       if (sortKey === "name") {
         return absteigend ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name);
+      }
+      // Verborgene Zellen stehen in einer Geldspalte immer am Ende —
+      // in beide Richtungen. Als `?? 0` gelesen stünden sie sonst
+      // mitten in der Tabelle, und ihre Nachbarn verrieten die
+      // Größenordnung.
+      if (GELDSPALTEN.has(sortKey)) {
+        if (a.finanzenGeheim !== b.finanzenGeheim) return a.finanzenGeheim ? 1 : -1;
       }
       const av = Number(a[sortKey] ?? 0);
       const bv = Number(b[sortKey] ?? 0);
@@ -115,16 +129,23 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId, vortag = 
 
     if (wertVon(gestern[0][1]) === null) return new Map();
 
+    // Wessen Wert verborgen ist, hat hier keinen Rang — weder heute noch
+    // gestern. Beide Listen lassen dieselben Leute weg, damit die Pfeile
+    // zueinander passen; sie zählen dann Plätze **unter den sichtbaren**.
     const damals = gestern
       .map(([id, v]) => ({ id, wert: wertVon(v) }))
+      .filter((x) => x.wert != null && Number.isFinite(x.wert))
       .sort((a, b) => (absteigend ? b.wert - a.wert : a.wert - b.wert));
 
     const rangDamals = new Map(damals.map((x, i) => [x.id, i + 1]));
     const map = new Map();
-    for (const [i, k] of sortiert.entries()) {
+    let platz = 0;
+    for (const k of sortiert) {
+      if (k.finanzenGeheim && GELDSPALTEN.has(sortKey)) continue;
+      platz++;
       const alt = rangDamals.get(String(k.id));
       // Nur wer gestern schon dabei war, kann sich verbessert haben.
-      if (alt != null) map.set(String(k.id), alt - (i + 1));
+      if (alt != null) map.set(String(k.id), alt - platz);
     }
     return map;
   }, [vortag, sortiert, sortKey, absteigend]);
@@ -157,6 +178,11 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId, vortag = 
   // Ein Wert, eine Darstellung – egal ob in der Tabellenzelle oder
   // aufgeklappt in der Detailzeile.
   function wert(k, key) {
+    // Eine Weiche statt zehn Sonderfälle: Ist diese Zeile verborgen und
+    // die Spalte eine Geldspalte, steht dort ein Schloss.
+    if (k.finanzenGeheim && GELDSPALTEN.has(key)) {
+      return <Schloss wer={k.name} />;
+    }
     switch (key) {
       case "gesamtwert":
         return k.teamwert > 0 ? <strong><Geld wert={k.gesamtwert} /></strong> : "–";
