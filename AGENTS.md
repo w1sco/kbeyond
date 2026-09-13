@@ -804,17 +804,37 @@ bliebe eine Woche ohne Angabe.
 
 ## Wann kommt ein Spieler wieder auf den Markt?
 
-Spieler kehren nach einem festen Rhythmus zurück, anfangs etwa alle 14 Tage. Der Rhythmus
-verkürzt sich, je leerer der Markt wird. `/liga/markt` zeigt daraus eine Prognose je Spieler.
+**Alle 14 Tage.** Ein Spieler, der am Markt erscheint und ungekauft abläuft,
+kommt zwei Wochen später wieder; einer, der an Kickbase zurückverkauft wird,
+zwei Wochen nach dem Verkauf. `/liga/markt` rechnet daraus je Spieler den
+nächsten Termin (`ZYKLUS_TAGE` in `lib/rhythmus.js`).
+
+Das gilt für die **namhaften** Spieler, um die es beim Kaufen geht. Bei
+Ergänzungsspielern kann Kickbase unregelmäßiger sein; die Seite sagt das im
+Hinweis, statt es zu verschweigen.
+
+### Die Schätzung gab es einmal
+
+Hier stand eine Rechnung, die den Rhythmus **laufend aus den beobachteten
+Abständen schätzte**: Median der jüngsten 21 Tage, Abstände unter zwei Tagen
+und über dem 1,6-fachen verworfen, unter vier Abständen „Rhythmus unbekannt".
+Sie war sorgfältig gebaut — und im Weg: Der gemessene Wert lag ohnehin bei 14,
+und jede Liga zeigte erst wochenlang „angenommen, noch nicht gemessen", bevor
+sie es bestätigen konnte. Eine Schätzung, die am Ende immer dasselbe ergibt, ist
+eine Zahl mit Umweg.
+
+Der Nutzer hat den Rhythmus als fest bestätigt; die Schätzung ist raus. Was
+bleibt, ist die Beobachtung — sie liefert den **Anker** je Spieler.
 
 ### Beobachtet wird das Erscheinen, nicht der Kauf
 
-Das ist der Kern. Ein Spieler kann auf den Markt kommen, **ungekauft ablaufen** und 14 Tage
-später wiederkommen und dann gekauft werden. Zwischen den beiden *Käufen* lägen 28 Tage,
-der Rhythmus ist aber 14. Wer aus Kaufabständen rechnet, bekommt systematisch Vielfache.
+Das ist der Kern. Ein Spieler kann auf den Markt kommen, **ungekauft ablaufen**
+und 14 Tage später wiederkommen und dann gekauft werden. Zwischen den beiden
+*Käufen* lägen 28 Tage, der Rhythmus ist aber 14. Wer aus Kaufabständen rechnet,
+bekommt systematisch Vielfache.
 
-Der Feed liefert dafür **Typ 3** („Spieler neu am Markt") — das Erscheinen selbst. Drei
-Quellen laufen in eine Zeitreihe:
+Der Feed liefert dafür **Typ 3** („Spieler neu am Markt") — das Erscheinen
+selbst. Drei Quellen laufen in eine Zeitreihe:
 
 | Quelle | Was sie sagt |
 |---|---|
@@ -822,71 +842,76 @@ Quellen laufen in eine Zeitreihe:
 | Events Typ 15 ohne `slr` | Kauf von Kickbase, der Spieler war also am Markt |
 | `markt_beobachtung` | Was wir selbst beim Aktualisieren am Markt gesehen haben |
 
-Käufe **zwischen zwei Managern** zählen nicht: die betreffen Spieler, die jemandem gehören,
-und folgen nicht dem Rhythmus der freien Spieler.
+Käufe **zwischen zwei Managern** zählen nicht: die betreffen Spieler, die
+jemandem gehören, und folgen nicht dem Rhythmus der freien Spieler.
 
-Die Mitschrift ist nötig, weil der Live-Markt flüchtig ist: Ein Angebot steht rund einen
-Tag, und das Feed-Fenster reicht nur ~670 Einträge zurück. Ein Angebot wird über seinen
-**Ablaufzeitpunkt** identifiziert (auf die Minute gerundet, weil die Restzeit sekundenweise
-läuft) — zweimal aktualisieren legt dasselbe Angebot deshalb nicht zweimal ab.
+Die Mitschrift ist nötig, weil der Live-Markt flüchtig ist: Ein Angebot steht
+rund einen Tag, und das Feed-Fenster reicht nur ~670 Einträge zurück. Ein
+Angebot wird über seinen **Ablaufzeitpunkt** identifiziert (auf die Minute
+gerundet, weil die Restzeit sekundenweise läuft) — zweimal aktualisieren legt
+dasselbe Angebot deshalb nicht zweimal ab.
 
 ### Nur Angebote von Kickbase zählen
 
-**Das war der Fehler, der die ersten Prognosen unbrauchbar machte.** Typ 3 feuert auch,
-wenn ein *Mitspieler* einen Spieler einstellt. Solche Auftritte folgen keinem Rhythmus,
-sondern der Laune des Besitzers: Wer kauft und zwei Tage später wieder anbietet, erzeugt
-einen Abstand von zwei Tagen. Genug davon drücken den Median der ganzen Liga nach unten —
-dann steht überall „jederzeit / überfällig", obwohl der echte Rhythmus 14 Tage ist.
-
-Ob ein Spieler frei war, sagt der **letzte Transfer davor**: hatte er einen Käufer, lag der
-Spieler in einem Kader; stand dort nur ein Verkäufer, ging er zurück an Kickbase. Auftritte
-aus der ersten Gruppe fliegen raus, ihre Zahl steht im Hinweis auf der Marktseite.
-
-Zweite Sicherung: Abstände unter zwei Tagen zählen nicht (`MINDEST_ABSTAND_TAGE`). Ein
-Angebot steht rund einen Tag; alles Engere ist eine Doppelbeobachtung, kein Rhythmus.
+Typ 3 feuert auch, wenn ein *Mitspieler* einen Spieler einstellt. Solche
+Auftritte folgen keinem Rhythmus, sondern der Laune des Besitzers — ein
+Auftritt, der als Anker herhält, setzt dann den Termin falsch. Ob ein Spieler
+frei war, sagt der **letzte Transfer davor**: hatte er einen Käufer, lag der
+Spieler in einem Kader; stand dort nur ein Verkäufer, ging er zurück an
+Kickbase. Auftritte aus der ersten Gruppe fliegen raus, ihre Zahl steht im
+Hinweis auf der Marktseite.
 
 ### Beobachtungen werden zu Auftritten gebündelt
 
-Erscheinen und Kauf desselben Angebots sind **ein** Auftritt, keine zwei. Alles, was enger
-als 36 Stunden beieinanderliegt, gilt als derselbe Auftritt.
-
-### Der Rhythmus wird laufend neu geschätzt
-
-Median der Abstände, nicht Mittelwert — einzelne Ausreißer sollen nicht durchschlagen.
-Zwei Korrekturen:
-
-- **Nur die jüngsten Abstände** (21 Tage) zählen, solange es genug davon gibt. Der Rhythmus
-  verkürzt sich mit der Zeit; ein Abstand von vor sechs Wochen beschreibt nicht das Heute.
-- **Abstände über dem 1,6-fachen des Medians fliegen raus.** Sie entstehen durch Auftritte,
-  die niemand mitbekommen hat — ein doppelter Abstand ist eine Datenlücke, kein doppelter
-  Rhythmus.
-
-Unter vier Abständen wird **nicht geschätzt**, sondern „Rhythmus noch unbekannt" angezeigt.
+Erscheinen und Kauf desselben Angebots sind **ein** Auftritt, keine zwei.
+Alles, was enger als 36 Stunden beieinanderliegt, gilt als derselbe Auftritt.
 
 ### Ein Verkauf setzt die Uhr neu
 
-Verankert wird am letzten Ereignis, das den Spieler **frei gemacht** hat: sein letzter
-Auftritt am Markt (er lief ungekauft ab) oder sein **Verkauf an Kickbase** — je nachdem,
-was später war. Wer gekauft und wieder verkauft wurde, geht zurück in den Pool und kommt
-von dort nach dem Rhythmus wieder.
+Verankert wird am letzten Ereignis, das den Spieler **frei gemacht** hat: sein
+letzter Auftritt am Markt (er lief ungekauft ab) oder sein **Verkauf an
+Kickbase** — je nachdem, was später war. Wer gekauft und wieder verkauft wurde,
+geht zurück in den Pool und kommt von dort nach 14 Tagen wieder.
 
-Ohne diesen Anker stand bei genau diesen Spielern „Rhythmus unbekannt", obwohl sich die
-Prognose direkt ausrechnen lässt: Verkaufsdatum + Rhythmus.
+Ohne diesen Anker stand bei genau diesen Spielern „unbekannt", obwohl sich der
+Termin direkt ausrechnen lässt: Verkaufsdatum + 14.
 
-### Solange nichts gemessen ist, gilt der Startwert
+### Die Ränder
 
-`BASIS_ZYKLUS_TAGE = 14` — die bekannte Ausgangslage einer Liga. Solange weniger als vier
-Abstände beobachtet sind, wird damit gerechnet und die Prognose als **Annahme**
-gekennzeichnet. Das ist keine erfundene Genauigkeit, sondern die dokumentierte
-Ausgangslage; sobald genug gemessen ist, ersetzt der gemessene Rhythmus sie.
+- **Einen Tag Kulanz** (`KULANZ_TAGE`): Kickbase stellt nicht auf die Minute
+  pünktlich ein. Erst danach heißt es „überfällig — jederzeit".
+- **„ca."** steht bei Spielern, die erst einmal beobachtet wurden. Wer zweimal
+  da war, hat den Rhythmus bestätigt; ein einzelner Anker kann auch ein
+  Fremdangebot sein, das durch die Filter gerutscht ist.
+- **„kommt demnächst"**: seit dem Reset weder am Markt gewesen noch verkauft.
+  Der erste Auftritt nach einem Reset folgt keinem Rhythmus — dort steht kein
+  Datum. Alles vor dem Stichtag bleibt draußen.
 
-### Was nicht prognostiziert wird
+22 Fälle durchgerechnet (`pruefstand/rhythmus.mjs`): Anker, Verkauf gegen
+Auftritt in beide Richtungen, der Termin selbst, der Kulanztag, überfällig.
 
-- **Alles vor dem Stichtag.** Die Historie vor dem Liga-Reset sagt über den heutigen
-  Rhythmus nichts.
-- **Spieler, die seit dem Reset weder am Markt waren noch verkauft wurden.** Die kommen in
-  den nächsten Tagen, aber ohne festen Abstand — der erste Auftritt nach einem Reset folgt
-  keinem Rhythmus. Dort steht „kommt demnächst", kein Datum.
+### Wer die Liga verlässt, fliegt aus dem Pool
+
+Der Spielerpool wird **zusammengeführt, nicht ersetzt** (siehe Rekonstruktion)
+— ein gescheiterter Vereinsabruf darf keine 25 Spieler kosten. Die Kehrseite:
+Ein Spieler, der ins Ausland wechselt, stand für immer im Pool und damit als
+„frei" auf der Marktseite. Es gab schlicht nichts, das ihn je entfernt hätte.
+
+`aktualisierePool()` merkt sich jetzt, wen der Lauf **gesehen** hat, und
+entfernt, wer in keinem Vereinskader mehr steht — **ausschließlich nach einem
+vollständigen Durchlauf**. Fehlt auch nur ein Verein, könnte der Spieler dort
+stehen, und er bleibt. Derselbe Schutz, wegen dem überhaupt zusammengeführt
+wird. Die Rückmeldung nennt die Abgänge namentlich („1 Spieler nicht mehr in
+der Liga (Freier Stürmer)"), damit man sieht, dass es die Richtigen trifft.
+
+Nachgemessen im Prüfstand (`KB_ABGANG=1`): Nach einem vollen Lauf ist der
+Spieler aus Pool und Marktseite verschwunden; mit `KB_TEAMFEHLER=1` dazu
+(ein Verein antwortet nicht) bleibt er stehen und die Spielerliste steht unter
+„offen".
+
+Für die **Rekonstruktion** ändert das nichts: Sie zieht die Spieler-IDs
+zusätzlich aus den `events`, und dort bleibt ein Abgang über seine Transfers
+bekannt.
 
 ---
 
@@ -1521,7 +1546,7 @@ lib/
   marktbeobachtung.js speichereMarkt(), sammleBeobachtungen(), aktuellAmMarkt()
   marktwerte.js     ladeMarktwertVerlauf(), ergaenzeMarktwerte() — Historie je Spieler
   rekonstruktion.js rekonstruiere(), holePool(), aktualisierePool()
-  rhythmus.js       bildeAuftritte(), schaetzeZyklus(), prognostiziere()
+  rhythmus.js       bildeAuftritte(), prognostiziere(), ZYKLUS_TAGE — 14 Tage, ohne DB
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   verlauf.js        tagesraster(), tagesreihen(), tageZwischen(), wertAmTag()
                     — Tagesstützstellen 0 Uhr, ohne DB

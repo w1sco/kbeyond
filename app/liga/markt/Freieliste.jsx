@@ -20,7 +20,7 @@ function prognoseRang(p) {
     case "ueberfaellig":      return 0;               // kann jederzeit kommen
     case "erwartet":          return Math.max(0.01, p.tageHin);
     case "nieDagewesen":      return 500;             // irgendwann in den nächsten Tagen
-    default:                  return 1000;            // Rhythmus unbekannt
+    default:                  return 1000;            // keine Prognose
   }
 }
 
@@ -44,7 +44,7 @@ function Prognose({ p }) {
       const text = tage <= 0 ? "heute" : tage === 1 ? "morgen" : `in ${tage} Tagen`;
       const woher = p.durchVerkauf ? "Verkauf" : "Auftritt";
       return (
-        <span title={`${woher} am ${zeitpunkt(p.anker)}${p.gemessen ? "" : " · angenommener Rhythmus"}`}>
+        <span title={`${woher} am ${zeitpunkt(p.anker)} · alle 14 Tage`}>
           {text}
           {p.sicherheit !== "gut" && <span className="kb-leise"> ca.</span>}
         </span>
@@ -55,7 +55,7 @@ function Prognose({ p }) {
       return <span className="kb-gedaempft">kommt demnächst</span>;
 
     default:
-      return <span className="kb-gedaempft">Rhythmus unbekannt</span>;
+      return <span className="kb-gedaempft">–</span>;
   }
 }
 

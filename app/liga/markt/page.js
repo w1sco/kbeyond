@@ -9,7 +9,7 @@ import { erlaubtesMinus } from "@/lib/gebot";
 import { holePool } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
-import { bildeAuftritte, abstaendeAus, schaetzeZyklus, prognostiziere, MINDEST_ABSTAENDE, BASIS_ZYKLUS_TAGE } from "@/lib/rhythmus";
+import { bildeAuftritte, prognostiziere, ZYKLUS_TAGE } from "@/lib/rhythmus";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt } from "@/lib/format";
 import Freieliste from "./Freieliste";
@@ -62,14 +62,12 @@ export default async function Markt({ searchParams }) {
   const amMarkt = await aktuellAmMarkt(leagueId);
   const verkauft = await letzteVerkaeufe(leagueId, settings.stichtag);
 
+  // Der Rhythmus selbst ist eine Konstante (ZYKLUS_TAGE) — geschätzt wird
+  // nichts mehr. Die Beobachtungen liefern nur noch den Anker je Spieler.
   const auftritteJe = new Map();
-  const alleAbstaende = [];
   for (const [id, zeiten] of beobachtungen) {
-    const auftritte = bildeAuftritte(zeiten);
-    auftritteJe.set(id, auftritte);
-    alleAbstaende.push(...abstaendeAus(auftritte));
+    auftritteJe.set(id, bildeAuftritte(zeiten));
   }
-  const zyklus = schaetzeZyklus(alleAbstaende);
 
   // Der Kaufrechner rechnet mit meinem Konto – wer "ich" bin, steht im Cookie.
   const ich = konten.find(
@@ -115,7 +113,6 @@ export default async function Markt({ searchParams }) {
       prognose: prognostiziere({
         auftritte: auftritteJe.get(String(s.id)) ?? [],
         verkauftAm: verkauft.get(String(s.id)) ?? null,
-        zyklusTage: zyklus.tage,
         jetzt,
         aufMarktBis: amMarkt.get(String(s.id)) ?? null,
       }),
@@ -261,11 +258,8 @@ export default async function Markt({ searchParams }) {
         </div>
         <div>
           <span className="kb-label">Rhythmus</span>
-          {zyklus.tage
-            ? <><strong>~{zyklus.tage.toLocaleString("de-DE", { maximumFractionDigits: 1 })} Tage</strong>
-                <span className="kb-leise"> aus {zyklus.anzahl} Abständen</span></>
-            : <><strong>{BASIS_ZYKLUS_TAGE} Tage</strong>
-                <span className="kb-leise"> angenommen, noch nicht gemessen</span></>}
+          <strong>{ZYKLUS_TAGE} Tage</strong>
+          <span className="kb-leise"> nach Auftritt oder Verkauf</span>
         </div>
         <div>
           <span className="kb-label">Verhältnis</span>
@@ -282,46 +276,41 @@ export default async function Markt({ searchParams }) {
 
       <Hinweis kurz="Wie die Rückkehr-Prognose entsteht" titel="Wann kommt ein Spieler wieder?">
         <p>
-          Spieler kehren nach einem festen Rhythmus auf den Markt zurück — anfangs etwa alle
-          14 Tage. Je leerer der Markt wird, desto schneller kommen sie wieder, deshalb wird
-          der Rhythmus laufend neu aus den <strong>jüngsten</strong> Abständen geschätzt.
-        </p>
-        <p>
-          <strong>Nur Angebote von Kickbase zählen.</strong> Stellt ein Mitspieler einen
-          Spieler ein, folgt das keinem Rhythmus, sondern seiner Laune — wer kauft und zwei
-          Tage später wieder anbietet, erzeugt einen Abstand von zwei Tagen. Genug davon
-          drücken den Median nach unten, und dann steht überall „überfällig&ldquo;, obwohl der
-          echte Rhythmus 14 Tage ist. Ob ein Spieler frei war, sagt der letzte Transfer
-          davor: hatte er einen Käufer, lag der Spieler in einem Kader.
-          {fremdangebote > 0 && ` In dieser Liga sind so ${fremdangebote} Auftritte ausgeschlossen.`}
+          <strong>Alle {ZYKLUS_TAGE} Tage.</strong> Ein Spieler, der am Markt erscheint und
+          ungekauft abläuft, kommt zwei Wochen später wieder; einer, der an Kickbase
+          zurückverkauft wird, zwei Wochen nach dem Verkauf. Das gilt für die namhaften
+          Spieler, um die es beim Kaufen geht — bei Ergänzungsspielern kann Kickbase
+          unregelmäßiger sein.
         </p>
         <p>
           Gezählt wird das <strong>Erscheinen</strong> am Markt, nicht der Kauf. Ein Spieler
-          kann ungekauft ablaufen und 14 Tage später wiederkommen und dann gekauft werden —
-          zwischen den Käufen lägen 28 Tage, der Rhythmus ist aber 14. Erscheinen und Kauf
-          desselben Angebots zählen als ein Auftritt.
+          kann ungekauft ablaufen und {ZYKLUS_TAGE} Tage später wiederkommen und dann gekauft
+          werden — zwischen den Käufen lägen 28 Tage, der Rhythmus ist aber {ZYKLUS_TAGE}.
+          Erscheinen und Kauf desselben Angebots zählen als ein Auftritt.
         </p>
         <p>
-          Alles vor dem Stichtag bleibt draußen: die Historie vor dem Liga-Reset sagt über
-          den heutigen Rhythmus nichts.
-        </p>
-        <p>
-          <strong>„kommt demnächst&ldquo;</strong> heißt: seit dem Reset noch nicht am Markt
-          gewesen. Diese Spieler tauchen in den nächsten Tagen auf, aber ohne festen
-          Abstand — der erste Auftritt nach einem Reset folgt keinem Rhythmus.
+          <strong>Nur Angebote von Kickbase zählen.</strong> Stellt ein Mitspieler einen
+          Spieler ein, folgt das keinem Rhythmus, sondern seiner Laune. Ob ein Spieler frei
+          war, sagt der letzte Transfer davor: hatte er einen Käufer, lag der Spieler in
+          einem Kader.
+          {fremdangebote > 0 && ` In dieser Liga sind so ${fremdangebote} Auftritte ausgeschlossen.`}
         </p>
         <p>
           <strong>Ein Verkauf setzt die Uhr neu.</strong> Wer gekauft und wieder an Kickbase
-          verkauft wurde, geht zurück in den Pool und kommt von dort nach dem Rhythmus
+          verkauft wurde, geht zurück in den Pool und kommt von dort nach {ZYKLUS_TAGE} Tagen
           wieder. Verankert wird deshalb am letzten Ereignis, das den Spieler frei gemacht
           hat: sein letzter Auftritt am Markt oder sein Verkauf — je nachdem, was später war.
         </p>
         <p>
-          Solange weniger als {MINDEST_ABSTAENDE} Abstände beobachtet sind, wird mit dem
-          bekannten Startwert von {BASIS_ZYKLUS_TAGE} Tagen gerechnet und die Prognose als{" "}
-          <strong>Annahme</strong> gekennzeichnet. Sobald genug gemessen ist, ersetzt der
-          gemessene Rhythmus die Annahme. Abstände, die grob ein Vielfaches des Medians
-          sind, werden verworfen: sie kommen von Auftritten, die niemand mitbekommen hat.
+          <strong>„kommt demnächst&ldquo;</strong> heißt: seit dem Reset noch nicht am Markt
+          gewesen. Diese Spieler tauchen in den nächsten Tagen auf, aber ohne festen
+          Abstand — der erste Auftritt nach einem Reset folgt keinem Rhythmus. Alles vor dem
+          Stichtag bleibt draußen.
+        </p>
+        <p>
+          <strong>„ca.&ldquo;</strong> steht bei Spielern, die erst einmal beobachtet wurden.
+          Wer zweimal da war, hat den Rhythmus schon bestätigt; ein einzelner Anker kann auch
+          ein Fremdangebot sein, das durch die Filter gerutscht ist.
         </p>
       </Hinweis>
 

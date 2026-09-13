@@ -480,8 +480,18 @@ Regeln:
 
 ### 7.7 Wann kommt ein Spieler wieder auf den Markt?
 
-Spieler kehren nach einem festen Rhythmus zurück, anfangs etwa alle 14 Tage.
-Der Rhythmus verkürzt sich, je leerer der Markt wird.
+**Alle 14 Tage.** Ein Spieler, der am Markt erscheint und ungekauft abläuft,
+kommt zwei Wochen später wieder; einer, der an Kickbase zurückverkauft wird,
+zwei Wochen nach dem Verkauf. Die Seite der freien Spieler rechnet daraus je
+Spieler den nächsten Termin.
+
+Das gilt für die **namhaften** Spieler, um die es beim Kaufen geht. Bei
+Ergänzungsspielern kann Kickbase unregelmäßiger sein — die Seite sagt das.
+
+> Früher wurde der Rhythmus laufend aus den beobachteten Abständen geschätzt.
+> Der gemessene Wert lag ohnehin bei 14, und jede Liga zeigte wochenlang
+> „angenommen, noch nicht gemessen", bevor sie es bestätigen konnte. Die
+> Schätzung ist raus; der Rhythmus ist eine Konstante.
 
 **Beobachtet wird das Erscheinen, nicht der Kauf.** Das ist der Kern: Ein
 Spieler kann auf den Markt kommen, **ungekauft ablaufen** und 14 Tage später
@@ -498,43 +508,33 @@ Drei Quellen fließen in eine Zeitreihe:
 | Eigene Mitschrift des Live-Markts | Was wir beim Aktualisieren gesehen haben |
 
 Die Mitschrift ist nötig, weil der Live-Markt flüchtig ist: Ein Angebot steht
-rund einen Tag, und das Feed-Fenster reicht nur ~670 Einträge zurück. Ein
-Angebot wird über seinen **Ablaufzeitpunkt** identifiziert (auf die Minute
-gerundet), damit zweimal Aktualisieren dasselbe Angebot nicht zweimal ablegt.
+rund einen Tag, und das Feed-Fenster reicht nur ~670 Einträge zurück.
 
-**Nur Angebote von Kickbase zählen.** Das war der Fehler, der die ersten
-Prognosen unbrauchbar machte: „Neu am Markt" feuert auch, wenn ein *Mitspieler*
-einen Spieler einstellt. Solche Auftritte folgen keinem Rhythmus, sondern der
-Laune des Besitzers — genug davon drücken den Median der ganzen Liga nach unten,
-und dann steht überall „jederzeit / überfällig", obwohl der echte Rhythmus
-14 Tage ist. Ob ein Spieler frei war, sagt der **letzte Transfer davor**: Hatte
-er einen Käufer, lag er in einem Kader.
-
-**Beobachtungen werden zu Auftritten gebündelt:** Erscheinen und Kauf desselben
-Angebots sind *ein* Auftritt. Alles, was enger als **36 Stunden** beieinander
-liegt, gilt als derselbe Auftritt.
-
-**Der Rhythmus wird laufend neu geschätzt** — Median der Abstände, nicht
-Mittelwert, damit einzelne Ausreißer nicht durchschlagen. Zwei Korrekturen:
-
-- Nur die **jüngsten Abstände** (21 Tage) zählen, solange es genug davon gibt.
-  Der Rhythmus verkürzt sich mit der Zeit.
-- **Abstände über dem 1,6-fachen des Medians fliegen raus.** Sie entstehen
-  durch Auftritte, die niemand mitbekommen hat — ein doppelter Abstand ist eine
-  Datenlücke, kein doppelter Rhythmus.
-- Abstände unter **2 Tagen** zählen nicht (Doppelbeobachtung).
-- Unter **4 Abständen** wird nicht geschätzt.
+**Nur Angebote von Kickbase zählen.** „Neu am Markt" feuert auch, wenn ein
+*Mitspieler* einen Spieler einstellt. Solche Auftritte folgen keinem Rhythmus,
+sondern der Laune des Besitzers. Ob ein Spieler frei war, sagt der letzte
+Transfer davor: hatte er einen Käufer, lag der Spieler in einem Kader.
 
 **Ein Verkauf setzt die Uhr neu.** Verankert wird am letzten Ereignis, das den
-Spieler *frei gemacht* hat: sein letzter Marktauftritt oder sein Verkauf an
+Spieler frei gemacht hat: sein letzter Auftritt am Markt oder sein Verkauf an
 Kickbase — je nachdem, was später war.
 
-**Solange nichts gemessen ist, gilt der Startwert 14 Tage**, und die Prognose
-wird als *Annahme* gekennzeichnet.
+Was die Spalte zeigt:
 
-**Nicht prognostiziert wird:** alles vor dem Stichtag, und Spieler, die seit dem
-Reset weder am Markt waren noch verkauft wurden — dort steht „kommt demnächst",
-kein Datum.
+- **jetzt am Markt** — steht gerade dort
+- **in n Tagen / morgen / heute** — 14 Tage nach dem Anker. „ca." dabei, wenn
+  der Spieler erst einmal beobachtet wurde; wer zweimal da war, hat den
+  Rhythmus bestätigt
+- **jederzeit (überfällig)** — der Termin ist um mehr als einen Tag vorbei
+- **kommt demnächst** — seit dem Reset weder am Markt gewesen noch verkauft.
+  Der erste Auftritt nach einem Reset folgt keinem Rhythmus
+
+**Wer die Liga verlässt, fliegt aus der Liste.** Die Spielerliste wird beim
+Aktualisieren zusammengeführt, nicht ersetzt (damit ein ausgefallener
+Vereinsabruf keine Spieler kostet). Die Kehrseite war, dass ein Spieler, der ins
+Ausland wechselt, für immer als „frei" stehen blieb. Jetzt wird entfernt, wer in
+keinem Vereinskader mehr steht — aber nur nach einem Lauf, der **alle** Vereine
+erreicht hat. Die Rückmeldung nennt die Abgänge namentlich.
 
 ### 7.8 Kaufrechner
 

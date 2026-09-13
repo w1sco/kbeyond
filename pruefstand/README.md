@@ -70,6 +70,23 @@ psql -h /tmp -p 5433 -U postgres -c \
    to_jsonb((now() - interval '1 day')::text)) WHERE id='bundesliga_v2';"
 ```
 
+## KB_ABGANG
+
+`KB_ABGANG=1` lässt den „Freien Stürmer" (301) aus seinem Vereinskader
+verschwinden — er hat die Liga verlassen. Nach einem **vollen** Lauf muss er
+aus dem Pool und von der Marktseite weg sein, und die Rückmeldung nennt ihn
+(`1 Spieler nicht mehr in der Liga (Freier Stürmer)`).
+
+Die Gegenprobe ist `KB_ABGANG=1 KB_TEAMFEHLER=1`: Ein Verein antwortet nicht,
+der Lauf ist unvollständig — dann **bleibt** er. Der Spieler könnte ja in dem
+Verein stehen, der nicht geantwortet hat. Derselbe Schutz, wegen dem überhaupt
+zusammengeführt statt ersetzt wird.
+
+```bash
+psql -h /tmp -p 5433 -U postgres -tAc "SELECT count(*) FROM pool_cache,
+  jsonb_array_elements(daten->'spieler') s WHERE id='bundesliga_v2' AND s->>'id'='301'"
+```
+
 ## KB_401 und KB_TOKEN_TAGE
 
 `KB_401=1` lässt Kickbase auf alles mit 401 antworten — wie bei einem

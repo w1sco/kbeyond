@@ -316,7 +316,13 @@ function fuerPfad(pfad) {
       fehler.status = 500;
       throw fehler;
     }
-    const kader = [...(VEREINSKADER[team[1]] ?? [])];
+    let kader = [...(VEREINSKADER[team[1]] ?? [])];
+    // Mit KB_ABGANG=1 hat der „Freie Stürmer" (301) die Liga verlassen: Er
+    // steht in keinem Vereinskader mehr. Nach einem vollen Lauf muss er aus
+    // dem Pool fliegen – nach einem halben (KB_TEAMFEHLER) dagegen bleiben.
+    if (process.env.KB_ABGANG === "1") {
+      kader = kader.filter((sp) => String(sp.i) !== "301");
+    }
     // Mit KB_NEUZUGANG=1 kommt ein Spieler dazu und einer ändert seinen
     // Marktwert. So lässt sich prüfen, dass der Pool wirklich zusammenführt
     // und Neuzugänge meldet – und nicht bloß fehlerfrei durchläuft.

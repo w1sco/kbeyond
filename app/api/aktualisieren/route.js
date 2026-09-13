@@ -115,7 +115,15 @@ export async function POST(request) {
           );
         }
         if (pl.geaendert > 0) erledigt.push(`${pl.geaendert} Spieler geändert`);
-        if (pl.neu === 0 && pl.geaendert === 0 && pl.vollstaendig) {
+        if (pl.entfernt > 0) {
+          // Wer die Liga verlassen hat — ebenfalls namentlich
+          const namen = pl.abgaenge.join(", ");
+          erledigt.push(
+            `${pl.entfernt} Spieler nicht mehr in der Liga` +
+            (namen ? ` (${namen}${pl.entfernt > pl.abgaenge.length ? " …" : ""})` : "")
+          );
+        }
+        if (pl.neu === 0 && pl.geaendert === 0 && pl.entfernt === 0 && pl.vollstaendig) {
           erledigt.push("Spielerliste unverändert");
         }
         if (!pl.vollstaendig) offen.push(`Spielerliste (${pl.vereine}/${pl.gesamt} Vereine)`);
