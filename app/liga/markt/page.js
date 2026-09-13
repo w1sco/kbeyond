@@ -9,7 +9,7 @@ import { erlaubtesMinus } from "@/lib/gebot";
 import { holePool } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
-import { bildeAuftritte, prognostiziere, ZYKLUS_TAGE } from "@/lib/rhythmus";
+import { bildeAuftritte, ZYKLUS_TAGE } from "@/lib/rhythmus";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { euro, prozent, zeitpunkt } from "@/lib/format";
 import Freieliste from "./Freieliste";
@@ -62,8 +62,10 @@ export default async function Markt({ searchParams }) {
   const amMarkt = await aktuellAmMarkt(leagueId);
   const verkauft = await letzteVerkaeufe(leagueId, settings.stichtag);
 
-  // Der Rhythmus selbst ist eine Konstante (ZYKLUS_TAGE) — geschätzt wird
-  // nichts mehr. Die Beobachtungen liefern nur noch den Anker je Spieler.
+  // Geschätzt wird nichts mehr: Der Rhythmus ist eine Vorgabe (14 Tage),
+  // die der Nutzer über einen Regler verschiebt. Die Beobachtungen liefern
+  // nur noch den Anker je Spieler — gerechnet wird im Browser, damit der
+  // Regler sofort wirkt.
   const auftritteJe = new Map();
   for (const [id, zeiten] of beobachtungen) {
     auftritteJe.set(id, bildeAuftritte(zeiten));
@@ -110,12 +112,13 @@ export default async function Markt({ searchParams }) {
       ...s,
       marktwert: s.marktwert == null ? null : Number(s.marktwert),
       startelf: elf.get(String(s.id)) ?? null,
-      prognose: prognostiziere({
-        auftritte: auftritteJe.get(String(s.id)) ?? [],
-        verkauftAm: verkauft.get(String(s.id)) ?? null,
-        jetzt,
-        aufMarktBis: amMarkt.get(String(s.id)) ?? null,
-      }),
+      // Die Anker als Zahlen: So überstehen sie die Server-Grenze, und der
+      // Regler rechnet im Browser daraus den Termin.
+      rueckkehr: {
+        auftritte: (auftritteJe.get(String(s.id)) ?? []).map((d) => d.getTime()),
+        verkauftAm: verkauft.get(String(s.id))?.getTime() ?? null,
+        aufMarktBis: amMarkt.get(String(s.id))?.getTime() ?? null,
+      },
     }));
 
   const ohneWert = frei.filter((s) => s.marktwert == null).length;
@@ -257,11 +260,6 @@ export default async function Markt({ searchParams }) {
           )}
         </div>
         <div>
-          <span className="kb-label">Rhythmus</span>
-          <strong>{ZYKLUS_TAGE} Tage</strong>
-          <span className="kb-leise"> nach Auftritt oder Verkauf</span>
-        </div>
-        <div>
           <span className="kb-label">Verhältnis</span>
           <strong>{verhaeltnis == null ? "–" : prozent(verhaeltnis)}</strong>
         </div>
@@ -276,11 +274,16 @@ export default async function Markt({ searchParams }) {
 
       <Hinweis kurz="Wie die Rückkehr-Prognose entsteht" titel="Wann kommt ein Spieler wieder?">
         <p>
-          <strong>Alle {ZYKLUS_TAGE} Tage.</strong> Ein Spieler, der am Markt erscheint und
-          ungekauft abläuft, kommt zwei Wochen später wieder; einer, der an Kickbase
-          zurückverkauft wird, zwei Wochen nach dem Verkauf. Das gilt für die namhaften
-          Spieler, um die es beim Kaufen geht — bei Ergänzungsspielern kann Kickbase
-          unregelmäßiger sein.
+          <strong>Alle {ZYKLUS_TAGE} Tage</strong> — so die Vorgabe. Ein Spieler, der am
+          Markt erscheint und ungekauft abläuft, kommt zwei Wochen später wieder; einer, der
+          an Kickbase zurückverkauft wird, zwei Wochen nach dem Verkauf. Das gilt für die
+          namhaften Spieler, um die es beim Kaufen geht — bei Ergänzungsspielern kann
+          Kickbase unregelmäßiger sein.
+        </p>
+        <p>
+          <strong>Der Regler über der Liste</strong> verschiebt den Abstand, falls Kickbase
+          ihn ändert. Die Spalte rechnet sofort neu; die Einstellung bleibt in diesem
+          Browser gespeichert.
         </p>
         <p>
           Gezählt wird das <strong>Erscheinen</strong> am Markt, nicht der Kauf. Ein Spieler
@@ -343,6 +346,8 @@ export default async function Markt({ searchParams }) {
 
       <Freieliste
         spieler={gefiltert}
+        leagueId={leagueId}
+        jetzt={jetzt.getTime()}
         konto={ich ? ich.konto : null}
         teamwert={meinTeamwert}
         ligaAufschlag={aufLiga.relativ}

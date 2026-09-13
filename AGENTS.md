@@ -807,11 +807,38 @@ bliebe eine Woche ohne Angabe.
 **Alle 14 Tage.** Ein Spieler, der am Markt erscheint und ungekauft abläuft,
 kommt zwei Wochen später wieder; einer, der an Kickbase zurückverkauft wird,
 zwei Wochen nach dem Verkauf. `/liga/markt` rechnet daraus je Spieler den
-nächsten Termin (`ZYKLUS_TAGE` in `lib/rhythmus.js`).
+nächsten Termin (`ZYKLUS_TAGE` in `lib/rhythmus.js` — die Vorgabe).
 
 Das gilt für die **namhaften** Spieler, um die es beim Kaufen geht. Bei
 Ergänzungsspielern kann Kickbase unregelmäßiger sein; die Seite sagt das im
 Hinweis, statt es zu verschweigen.
+
+### Der Regler
+
+Über der Liste steht ein Regler (1–30 Tage, `ZYKLUS_BEREICH`). Verschiebt
+Kickbase den Abstand, schiebt der Nutzer mit — die Spalte rechnet **sofort**
+neu, ohne Seitenaufruf. Dafür rechnet nicht mehr der Server, sondern der
+Browser: Die Marktseite reicht je Spieler nur die **Anker** durch (Auftritte,
+Verkauf, Marktablauf — als Zahlen, damit sie die Server-Grenze überstehen),
+und `prognostiziere()` läuft in `Freieliste.jsx`. Sie ist reine Rechnung ohne
+Datenbank, deshalb geht das.
+
+Zwei Fallen, beide bekannt aus diesem Projekt:
+
+- **`jetzt` kommt vom Server** (als Zahl). Ein `Date.now()` beim Rendern liefe
+  beim Hydrieren auseinander.
+- **Der gemerkte Wert wird nicht beim ersten Rendern aus dem `localStorage`
+  gelesen.** Das erzeugte auf dem Server einen anderen Baum als im Browser —
+  der Konflikt, der hier schon einmal die Aufstellungsauswahl gekostet hat.
+  Gelesen wird über `useSyncExternalStore`: auf dem Server die Vorgabe, im
+  Browser der gemerkte Wert. Das ist zugleich der Weg, den der Linter für
+  einen Speicher außerhalb von React verlangt — ein `setState` im Effekt lehnt
+  er ab.
+
+Gemerkt wird **im Browser, je Liga** (`kb_zyklus_{liga}`), nicht in
+`liga_settings`: Der Regler ist eine Hand am Modell, keine Einstellung, die
+der Bruder für alle umstellen soll. Ein Knopf „zurück auf 14" erscheint, sobald
+jemand geschoben hat.
 
 ### Die Schätzung gab es einmal
 
@@ -887,8 +914,10 @@ Termin direkt ausrechnen lässt: Verkaufsdatum + 14.
   Der erste Auftritt nach einem Reset folgt keinem Rhythmus — dort steht kein
   Datum. Alles vor dem Stichtag bleibt draußen.
 
-22 Fälle durchgerechnet (`pruefstand/rhythmus.mjs`): Anker, Verkauf gegen
-Auftritt in beide Richtungen, der Termin selbst, der Kulanztag, überfällig.
+29 Fälle durchgerechnet (`pruefstand/rhythmus.mjs`): Anker, Verkauf gegen
+Auftritt in beide Richtungen, der Termin selbst, der Kulanztag, überfällig, der
+Regler — und Zeitpunkte als Zahlen oder Text, wie sie über die Server-Grenze
+kommen.
 
 ### Wer die Liga verlässt, fliegt aus dem Pool
 

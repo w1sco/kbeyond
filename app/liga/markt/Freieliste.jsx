@@ -1,6 +1,7 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useSyncExternalStore } from "react";
 import { euro, euroKurz, zeitpunkt, POS_ORDNUNG } from "@/lib/format";
+import { prognostiziere, ZYKLUS_TAGE, ZYKLUS_BEREICH } from "@/lib/rhythmus";
 import Kaufrechner from "../../_ui/Kaufrechner";
 import Startelf from "../../_ui/Startelf";
 
@@ -24,7 +25,33 @@ function prognoseRang(p) {
   }
 }
 
-function Prognose({ p }) {
+// ── Der gemerkte Rhythmus, als externer Speicher ───────────────────
+//
+// Der localStorage ist ein Speicher außerhalb von React, und genau so wird
+// er gelesen: über useSyncExternalStore. Das löst zwei Dinge auf einmal —
+// auf dem Server gilt die Vorgabe (kein Hydrierungskonflikt, der hier
+// schon einmal die Aufstellungsauswahl gekostet hat), und es braucht kein
+// setState in einem Effekt, das der Linter zu Recht anmahnt.
+const hoerer = new Set();
+function abonniere(cb) {
+  hoerer.add(cb);
+  window.addEventListener("storage", cb);
+  return () => { hoerer.delete(cb); window.removeEventListener("storage", cb); };
+}
+function ladeZyklus(schluessel) {
+  try {
+    const n = Number(localStorage.getItem(schluessel));
+    return n >= ZYKLUS_BEREICH[0] && n <= ZYKLUS_BEREICH[1] ? n : ZYKLUS_TAGE;
+  } catch {
+    return ZYKLUS_TAGE; // kein Speicher (privater Modus o. ä.) – dann die Vorgabe
+  }
+}
+function merkeZyklus(schluessel, n) {
+  try { localStorage.setItem(schluessel, String(n)); } catch { /* dann nur bis zum Neuladen */ }
+  for (const cb of hoerer) cb();
+}
+
+function Prognose({ p, zyklus }) {
   if (!p) return <span className="kb-gedaempft">–</span>;
 
   switch (p.lage) {
@@ -44,7 +71,7 @@ function Prognose({ p }) {
       const text = tage <= 0 ? "heute" : tage === 1 ? "morgen" : `in ${tage} Tagen`;
       const woher = p.durchVerkauf ? "Verkauf" : "Auftritt";
       return (
-        <span title={`${woher} am ${zeitpunkt(p.anker)} · alle 14 Tage`}>
+        <span title={`${woher} am ${zeitpunkt(p.anker)} · alle ${zyklus} Tage`}>
           {text}
           {p.sicherheit !== "gut" && <span className="kb-leise"> ca.</span>}
         </span>
@@ -59,8 +86,41 @@ function Prognose({ p }) {
   }
 }
 
-export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAufschlag = null, eigenerKader = [], boni = null }) {
+export default function Freieliste({
+  spieler, leagueId, jetzt, konto = null, teamwert = 0, ligaAufschlag = null,
+  eigenerKader = [], boni = null,
+}) {
   const [gewaehlt, setGewaehlt] = useState(() => new Set());
+
+  // ── Der Rhythmus als Regler ──────────────────────────────────────
+  //
+  // Vorgabe 14 Tage. Wer die Liga anders erlebt, schiebt — die Spalte
+  // rechnet sofort neu, weil die Anker je Spieler hier liegen und die
+  // Rechnung ohne Datenbank auskommt.
+  //
+  // Gemerkt wird im Browser, je Liga — siehe oben, wie.
+  const schluessel = `kb_zyklus_${leagueId}`;
+  const gemerkt = useSyncExternalStore(
+    abonniere, () => ladeZyklus(schluessel), () => ZYKLUS_TAGE);
+  // Fällt der Speicher aus, hält der Zustand den Wert bis zum Neuladen.
+  const [ungespeichert, setUngespeichert] = useState(null);
+  const zyklus = ungespeichert ?? gemerkt;
+  function zyklusSetzen(n) {
+    setUngespeichert(n);
+    merkeZyklus(schluessel, n);
+  }
+
+  // `jetzt` kommt vom Server: ein Date.now() beim Rendern liefe beim
+  // Hydrieren auseinander.
+  const mitPrognose = useMemo(
+    () => spieler.map((s) => ({
+      ...s,
+      prognose: s.rueckkehr
+        ? prognostiziere({ ...s.rueckkehr, jetzt, zyklusTage: zyklus })
+        : null,
+    })),
+    [spieler, jetzt, zyklus]
+  );
   const [sortKey, setSortKey] = useState("marktwert");
   const [absteigend, setAbsteigend] = useState(true);
   const [suche, setSuche] = useState("");
@@ -76,7 +136,7 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
 
   const zeilen = useMemo(() => {
     const s = suche.trim().toLowerCase();
-    let gefiltert = pos === "alle" ? spieler : spieler.filter((x) => x.position === pos);
+    let gefiltert = pos === "alle" ? mitPrognose : mitPrognose.filter((x) => x.position === pos);
     if (s) gefiltert = gefiltert.filter((x) => (x.name ?? "").toLowerCase().includes(s));
 
     const kopie = [...gefiltert];
@@ -99,7 +159,7 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
         : Number(a[sortKey] ?? 0) - Number(b[sortKey] ?? 0);
     });
     return kopie;
-  }, [spieler, sortKey, absteigend, suche, pos]);
+  }, [mitPrognose, sortKey, absteigend, suche, pos]);
 
   function klick(key) {
     if (key === sortKey) setAbsteigend(!absteigend);
@@ -135,6 +195,22 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
           aufLeeren={() => setGewaehlt(new Set())}
         />
       )}
+
+      <div className="kb-zyklus">
+        <label className="kb-aufschlagregler">
+          <span className="kb-label">
+            Wieder am Markt nach: <strong>{zyklus} {zyklus === 1 ? "Tag" : "Tagen"}</strong>
+            {zyklus !== ZYKLUS_TAGE && (
+              <button type="button" className="kb-btn kb-btn--klein"
+                      onClick={() => zyklusSetzen(ZYKLUS_TAGE)}>
+                zurück auf {ZYKLUS_TAGE}
+              </button>
+            )}
+          </span>
+          <input type="range" min={ZYKLUS_BEREICH[0]} max={ZYKLUS_BEREICH[1]} step={1}
+                 value={zyklus} onChange={(e) => zyklusSetzen(Number(e.target.value))} />
+        </label>
+      </div>
 
       {/* Die Position filtert nur die Liste, nicht das Verhältnis darüber:
           „Was kann die Liga bezahlen" ist eine Frage über den ganzen freien
@@ -223,7 +299,7 @@ export default function Freieliste({ spieler, konto = null, teamwert = 0, ligaAu
                       </>
                     )}
                   </td>
-                  <td><Prognose p={s.prognose} /></td>
+                  <td><Prognose p={s.prognose} zyklus={zyklus} /></td>
                 </tr>
               ))}
             </tbody>

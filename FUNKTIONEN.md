@@ -493,6 +493,10 @@ Ergänzungsspielern kann Kickbase unregelmäßiger sein — die Seite sagt das.
 > „angenommen, noch nicht gemessen", bevor sie es bestätigen konnte. Die
 > Schätzung ist raus; der Rhythmus ist eine Konstante.
 
+**Ein Regler über der Liste** verschiebt den Abstand (1–30 Tage), falls Kickbase
+ihn ändert. Die Spalte rechnet sofort neu; die Einstellung bleibt im Browser
+gespeichert, je Liga. „zurück auf 14" holt die Vorgabe zurück.
+
 **Beobachtet wird das Erscheinen, nicht der Kauf.** Das ist der Kern: Ein
 Spieler kann auf den Markt kommen, **ungekauft ablaufen** und 14 Tage später
 wiederkommen und dann gekauft werden. Zwischen den beiden *Käufen* lägen

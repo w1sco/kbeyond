@@ -73,5 +73,27 @@ pruefe("seit dem Reset nie gesehen",
 pruefe("ohne Angaben: nie gesehen, kein Absturz",
   prognostiziere({ jetzt }).lage, "nieDagewesen");
 
+// ── Der Regler ─────────────────────────────────────────────────────
+// Ein anderer Abstand verschiebt den Termin — und nur den.
+const p8 = prognostiziere({ auftritte: auftritt, jetzt, zyklusTage: 7 });
+pruefe("7 Tage: Termin = Auftritt + 7", p8.naechster.getTime(), auftritt[0].getTime() + tage(7));
+pruefe("7 Tage: damit schon überfällig", p8.lage, "ueberfaellig");
+const p9 = prognostiziere({ auftritte: auftritt, jetzt, zyklusTage: 21 });
+pruefe("21 Tage: noch 13 hin", Math.round(p9.tageHin), 13);
+
+// Über die Server-Grenze kommen Zeitpunkte als Zahlen an — die Rechnung
+// läuft im Browser und darf daran nicht scheitern.
+const p10 = prognostiziere({
+  auftritte: [auftritt[0].getTime()], verkauftAm: T("2026-09-10T18:00Z").getTime(),
+  jetzt: jetzt.getTime(),
+});
+pruefe("Zahlen statt Daten: gleicher Anker", p10.anker.getTime(), T("2026-09-10T18:00Z").getTime());
+pruefe("Zahlen statt Daten: gleiche Lage", p10.lage, "erwartet");
+pruefe("Text statt Daten geht auch",
+  prognostiziere({ auftritte: ["2026-09-05T10:00Z"], jetzt: "2026-09-13T12:00:00Z" }).naechster.getTime(),
+  auftritt[0].getTime() + tage(14));
+pruefe("Müll als Anker: nie dagewesen statt Absturz",
+  prognostiziere({ auftritte: ["kaputt"], verkauftAm: "auch kaputt", jetzt }).lage, "nieDagewesen");
+
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

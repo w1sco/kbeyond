@@ -2043,3 +2043,9 @@ th.kb-namensspalte { z-index: 3; }
   border-top: 1px solid var(--kb-rand);
 }
 .kb-zugangprivat .kb-btn { margin-left: auto; }
+
+/* Der Rhythmus-Regler über der Liste der freien Spieler. Der
+   Zurück-Knopf erscheint nur, wenn jemand geschoben hat. */
+.kb-zyklus { margin-top: 12px; }
+.kb-zyklus .kb-label { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kb-zyklus .kb-btn--klein { margin-left: 0; }
