@@ -533,6 +533,17 @@ Was die Spalte zeigt:
 - **kommt demnächst** — seit dem Reset weder am Markt gewesen noch verkauft.
   Der erste Auftritt nach einem Reset folgt keinem Rhythmus
 
+**Läuft er noch vor dem Anpfiff aus?** Unter der Prognose steht, ob das
+Angebot vor dem ersten Spiel des nächsten Spieltags abgelaufen sein wird —
+denn erst dann lässt sich der Spieler aufstellen. ✓ heißt mit einem Tag Luft
+vorher, ~ heißt knapp (oder der Spieler ist überfällig und kann jeden Tag
+kommen), ✕ heißt erst danach. Der Anpfiff kommt aus dem Spielplan; kennt der
+keinen, aus der Einstellung (Freitag 20:30) — die Seite sagt, welches.
+
+**Filter nach Startelf-Chance:** Alle · Spielt sicher (★ ✔) · Spielt evtl.
+(★ ✔ ?) · Ohne Nicht-Spieler (alles außer ✕). Wer keine Angabe hat, gilt
+weder als sicher noch als vielleicht.
+
 **Wer die Liga verlässt, fliegt aus der Liste.** Die Spielerliste wird beim
 Aktualisieren zusammengeführt, nicht ersetzt (damit ein ausgefallener
 Vereinsabruf keine Spieler kostet). Die Kehrseite war, dass ein Spieler, der ins

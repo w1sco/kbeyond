@@ -3,7 +3,7 @@
 // Der Rhythmus ist eine Konstante (14 Tage). Geprüft wird deshalb nicht
 // eine Schätzung, sondern der Anker: woran hängt der Termin, und was
 // passiert an den Rändern.
-import { bildeAuftritte, prognostiziere, ZYKLUS_TAGE, KULANZ_TAGE } from "../lib/rhythmus.js";
+import { bildeAuftritte, prognostiziere, vorAnpfiff, naechsterWochentagText, ZYKLUS_TAGE, KULANZ_TAGE } from "../lib/rhythmus.js";
 
 let ok = 0, fehler = 0;
 const pruefe = (name, ist, soll) => {
@@ -94,6 +94,57 @@ pruefe("Text statt Daten geht auch",
   auftritt[0].getTime() + tage(14));
 pruefe("Müll als Anker: nie dagewesen statt Absturz",
   prognostiziere({ auftritte: ["kaputt"], verkauftAm: "auch kaputt", jetzt }).lage, "nieDagewesen");
+
+// ── Läuft er noch vor dem Anpfiff aus? ─────────────────────────────
+{
+  const pr = pruefe;
+  const jetzt2 = T("2026-09-14T10:00:00Z");
+  const anpfiff = T("2026-09-18T18:30:00Z"); // Freitag 20:30 Berlin
+
+  // Erwartet am 15.9. → läuft am 16.9. aus → mit einem Tag Spielraum vor Fr.
+  const bald = prognostiziere({ auftritte: [T("2026-09-01T10:00Z")], jetzt: jetzt2 });
+  pr("sicher: Ablauf zwei Tage vor Anpfiff", vorAnpfiff(bald, anpfiff, { jetzt: jetzt2 }).lage, "sicher");
+  pr("… mit dem Ablaufzeitpunkt", vorAnpfiff(bald, anpfiff, { jetzt: jetzt2 }).ablauf.getTime(),
+    T("2026-09-15T10:00Z").getTime() + tage(1));
+
+  // Erwartet am 17.9. 10:00 → Ablauf 18.9. 10:00 → im Spielraum: vielleicht
+  const knapp = prognostiziere({ auftritte: [T("2026-09-03T10:00Z")], jetzt: jetzt2 });
+  pr("vielleicht: Ablauf am Anpfifftag", vorAnpfiff(knapp, anpfiff, { jetzt: jetzt2 }).lage, "vielleicht");
+
+  // Erwartet am 20.9. → Ablauf 21.9. → klar danach
+  const spaet = prognostiziere({ auftritte: [T("2026-09-06T10:00Z")], jetzt: jetzt2 });
+  pr("nein: Ablauf drei Tage nach Anpfiff", vorAnpfiff(spaet, anpfiff, { jetzt: jetzt2 }).lage, "nein");
+
+  // Der Regler verschiebt das Urteil mit.
+  pr("mit 7 Tagen wird aus nein sicher",
+    vorAnpfiff(prognostiziere({ auftritte: [T("2026-09-06T10:00Z")], jetzt: jetzt2, zyklusTage: 7 }),
+               anpfiff, { jetzt: jetzt2 }).lage, "sicher");
+
+  // Steht gerade am Markt: die Uhr entscheidet, kein Spielraum.
+  pr("am Markt, läuft vorher ab: sicher",
+    vorAnpfiff({ lage: "aufMarkt", bis: T("2026-09-15T12:00Z") }, anpfiff).lage, "sicher");
+  pr("am Markt, läuft eine Minute danach ab: nein",
+    vorAnpfiff({ lage: "aufMarkt", bis: T("2026-09-18T18:31:00Z") }, anpfiff).lage, "nein");
+
+  // Überfällig: kann jeden Tag kommen.
+  const ueber = prognostiziere({ auftritte: [T("2026-08-20T10:00Z")], jetzt: jetzt2 });
+  pr("überfällig, Anpfiff in vier Tagen: vielleicht", vorAnpfiff(ueber, anpfiff, { jetzt: jetzt2 }).lage, "vielleicht");
+  pr("überfällig, Anpfiff in zwölf Stunden: nein — selbst jetzt reicht es nicht",
+    vorAnpfiff(ueber, T("2026-09-14T22:00:00Z"), { jetzt: jetzt2 }).lage, "nein");
+
+  // Keine Aussage, wo keine möglich ist.
+  pr("nie dagewesen: keine Aussage", vorAnpfiff({ lage: "nieDagewesen" }, anpfiff).lage, null);
+  pr("ohne Anpfiff: keine Aussage", vorAnpfiff(bald, null).lage, null);
+  pr("ohne Prognose: keine Aussage", vorAnpfiff(null, anpfiff).lage, null);
+  pr("Anpfiff als Zahl geht auch", vorAnpfiff(bald, anpfiff.getTime(), { jetzt: jetzt2 }).lage, "sicher");
+
+  // Der Ersatz, wenn der Spielplan schweigt: nächster Freitag 20:30.
+  pr("Montag → kommender Freitag", naechsterWochentagText("2026-09-14T10:00", 1, 5), "2026-09-18T20:30");
+  pr("Freitag 19:00 → heute", naechsterWochentagText("2026-09-18T19:00", 5, 5), "2026-09-18T20:30");
+  pr("Freitag 21:00 → nächste Woche", naechsterWochentagText("2026-09-18T21:00", 5, 5), "2026-09-25T20:30");
+  pr("Samstag als Spieltag", naechsterWochentagText("2026-09-14T10:00", 1, 6, "15:30"), "2026-09-19T15:30");
+
+}
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

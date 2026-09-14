@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, getStartelf } from "@/lib/db";
+import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, getStartelf, naechsterAnpfiff } from "@/lib/db";
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { geheimeZugaenge } from "@/lib/zugang";
 import { wenVerbergen, verbergeKonten } from "@/lib/privatsphaere";
@@ -9,9 +9,10 @@ import { erlaubtesMinus } from "@/lib/gebot";
 import { holePool } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
-import { bildeAuftritte, ZYKLUS_TAGE } from "@/lib/rhythmus";
+import { bildeAuftritte, naechsterWochentagText, ZYKLUS_TAGE, ANGEBOT_DAUER_H } from "@/lib/rhythmus";
 import { sitzung, verlangeLiga } from "@/lib/auth";
-import { euro, prozent, zeitpunkt } from "@/lib/format";
+import { euro, prozent, zeitpunkt, wochentag, ausEingabe, ZONE } from "@/lib/format";
+import { spieltagWahl } from "@/lib/loginbonus";
 import Freieliste from "./Freieliste";
 import Hinweis from "../../_ui/Hinweis";
 import Startelflegende from "../../_ui/Startelflegende";
@@ -106,6 +107,23 @@ export default async function Markt({ searchParams }) {
   const vergeben = new Set([...kader.besetzt, ...besitz.besitzer.keys()]);
 
   const jetzt = new Date();
+
+  // ── Wann pfeift der Spieltag an? ─────────────────────────────────
+  //
+  // Aus dem Spielplan: das erste Spiel, das noch bevorsteht. Kennt er
+  // keins (noch nie aktualisiert, Saisonende), gilt der eingestellte
+  // Spieltagsbeginn — Freitag 20:30, oder Samstag 15:30 — und die Seite
+  // sagt, woher die Zahl kommt.
+  let anpfiff = await naechsterAnpfiff();
+  let anpfiffQuelle = "Spielplan";
+  if (!anpfiff) {
+    const wahl = spieltagWahl(settings.spieltag_start);
+    const berlin = jetzt.toLocaleString("sv-SE", { timeZone: ZONE }).replace(" ", "T").slice(0, 16);
+    anpfiff = ausEingabe(naechsterWochentagText(
+      berlin, wochentag(jetzt), wahl.tag, wahl.schluessel === "sa" ? "15:30" : "20:30"));
+    anpfiffQuelle = `Einstellung (${wahl.label})`;
+  }
+
   const frei = pool.spieler
     .filter((s) => !vergeben.has(String(s.id)))
     .map((s) => ({
@@ -286,6 +304,17 @@ export default async function Markt({ searchParams }) {
           Browser gespeichert.
         </p>
         <p>
+          <strong>Vor dem Anpfiff?</strong> Wer einen Spieler am Spieltag aufstellen will,
+          braucht ihn vorher — das Angebot muss <strong>abgelaufen</strong> sein, bevor das
+          erste Spiel beginnt. Gerechnet wird Erscheinen + {ANGEBOT_DAUER_H} Stunden gegen
+          den nächsten Anpfiff aus dem Spielplan. <span className="kb-plus">✓</span> heißt:
+          mit einem Tag Luft vorher. <span className="kb-warntext">~</span> heißt: Ablauf
+          liegt im Bereich eines Tages um den Anpfiff, oder der Spieler ist überfällig und
+          kann jeden Tag kommen. <span className="kb-gedaempft">✕</span> heißt: mit einem Tag
+          Luft danach. Wer gerade am Markt steht, hat eine echte Uhr — da gibt es kein
+          „vielleicht&ldquo;.
+        </p>
+        <p>
           Gezählt wird das <strong>Erscheinen</strong> am Markt, nicht der Kauf. Ein Spieler
           kann ungekauft ablaufen und {ZYKLUS_TAGE} Tage später wiederkommen und dann gekauft
           werden — zwischen den Käufen lägen 28 Tage, der Rhythmus ist aber {ZYKLUS_TAGE}.
@@ -348,6 +377,8 @@ export default async function Markt({ searchParams }) {
         spieler={gefiltert}
         leagueId={leagueId}
         jetzt={jetzt.getTime()}
+        anpfiff={anpfiff ? anpfiff.getTime() : null}
+        anpfiffQuelle={anpfiffQuelle}
         konto={ich ? ich.konto : null}
         teamwert={meinTeamwert}
         ligaAufschlag={aufLiga.relativ}

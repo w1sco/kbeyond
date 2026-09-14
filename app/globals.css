@@ -2049,3 +2049,18 @@ th.kb-namensspalte { z-index: 3; }
 .kb-zyklus { margin-top: 12px; }
 .kb-zyklus .kb-label { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .kb-zyklus .kb-btn--klein { margin-left: 0; }
+
+/* Läuft er noch vor dem Anpfiff aus? Das Zeichen unter der Prognose.
+   Farbe UND Form: ✓ / ~ / ✕ — die Farbe allein trägt es nicht. */
+.kb-anpfiffzeile { margin-top: 10px; }
+.kb-anpfiff {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.kb-anpfiff--ja    { color: var(--kb-gut); }
+.kb-anpfiff--knapp { color: var(--kb-warn-text); }
+.kb-anpfiff--nein  { color: var(--kb-text-schwach); }
+

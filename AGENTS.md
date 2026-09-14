@@ -840,6 +840,41 @@ Gemerkt wird **im Browser, je Liga** (`kb_zyklus_{liga}`), nicht in
 der Bruder für alle umstellen soll. Ein Knopf „zurück auf 14" erscheint, sobald
 jemand geschoben hat.
 
+### Läuft er noch vor dem Anpfiff aus?
+
+Wer einen Spieler am Spieltag aufstellen will, braucht ihn **vorher**: Das
+Angebot muss abgelaufen sein, bevor das erste Spiel beginnt. `vorAnpfiff()`
+rechnet Erscheinen + `ANGEBOT_DAUER_H` (24 h, „ein Angebot steht rund einen
+Tag") gegen den nächsten Anpfiff und gibt eine von drei Aussagen — oder keine:
+
+| Zeichen | Lage | Wann |
+|---|---|---|
+| ✓ vor Anpfiff | `sicher` | Ablauf liegt mit einem Tag Luft (`SPIELRAUM_TAGE`) davor |
+| ~ knapp | `vielleicht` | Ablauf im Bereich eines Tages um den Anpfiff — oder überfällig und kann jeden Tag kommen |
+| ✕ erst danach | `nein` | Ablauf mit einem Tag Luft danach — oder überfällig, aber selbst ab jetzt reicht es nicht mehr |
+| — | `null` | nie dagewesen, oder kein Anpfiff bekannt |
+
+Der Spielraum kommt aus der Prognose selbst: Der Anker ist ein Zeitpunkt, der
+Abstand eine ganze Zahl Tage — genauer als auf einen Tag wird es nicht. **Wer
+gerade am Markt steht, hat eine echte Uhr** (`aufMarktBis`), da gibt es kein
+„vielleicht". Und der Regler verschiebt das Urteil mit — bei 7 Tagen wird aus
+einem ✕ ein ✓.
+
+**Der Anpfiff kommt aus dem Spielplan** (`naechsterAnpfiff()`: das erste Spiel
+mit `datum > NOW()`) — dafür ist die Tabelle `spiele` noch da. Kennt er keins,
+gilt der eingestellte Spieltagsbeginn (`liga_settings.spieltag_start`: Freitag
+20:30, Samstag 15:30), gerechnet über `ausEingabe()` in deutscher Ortszeit; die
+Seite nennt die Quelle („Spielplan" oder „Einstellung (Freitag)"), statt beide
+gleich aussehen zu lassen.
+
+### Filter nach Startelf-Chance
+
+Über der Liste: **Alle · Spielt sicher · Spielt evtl. · Ohne Nicht-Spieler**,
+mit Anzahl je Chip. „Sicher" heißt Stufe 1–2, „evtl." 1–3, „ohne" alles außer
+Stufe 5. **Wer keine Angabe hat, ist weder sicher noch vielleicht** — Unbekanntes
+zählt nur mit, wo nichts Bestimmtes verlangt wird. Nur das ✕ ist „spielt
+definitiv nicht"; eine fehlende Angabe ist keine Aussage.
+
 ### Die Schätzung gab es einmal
 
 Hier stand eine Rechnung, die den Rhythmus **laufend aus den beobachteten
@@ -914,10 +949,10 @@ Termin direkt ausrechnen lässt: Verkaufsdatum + 14.
   Der erste Auftritt nach einem Reset folgt keinem Rhythmus — dort steht kein
   Datum. Alles vor dem Stichtag bleibt draußen.
 
-29 Fälle durchgerechnet (`pruefstand/rhythmus.mjs`): Anker, Verkauf gegen
+46 Fälle durchgerechnet (`pruefstand/rhythmus.mjs`): Anker, Verkauf gegen
 Auftritt in beide Richtungen, der Termin selbst, der Kulanztag, überfällig, der
-Regler — und Zeitpunkte als Zahlen oder Text, wie sie über die Server-Grenze
-kommen.
+Regler, Zeitpunkte als Zahlen oder Text — und die Anpfiff-Frage in allen vier
+Lagen, samt Regler-Wirkung und dem Ersatz-Anpfiff aus der Einstellung.
 
 ### Wer die Liga verlässt, fliegt aus dem Pool
 
@@ -1575,7 +1610,7 @@ lib/
   marktbeobachtung.js speichereMarkt(), sammleBeobachtungen(), aktuellAmMarkt()
   marktwerte.js     ladeMarktwertVerlauf(), ergaenzeMarktwerte() — Historie je Spieler
   rekonstruktion.js rekonstruiere(), holePool(), aktualisierePool()
-  rhythmus.js       bildeAuftritte(), prognostiziere(), ZYKLUS_TAGE — 14 Tage, ohne DB
+  rhythmus.js       bildeAuftritte(), prognostiziere(), vorAnpfiff() — 14 Tage, ohne DB
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   verlauf.js        tagesraster(), tagesreihen(), tageZwischen(), wertAmTag()
                     — Tagesstützstellen 0 Uhr, ohne DB

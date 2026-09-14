@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useSyncExternalStore } from "react";
 import { euro, euroKurz, zeitpunkt, POS_ORDNUNG } from "@/lib/format";
-import { prognostiziere, ZYKLUS_TAGE, ZYKLUS_BEREICH } from "@/lib/rhythmus";
+import { prognostiziere, vorAnpfiff, ZYKLUS_TAGE, ZYKLUS_BEREICH } from "@/lib/rhythmus";
 import Kaufrechner from "../../_ui/Kaufrechner";
 import Startelf from "../../_ui/Startelf";
 
@@ -51,6 +51,36 @@ function merkeZyklus(schluessel, n) {
   for (const cb of hoerer) cb();
 }
 
+// ── Filter nach Startelf-Chance ─────────────────────────────────────
+//
+// Vier Sichten. Wer keine Angabe hat (null), ist weder „sicher" noch
+// „vielleicht" — Unbekanntes zählt nur dort mit, wo nichts Bestimmtes
+// verlangt wird. Nur die Stufe 5 (✕) ist „spielt definitiv nicht".
+const ELF_SICHTEN = [
+  { schluessel: "alle",   label: "Alle",            passt: () => true },
+  { schluessel: "sicher", label: "Spielt sicher",   passt: (st) => st === 1 || st === 2 },
+  { schluessel: "evtl",   label: "Spielt evtl.",    passt: (st) => st != null && st <= 3 },
+  { schluessel: "ohne",   label: "Ohne Nicht-Spieler", passt: (st) => st !== 5 },
+];
+
+// Das Zeichen zur Frage „läuft er noch vor dem Anpfiff aus?"
+function VorAnpfiff({ a }) {
+  if (!a || !a.lage) return null;
+  const wann = a.ablauf ? ` · Ablauf ${zeitpunkt(a.ablauf)}` : "";
+  const form = {
+    sicher:     ["kb-anpfiff kb-anpfiff--ja",    "✓", "vor Anpfiff",  `Läuft vor dem Anpfiff aus${wann}`],
+    vielleicht: ["kb-anpfiff kb-anpfiff--knapp", "~", "knapp",        `Könnte noch vor dem Anpfiff auslaufen${wann}`],
+    nein:       ["kb-anpfiff kb-anpfiff--nein",  "✕", "erst danach",  `Läuft erst nach dem Anpfiff aus${wann}`],
+  }[a.lage];
+  if (!form) return null;
+  const [klasse, zeichen, text, titel] = form;
+  return (
+    <span className={klasse} title={titel}>
+      <span aria-hidden="true">{zeichen}</span> {text}
+    </span>
+  );
+}
+
 function Prognose({ p, zyklus }) {
   if (!p) return <span className="kb-gedaempft">–</span>;
 
@@ -87,10 +117,11 @@ function Prognose({ p, zyklus }) {
 }
 
 export default function Freieliste({
-  spieler, leagueId, jetzt, konto = null, teamwert = 0, ligaAufschlag = null,
-  eigenerKader = [], boni = null,
+  spieler, leagueId, jetzt, anpfiff = null, anpfiffQuelle = null,
+  konto = null, teamwert = 0, ligaAufschlag = null, eigenerKader = [], boni = null,
 }) {
   const [gewaehlt, setGewaehlt] = useState(() => new Set());
+  const [elfSicht, setElfSicht] = useState("alle");
 
   // ── Der Rhythmus als Regler ──────────────────────────────────────
   //
@@ -113,14 +144,24 @@ export default function Freieliste({
   // `jetzt` kommt vom Server: ein Date.now() beim Rendern liefe beim
   // Hydrieren auseinander.
   const mitPrognose = useMemo(
-    () => spieler.map((s) => ({
-      ...s,
-      prognose: s.rueckkehr
+    () => spieler.map((s) => {
+      const prognose = s.rueckkehr
         ? prognostiziere({ ...s.rueckkehr, jetzt, zyklusTage: zyklus })
-        : null,
-    })),
-    [spieler, jetzt, zyklus]
+        : null;
+      return { ...s, prognose, anpfiff: vorAnpfiff(prognose, anpfiff, { jetzt }) };
+    }),
+    [spieler, jetzt, zyklus, anpfiff]
   );
+
+  // Wie viele je Sicht — steht auf den Chips, damit man vor dem Klick
+  // sieht, ob sich einer lohnt. Dieselbe Regel wie bei den Positionen.
+  const jeSicht = useMemo(() => {
+    const z = new Map();
+    for (const sicht of ELF_SICHTEN) {
+      z.set(sicht.schluessel, spieler.filter((x) => sicht.passt(x.startelf ?? null)).length);
+    }
+    return z;
+  }, [spieler]);
   const [sortKey, setSortKey] = useState("marktwert");
   const [absteigend, setAbsteigend] = useState(true);
   const [suche, setSuche] = useState("");
@@ -137,6 +178,8 @@ export default function Freieliste({
   const zeilen = useMemo(() => {
     const s = suche.trim().toLowerCase();
     let gefiltert = pos === "alle" ? mitPrognose : mitPrognose.filter((x) => x.position === pos);
+    const sicht = ELF_SICHTEN.find((x) => x.schluessel === elfSicht) ?? ELF_SICHTEN[0];
+    gefiltert = gefiltert.filter((x) => sicht.passt(x.startelf ?? null));
     if (s) gefiltert = gefiltert.filter((x) => (x.name ?? "").toLowerCase().includes(s));
 
     const kopie = [...gefiltert];
@@ -159,7 +202,7 @@ export default function Freieliste({
         : Number(a[sortKey] ?? 0) - Number(b[sortKey] ?? 0);
     });
     return kopie;
-  }, [mitPrognose, sortKey, absteigend, suche, pos]);
+  }, [mitPrognose, sortKey, absteigend, suche, pos, elfSicht]);
 
   function klick(key) {
     if (key === sortKey) setAbsteigend(!absteigend);
@@ -210,6 +253,32 @@ export default function Freieliste({
           <input type="range" min={ZYKLUS_BEREICH[0]} max={ZYKLUS_BEREICH[1]} step={1}
                  value={zyklus} onChange={(e) => zyklusSetzen(Number(e.target.value))} />
         </label>
+      </div>
+
+      {/* Läuft er noch vor dem Anpfiff aus? Die Zeile sagt, gegen welchen
+          Anpfiff gerechnet wird — und woher der stammt. */}
+      <div className="kb-anpfiffzeile kb-leise">
+        {anpfiff
+          ? <>Nächster Anpfiff: <strong>{zeitpunkt(anpfiff)}</strong> ({anpfiffQuelle})</>
+          : <>Kein Anpfiff bekannt — die Frage „vor dem Anpfiff?&ldquo; bleibt offen.</>}
+      </div>
+
+      {/* Filter nach Startelf-Chance: wer spielt überhaupt? */}
+      <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Startelf-Chance">
+        {ELF_SICHTEN.map((sicht) => {
+          const anzahl = jeSicht.get(sicht.schluessel) ?? 0;
+          return (
+            <button
+              key={sicht.schluessel}
+              type="button"
+              className={`kb-sortchip${elfSicht === sicht.schluessel ? " kb-sortchip--aktiv" : ""}`}
+              disabled={anzahl === 0 && sicht.schluessel !== "alle"}
+              onClick={() => setElfSicht(sicht.schluessel)}
+            >
+              {sicht.label} <span className="kb-chipzahl">{anzahl}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Die Position filtert nur die Liste, nicht das Verhältnis darüber:
@@ -299,7 +368,10 @@ export default function Freieliste({
                       </>
                     )}
                   </td>
-                  <td><Prognose p={s.prognose} zyklus={zyklus} /></td>
+                  <td>
+                    <Prognose p={s.prognose} zyklus={zyklus} />
+                    <VorAnpfiff a={s.anpfiff} />
+                  </td>
                 </tr>
               ))}
             </tbody>
