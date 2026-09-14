@@ -25,7 +25,7 @@ export default async function Spielplan({ searchParams }) {
   await verlangeLiga(leagueId, token);
 
   // Auch das kostet ein Dutzend Aufrufe, also erst auf Klick — dieselbe
-  // Regel wie bei /livepunkte und /startelf.
+  // Regel wie bei /startelf.
   if (p.suchen !== "1") {
     return (
       <main className="kb-seite kb-seite--schmal">

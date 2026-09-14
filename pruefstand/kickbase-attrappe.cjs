@@ -69,21 +69,6 @@ const VEREINSKADER = {
   ],
 };
 
-// Spieltagspunkte eines Managers – dieselbe Zahl im Live-Endpunkt wie im
-// Kader, sonst ließe sich die Summenprobe nicht prüfen.
-function spieltagsPunkte(uid) {
-  const i = MANAGER.findIndex((m) => String(m.i) === String(uid));
-  return i < 0 ? 0 : 80 - i * 17;
-}
-
-// Die Punkte auf elf Spieler verteilen, so dass die Summe genau stimmt.
-function verteile(summe, anzahl) {
-  const basis = Math.floor(summe / anzahl);
-  const raus = Array(anzahl).fill(basis);
-  raus[0] += summe - basis * anzahl;
-  return raus;
-}
-
 function antwort(daten, status = 200) {
   return new Response(JSON.stringify(daten), {
     status,
@@ -165,41 +150,6 @@ function fuerPfad(pfad) {
     };
   }
 
-  // Live-Punkte am Spieltag. Mit KB_LIVE=1 antwortet **einer** der
-  // Kandidaten – so lässt sich prüfen, dass die Suche ihn findet, sich den
-  // Pfad merkt und die Seite danach nur noch einen Aufruf macht.
-  //
-  // Bewusst verschachtelt und mit Ablenkung: Der Manager heißt hier `u`,
-  // nicht `i`, die Punkte `mdp`, und daneben steht ein Marktwert. Wer
-  // Feldnamen rät statt zu suchen, fällt hier durch.
-  if (process.env.KB_LIVE === "1" && pfad.includes(`/leagues/${LIGA}/live`)) {
-    const spieler = (uid, punkte) =>
-      vollerKader(String(uid)).slice(0, 11).map((s, i) => ({
-        pi: String(s.i), pn: s.n, mdp: Math.max(0, punkte - i * 3), mv: s.mv,
-      }));
-    return {
-      d: {
-        ranking: {
-          players: MANAGER.filter((m) => !m.adm || process.env.KB_ADMIN_SPIELT === "1")
-            .map((m, i) => ({
-              u: String(m.i), unm: m.n, mdp: spieltagsPunkte(m.i), tv: m.tv,
-              // `lp` wie in echt: eine Liste **blanker Spieler-IDs** – die
-              // Aufstellung, ohne Punkte. So liefert Kickbase es
-              // tatsächlich, an echten Daten abgelesen.
-              lp: vollerKader(String(m.i)).slice(0, 11).map((x) => Number(x.i) || x.i),
-              // Mit KB_LIVE_NUR_SUMMEN=1 fehlen die Spielerlisten mit
-              // Punkten – dann bleibt nur `lp`, also die echte Lage. Die
-              // Seite muss die Elf trotzdem zeigen und sagen, dass die
-              // Einzelpunkte fehlen.
-              ...(process.env.KB_LIVE_NUR_SUMMEN === "1"
-                ? {}
-                : { pl: spieler(m.i, 20 - i * 4) }),
-            })),
-        },
-      },
-    };
-  }
-
   const squad = pfad.match(/\/managers\/(\d+)\/squad/);
   if (squad) {
     // Mit KB_ELF=1 trägt der Kader eine Aufstellung, kodiert wie bei
@@ -215,21 +165,10 @@ function fuerPfad(pfad) {
       // Wie live: `lo` null-basiert für die Aufgestellten, Bank ohne Feld.
       // Mit KB_ZEHN=1 sind es zehn statt elf.
       const wieViele = process.env.KB_ZEHN === "1" ? 10 : 11;
-      // Mit KB_MDP_IM_KADER=1 traegt der Kader die Spieltagspunkte je
-      // Spieler. Ihre Summe ueber die Elf ergibt genau die Zahl, die der
-      // Live-Endpunkt fuer den Manager meldet — die Probe, mit der sich
-      // das richtige Feld beweisen laesst.
-      const punkte =
-        process.env.KB_MDP_IM_KADER === "1"
-          ? verteile(spieltagsPunkte(squad[1]), wieViele)
-          : null;
       return {
         it: eigene.map((s, i) => ({
           pi: String(s.i), pn: s.n, pos: s.pos, mv: s.mv,
-          // `p` sind Saisonpunkte – bewusst daneben, damit sich zeigt,
-          // dass die Probe das falsche Feld aussortiert.
           p: 1000 + i,
-          ...(punkte && i < wieViele ? { mdp: punkte[i] } : {}),
           ...(i < wieViele ? { lo: i } : {}),
         })),
       };

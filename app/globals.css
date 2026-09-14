@@ -2064,3 +2064,8 @@ th.kb-namensspalte { z-index: 3; }
 .kb-anpfiff--knapp { color: var(--kb-warn-text); }
 .kb-anpfiff--nein  { color: var(--kb-text-schwach); }
 
+
+/* Ein abgewählter Filterchip: durchgestrichen und blass — „nicht drin",
+   im Unterschied zu „nicht wählbar" (disabled). */
+.kb-sortchip--aus { text-decoration: line-through; opacity: 0.65; }
+

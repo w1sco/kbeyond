@@ -53,15 +53,22 @@ function merkeZyklus(schluessel, n) {
 
 // ── Filter nach Startelf-Chance ─────────────────────────────────────
 //
-// Vier Sichten. Wer keine Angabe hat (null), ist weder „sicher" noch
-// „vielleicht" — Unbekanntes zählt nur dort mit, wo nichts Bestimmtes
-// verlangt wird. Nur die Stufe 5 (✕) ist „spielt definitiv nicht".
-const ELF_SICHTEN = [
-  { schluessel: "alle",   label: "Alle",            passt: () => true },
-  { schluessel: "sicher", label: "Spielt sicher",   passt: (st) => st === 1 || st === 2 },
-  { schluessel: "evtl",   label: "Spielt evtl.",    passt: (st) => st != null && st <= 3 },
-  { schluessel: "ohne",   label: "Ohne Nicht-Spieler", passt: (st) => st !== 5 },
+// Fünf Gruppen, **überschneidungsfrei** — nur so ergibt eine Mehrfachauswahl
+// einen Sinn: Angekreuzt heißt drin, jede Gruppe für sich. „Spielt sicher"
+// und „spielt evtl." zusammen sind dann genau die, die man aufstellen kann;
+// das ✕ abwählen nimmt die raus, die definitiv nicht spielen.
+//
+// Wer keine Angabe hat, ist eine eigene Gruppe: weder sicher noch
+// vielleicht, aber auch nicht „spielt nicht". Eine fehlende Angabe ist
+// keine Aussage.
+const ELF_GRUPPEN = [
+  { schluessel: "sicher", label: "★ ✔ spielt sicher", passt: (st) => st === 1 || st === 2 },
+  { schluessel: "evtl",   label: "? spielt evtl.",    passt: (st) => st === 3 },
+  { schluessel: "kaum",   label: "! eher nicht",      passt: (st) => st === 4 },
+  { schluessel: "nie",    label: "✕ spielt nicht",    passt: (st) => st === 5 },
+  { schluessel: "offen",  label: "ohne Angabe",       passt: (st) => st == null },
 ];
+const ALLE_GRUPPEN = ELF_GRUPPEN.map((g) => g.schluessel);
 
 // Das Zeichen zur Frage „läuft er noch vor dem Anpfiff aus?"
 function VorAnpfiff({ a }) {
@@ -121,7 +128,18 @@ export default function Freieliste({
   konto = null, teamwert = 0, ligaAufschlag = null, eigenerKader = [], boni = null,
 }) {
   const [gewaehlt, setGewaehlt] = useState(() => new Set());
-  const [elfSicht, setElfSicht] = useState("alle");
+  // Welche Gruppen drin sind — anfangs alle. Ein Chip schaltet seine
+  // Gruppe um; „Alle" holt alle zurück.
+  const [elfAktiv, setElfAktiv] = useState(() => new Set(ALLE_GRUPPEN));
+  function gruppeUmschalten(schluessel) {
+    setElfAktiv((alt) => {
+      const neu = new Set(alt);
+      if (neu.has(schluessel)) neu.delete(schluessel);
+      else neu.add(schluessel);
+      return neu;
+    });
+  }
+  const alleGruppen = elfAktiv.size === ELF_GRUPPEN.length;
 
   // ── Der Rhythmus als Regler ──────────────────────────────────────
   //
@@ -153,12 +171,12 @@ export default function Freieliste({
     [spieler, jetzt, zyklus, anpfiff]
   );
 
-  // Wie viele je Sicht — steht auf den Chips, damit man vor dem Klick
+  // Wie viele je Gruppe — steht auf den Chips, damit man vor dem Klick
   // sieht, ob sich einer lohnt. Dieselbe Regel wie bei den Positionen.
-  const jeSicht = useMemo(() => {
+  const jeGruppe = useMemo(() => {
     const z = new Map();
-    for (const sicht of ELF_SICHTEN) {
-      z.set(sicht.schluessel, spieler.filter((x) => sicht.passt(x.startelf ?? null)).length);
+    for (const g of ELF_GRUPPEN) {
+      z.set(g.schluessel, spieler.filter((x) => g.passt(x.startelf ?? null)).length);
     }
     return z;
   }, [spieler]);
@@ -178,8 +196,10 @@ export default function Freieliste({
   const zeilen = useMemo(() => {
     const s = suche.trim().toLowerCase();
     let gefiltert = pos === "alle" ? mitPrognose : mitPrognose.filter((x) => x.position === pos);
-    const sicht = ELF_SICHTEN.find((x) => x.schluessel === elfSicht) ?? ELF_SICHTEN[0];
-    gefiltert = gefiltert.filter((x) => sicht.passt(x.startelf ?? null));
+    if (!alleGruppen) {
+      const aktiv = ELF_GRUPPEN.filter((g) => elfAktiv.has(g.schluessel));
+      gefiltert = gefiltert.filter((x) => aktiv.some((g) => g.passt(x.startelf ?? null)));
+    }
     if (s) gefiltert = gefiltert.filter((x) => (x.name ?? "").toLowerCase().includes(s));
 
     const kopie = [...gefiltert];
@@ -202,7 +222,7 @@ export default function Freieliste({
         : Number(a[sortKey] ?? 0) - Number(b[sortKey] ?? 0);
     });
     return kopie;
-  }, [mitPrognose, sortKey, absteigend, suche, pos, elfSicht]);
+  }, [mitPrognose, sortKey, absteigend, suche, pos, elfAktiv, alleGruppen]);
 
   function klick(key) {
     if (key === sortKey) setAbsteigend(!absteigend);
@@ -263,19 +283,30 @@ export default function Freieliste({
           : <>Kein Anpfiff bekannt — die Frage „vor dem Anpfiff?&ldquo; bleibt offen.</>}
       </div>
 
-      {/* Filter nach Startelf-Chance: wer spielt überhaupt? */}
+      {/* Filter nach Startelf-Chance: Mehrfachauswahl, jede Gruppe für
+          sich an- oder abwählbar. Angekreuzt = drin. */}
       <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Startelf-Chance">
-        {ELF_SICHTEN.map((sicht) => {
-          const anzahl = jeSicht.get(sicht.schluessel) ?? 0;
+        <button
+          type="button"
+          className={`kb-sortchip${alleGruppen ? " kb-sortchip--aktiv" : ""}`}
+          onClick={() => setElfAktiv(new Set(ALLE_GRUPPEN))}
+        >
+          Alle <span className="kb-chipzahl">{spieler.length}</span>
+        </button>
+        {ELF_GRUPPEN.map((g) => {
+          const anzahl = jeGruppe.get(g.schluessel) ?? 0;
+          const an = elfAktiv.has(g.schluessel);
           return (
             <button
-              key={sicht.schluessel}
+              key={g.schluessel}
               type="button"
-              className={`kb-sortchip${elfSicht === sicht.schluessel ? " kb-sortchip--aktiv" : ""}`}
-              disabled={anzahl === 0 && sicht.schluessel !== "alle"}
-              onClick={() => setElfSicht(sicht.schluessel)}
+              role="checkbox"
+              aria-checked={an}
+              className={`kb-sortchip${an && !alleGruppen ? " kb-sortchip--aktiv" : ""}${an ? "" : " kb-sortchip--aus"}`}
+              disabled={anzahl === 0}
+              onClick={() => gruppeUmschalten(g.schluessel)}
             >
-              {sicht.label} <span className="kb-chipzahl">{anzahl}</span>
+              {g.label} <span className="kb-chipzahl">{anzahl}</span>
             </button>
           );
         })}

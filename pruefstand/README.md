@@ -202,34 +202,13 @@ Er prüft, ob Seiten **rendern** — nicht, ob die Zahlen stimmen. Dafür sind
 die einzelnen Durchrechnungen da (Rhythmus, Aufschlag, Verlauf), die ohne
 Datenbank auskommen.
 
-## KB_LIVE
-
-`KB_LIVE=1` lässt **einen** der Live-Kandidaten antworten — bewusst
-verschachtelt (`d.ranking.players`), mit `u` als Manager-ID, `mdp` als
-Punktefeld und einem Marktwert direkt daneben. Keiner dieser Namen steht im
-Code: Wer Feldnamen rät statt zu suchen, fällt hier durch.
-
-`KB_LIVE_NUR_SUMMEN=1` lässt die Spielerlisten weg: Der Endpunkt meldet dann
-nur Punkte je Manager. Die Seite muss das **sagen** und trotzdem die
-gespeicherte Elf zeigen — ohne Einzelpunkte, aber nicht leer.
-
-Ohne `KB_LIVE` antwortet der Endpunkt mit 404 — der Normalfall zwischen zwei
-Spieltagen. Die Live-Seite muss das dann **sagen** und darf keine Tabelle
-voller Nullen zeigen.
-
-```bash
-# Endpunkt einmal suchen lassen (sonst steht die Seite auf "noch nicht bestimmt")
-curl -s --noproxy '*' -X POST -b "kb_token=pruef" -H "Origin: http://localhost:3300" \
-  "http://localhost:3300/api/live?league=1"
-```
-
 ## KB_429
 
 `KB_429=1` lässt Kickbase auf alles mit **429** antworten — wie bei zu vielen
 Aufrufen. Keine Seite darf daran sterben.
 
 Nachgemessen, nachdem der Nutzer auf der Startseite `A server error occurred`
-sah: `/`, `/liga`, `/liga?league=…` und `/liga/live` antworten jetzt alle mit
+sah: `/`, `/liga`, `/liga?league=…` und `/liga/markt` antworten jetzt alle mit
 **200** und zeigen „Kickbase drosselt gerade". Vorher endete die Ligaauswahl
 mit HTTP 500 — und damit die ganze App, weil sie der Einstieg ist.
 
@@ -245,19 +224,9 @@ Damit lässt sich die Frage „wie viele Kickbase-Aufrufe kostet diese Seite?"
 
 ```bash
 vorher=$(grep -c "^\[KB\]" dev.log)
-curl -s -o /dev/null -b "kb_token=pruef" "http://localhost:3300/liga/live?league=1"
+curl -s -o /dev/null -b "kb_token=pruef" "http://localhost:3300/liga/markt?league=1"
 echo $(( $(grep -c "^\[KB\]" dev.log) - vorher ))
 ```
-
-## KB_MDP_IM_KADER
-
-`KB_MDP_IM_KADER=1` legt in den Kader ein Feld `mdp` je Spieler, dessen Summe
-über die Elf **genau** die Spieltagspunkte ergibt, die der Live-Endpunkt für
-diesen Manager meldet. Daneben steht `p` mit Saisonpunkten als Ablenkung.
-
-Damit lässt sich der ganze Weg prüfen: Endpunkt suchen → Punktefeld über die
-Summe beweisen → holen → speichern → anzeigen. Das falsche Feld muss dabei
-durchfallen.
 
 ## dunkel.cjs
 

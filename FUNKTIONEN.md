@@ -445,7 +445,7 @@ Liga sie überhaupt bezahlen?*
 ### 7.6b Startelf-Chance — das Zeichen vor jedem Namen
 
 Auf **allen** Seiten, auf denen Spieler vorkommen (Kader, freie Spieler,
-Transfermarkt, News, Live, Aufstellungswahl), steht hinter dem Namen ein
+Transfermarkt, Aufstellungswahl), steht hinter dem Namen ein
 Zeichen: wie sicher der Spieler am kommenden Spieltag in der Startelf steht.
 Kickbase liefert das im Spielerprofil als Zahl (`prob`), die Einschätzung
 selbst kommt von Ligainsider.
@@ -646,69 +646,6 @@ nicht neben einem mit 22 von 22 stehen, als wären die Zahlen vergleichbar.
 
 **Ø relativ gewichtet jeden Kauf gleich**, sonst bestimmte ein einziger teurer
 Spieler die Quote der ganzen Liga.
-
-### 7.12 Spieler-News
-
-Meldungen der letzten **7 Tage** zu den Spielern im eigenen Kader und zu allen
-Angeboten am Transfermarkt, kurz zusammengefasst unter dem jeweiligen Namen.
-
-**Die News werden recherchiert, nicht geliefert.** Kickbase hat keine
-Nachrichten. Geholt wird über die **Websuche eines Sprachmodells**: Es sucht
-selbst und fasst zusammen. Damit sind überregionale Quellen (kicker,
-ligainsider), Regionalmedien (Deichstube, DerWesten) und Transfer-Journalisten
-gleichermaßen erreichbar.
-
-**Die Suche wird nicht auf eine feste Quellenliste eingeengt** — eine solche
-Liste schlösse genau die regionalen Quellen aus, die man vorher nicht
-aufzählen kann. Stattdessen stehen die bevorzugten Quellen in der Anweisung,
-und **jede Meldung nennt ihre Herkunft** samt Link.
-
-**Gesucht wird über Name und Verein, nicht über die interne Spieler-ID.** Das
-Internet kennt diese ID nicht; sie im Prompt zu führen stiftet nur Verwirrung.
-Zugeordnet wird über eine laufende Nummer aus der Liste. Der **Vereinsname**
-muss dabei ein echter Name sein — eine interne Vereins-Nummer („Undav (7)") ist
-für eine Nachrichtensuche schlimmer als gar keine Angabe.
-
-**Zwei Modi, weil Recherche Geld kostet:**
-
-- **Sammeln** (Normalfall): Ein Aufruf deckt **zwölf Spieler** ab, und gesucht
-  wird auf **Übersichtsseiten** — die Ausfall- und Sperrenlisten der großen
-  Portale führen hunderte Spieler auf einmal. Drei bis fünf Suchen beantworten
-  damit die Frage für ein ganzes Bündel. Aus 71 Einzelrecherchen werden sechs
-  Anfragen.
-- **Einzeln**: die Tiefensuche mit mehr Suchen und breiteren Quellen — nur auf
-  ausdrücklichen Klick („genauer") und immer für genau einen Spieler.
-
-Welcher Modus gilt, muss der **Server** entscheiden, nicht der Browser — sonst
-kann ein manipulierter Aufruf einen teureren Lauf auslösen.
-
-**Weitere Regeln:**
-
-- Recherchiert wird bündelweise mit Fortschrittsanzeige. Was fertig ist, ist
-  gespeichert; ein Abbruch kostet nur das laufende Bündel.
-- **Ein einzelner Ausfall darf den Lauf nicht mitreißen.** Der betroffene
-  Spieler wird vermerkt, es geht weiter. Scheitern die ersten drei Versuche
-  ohne einen Erfolg, bricht der Lauf ab, statt weiter Geld auszugeben.
-- **„Nichts gefunden" wird gespeichert, eine ausbleibende Antwort nicht.**
-  Sonst kostet derselbe Spieler bei jedem Lauf erneut Geld — aber ein einziger
-  kaputter Lauf würde alle Spieler als „erledigt" markieren und dauerhaft
-  blockieren. Ein Knopf **„N leere verwerfen"** räumt solche Einträge weg.
-- „Nichts Neues in den letzten 7 Tagen" und „Noch nicht recherchiert" sind
-  **zwei verschiedene Zustände** und werden verschieden angezeigt.
-- Was jünger als 12 Stunden ist, wird nicht neu geholt. Ein zweiter Knopf holt
-  trotzdem alles neu.
-- **Ein stiller Ausfall sieht aus wie ein Ergebnis.** Null Meldungen können
-  heißen: nichts gefunden, Antwort nicht zuordenbar, oder die Suche lief gar
-  nicht. Jeder Aufruf muss deshalb zurückgeben, **wie viele Suchen liefen, wie
-  viele Einträge kamen und wie viele verworfen wurden** — und die Seite muss
-  diese Zahlen zeigen, wenn ein Lauf ohne Meldung bleibt.
-- **Die Anweisung darf das Ergebnis nicht vorwegnehmen.** Stand darin, zu den
-  meisten Spielern sei ohnehin nichts zu finden, ist „nichts" die bequemste
-  Antwort. Stattdessen: eine Mindestzahl an Suchen verlangen und für *jeden*
-  Spieler einen Eintrag.
-- **Erfinden ist schlimmer als nichts.** Eine erfundene Verletzungsmeldung ist
-  hier deutlich schädlicher als eine leere Zeile — danach würde jemand
-  verkaufen.
 
 ### 7.13 Frag die Liga
 

@@ -297,8 +297,6 @@ spiele(spieltag, heim, gast, datum, mi, tore_heim, tore_gast, stand)
 startelf(player_id PK, stufe, spieltag, stand)   -- ligaunabhängig
   stufe 1–5 aus `prob`, NULL = gefragt und nichts geliefert
   spieltag = für welchen Spieltag die Prognose gilt
-news(league_id, player_id, name, text, stimmung, quellen JSONB, stand)
-  PK (league_id, player_id) — leerer text = nachgesehen, nichts gefunden
 kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis,
       punkte, aufgestellt, stand)
   + Index (league_id)                                 -- PK (league_id, manager_id, player_id)
@@ -359,302 +357,26 @@ aussieht, als Name zu behandeln ist.
 
 ---
 
-## Spieler-News
-
-`/liga/news` zeigt Meldungen der letzten 7 Tage zu den Spielern im eigenen Kader und zu
-allen Angeboten am Transfermarkt, kurz zusammengefasst unter dem jeweiligen Namen.
-
-### Die News werden recherchiert, nicht geliefert
-
-Kickbase hat keine Nachrichten, und das Projekt hat keine Redaktion. Geholt wird über die
-**Websuche des Modells**: Claude sucht selbst und fasst zusammen. Damit sind überregionale
-Quellen (kicker, ligainsider), Regionalmedien (Deichstube, DerWesten) und
-Transfer-Journalisten wie Fabrizio Romano gleichermaßen erreichbar.
-
-**Die Suche wird bewusst nicht auf eine Domainliste eingeengt.** Eine feste Liste schlösse
-genau die regionalen Quellen aus, die man vorher nicht aufzählen kann. Stattdessen stehen
-die bevorzugten Quellen in der Anweisung, und jede Meldung muss ihre Herkunft nennen — so
-ist am Ergebnis ablesbar, worauf sie beruht.
-
-**Nur Claude.** Die Websuche ist ein serverseitiges Werkzeug der Anthropic-API; ChatGPT und
-Gemini haben eigene, anders geformte Mechanismen. Die Frage-Funktion kann weiterhin alle
-drei; die Recherche kann es nicht, und die Seite sagt das.
-
-### Gesucht wird über Name und Verein, nicht über die ID
-
-Das Internet kennt die Kickbase-Spieler-ID nicht. Sie stand trotzdem in der Spielerliste
-des Prompts und half dort niemandem — schlimmstenfalls landete sie in einer Suchanfrage.
-Übergeben werden jetzt **Name und Vereinsname**, zugeordnet wird über eine **laufende
-Nummer** aus der Liste.
-
-Der Verein war der eigentliche Fehler: Übergeben wurde die **Team-ID**, also „Undav (7)".
-Der Pool trägt deshalb jetzt den Vereinsnamen. Unter welchem Feld er in der Tabelle steht,
-ist nicht belegt — `vereinsname()` probiert die Kandidaten durch und gibt im Zweifel `null`
-zurück. **Lieber keine Angabe als eine Zahl:** „(7)" ist für eine Nachrichtensuche
-schlimmer als gar nichts.
-
-**Sieben Tage, nicht dreißig.** Was älter ist, hat für die Aufstellung am Wochenende keine
-Bedeutung mehr, und ein enger Zeitraum liefert schärfere Treffer.
-
-### Alles vom Modell wird geprüft, nicht übernommen
-
-Das Modell antwortet mit Text, nicht mit einem Versprechen. `findeArray()` schneidet das
-JSON heraus (auch aus einem Codeblock oder aus Fließtext) und probiert **jede** öffnende
-Klammer als Anfang durch — eine Klammer im Fließtext („laut [1] und [2]") zerriss sonst den
-Ausschnitt. `saubereMeldung()` verwirft unbekannte Spieler-IDs, erfundene Stimmungswerte und
-Nicht-http-URLs und deckelt Textlänge und Quellenzahl. 22 Fälle durchgerechnet
-(`pruefstand/news.mjs`).
-
-### Sammeln ist der Normalfall, Tiefensuche die Ausnahme
-
-Der erste Entwurf suchte für **jeden Spieler einzeln und breit**. Bei Kader plus
-Transfermarkt waren das 71 Recherchen für einen Knopfdruck — zu teuer, und die Anfragen
-liefen in Vercels Zeitgrenze (der Nutzer sah `Fehler 504`, bevor irgendetwas gespeichert
-war).
-
-**Sammelmodus** (Vorgabe): Ein Aufruf deckt **zwölf Spieler** ab, und gesucht wird auf
-**Übersichtsseiten** — die Ausfall- und Sperrenlisten von ligainsider, kicker und
-transfermarkt führen hunderte Spieler auf einmal. Drei Suchen beantworten damit die Frage
-für ein ganzes Bündel statt für einen Spieler. Aus 71 Recherchen werden sechs Anfragen.
-
-**Einzelmodus**: die Tiefensuche mit mehr Suchen, breiteren Quellen und höherem Effort —
-nur auf ausdrücklichen Klick („genauer") und immer für genau einen Spieler.
-
-**Welcher Modus gilt, entscheidet die Route**, nicht der Browser: Ein manipulierter Aufruf
-soll sich keinen teureren Lauf aussuchen können, als vorgesehen ist.
-
-Der Browser ruft wiederholt auf und zeigt den Fortschritt. Was fertig ist, steht in `news`
-und bleibt — ein Abbruch kostet nur das laufende Bündel.
-
-**Ein Ausfall reißt den Lauf nicht mehr mit.** Vorher beendete eine Zeitüberschreitung bei
-Spieler 1 alle übrigen 70. Jetzt wird der betroffene Spieler vermerkt und weitergemacht;
-scheitern die ersten drei Versuche ohne einen einzigen Erfolg, bricht der Lauf ab, statt
-70-mal weiter Geld auszugeben.
-
-Fehlermeldungen der API werden **übersetzt, nicht durchgereicht**: „Der API-Schlüssel wird
-abgelehnt" statt eines JSON-Klumpens.
-
-**Ein Ergebnis wird gespeichert, eine ausbleibende Antwort nicht.** „Nichts gefunden" ist
-ein Ergebnis und wird abgelegt, sonst kostet derselbe Spieler bei jedem Lauf erneut Geld.
-Ein Spieler, zu dem das Modell **gar nichts gesagt hat**, ist aber kein Ergebnis. Genau
-daran scheiterte ein Lauf über 70 Spieler: Alle wurden als „nichts gefunden" abgelegt,
-galten damit als erledigt und wurden nie wieder abgefragt — obwohl in Wahrheit nie eine
-Antwort kam. Ein Knopf **„N leere verwerfen"** räumt solche Einträge weg.
-
-„Nichts Neues in den letzten 7 Tagen" und „Noch nicht recherchiert" sind deshalb zwei
-verschiedene Zustände, und die Seite zeigt sie verschieden.
-
-### Ein stiller Ausfall sieht aus wie ein Ergebnis
-
-Null Meldungen können drei sehr verschiedene Dinge heißen: Das Modell hat gesucht und
-nichts gefunden; es hat geantwortet, aber mit IDs, die sich nicht zuordnen lassen; oder die
-Websuche lief gar nicht. Von außen sieht alles drei gleich aus.
-
-Jeder Aufruf gibt deshalb zurück, **wie viele Suchen liefen, wie viele Einträge kamen und
-wie viele davon verworfen wurden**. Bleibt ein ganzer Lauf ohne Meldung, nennt die Seite
-diese Zahlen statt achselzuckend „keine News" anzuzeigen.
-
-**Die Anweisung darf das Ergebnis nicht vorwegnehmen.** In der ersten Fassung stand darin,
-zu den allermeisten Spielern sei nichts zu finden — bei niedrigem Effort ist „nichts" damit
-die bequemste Antwort. Der Satz ist raus, dafür steht dort jetzt ausdrücklich, dass
-mindestens zwei bis drei Suchen zu laufen haben und für **jeden** Spieler ein Eintrag mit
-**exakt** der mitgegebenen ID zurückkommen muss.
-
-Frisches wird nicht neu geholt: Was jünger als 12 Stunden ist, bleibt stehen. Ein zweiter
-Knopf holt trotzdem alles neu.
-
-### Welche Fassung der Websuche gilt, wird nicht geraten
-
-Der Nutzer wählt sein Modell selbst, und das Werkzeug gibt es in zwei Fassungen
-(`web_search_20260209`, `web_search_20250305`). Versucht wird die neuere; **nur bei 400**
-wird die ältere genommen. Alles andere (Schlüssel ungültig, Guthaben leer) schlägt durch,
-statt ein zweites Mal Geld zu kosten.
-
-### Erfinden ist schlimmer als nichts
-
-In der Anweisung steht ausdrücklich, dass ein Spieler ohne Meldung ein gültiges Ergebnis
-ist. Eine erfundene Verletzungsmeldung wäre hier deutlich schädlicher als eine leere Zeile
-— danach würde jemand verkaufen.
-
-## Live-Punkte am Spieltag
-
-`/liga/live` zeigt während eines Spieltags, was die Elf jedes Managers gerade
-holt — Managersumme, Rückstand auf den Führenden, und aufgeklappt die
-Aufstellung mit den Einzelpunkten.
-
-### Der Endpunkt wird gesucht, nicht geraten
-
-Wo Kickbase die Live-Punkte ausliefert, ist **nicht belegt**. Geraten wird
-deshalb nicht: Wir kennen die **Manager-IDs dieser Liga**, und das genügt als
-Anker. `findePunkte()` durchsucht die Antwort nach einer Liste, deren Einträge
-genau diese IDs tragen, und nimmt daneben ein Feld, dessen Werte wie Punkte
-aussehen. Findet sich nichts, kommt nichts zurück.
-
-Das ist derselbe Weg wie bei `findeWertreihe()` und `findeSpielerListe()` — und
-er trägt: In der Attrappe heißt das ID-Feld `u` und das Punktefeld `mdp`, beide
-verschachtelt unter `d.ranking.players`, mit einem Marktwert direkt daneben.
-Kein einziger dieser Namen steht im Code.
-
-Zwei Regeln, die den Fund erst brauchbar machen:
-
-- **Ein Feld, in dem überall dasselbe steht, ist kein Punktestand.** Sonst
-  gewinnt vor dem Anpfiff irgendeine Nullspalte.
-- **Zwei Treffer sind das Minimum.** Eine Liste, in der genau eine bekannte ID
-  vorkommt, ist Zufall — und ein zufälliges Feldpaar verdirbt alle anderen.
-
-### Die Einzelpunkte stehen im Eintrag des Managers
-
-Erst wurden sie über die Spieler-IDs aus dem **gespeicherten Kader** gesucht.
-Das trägt nur, solange beide Seiten dieselben IDs führen — ist der Kader einen
-Transfer alt oder schneidet Kickbase die IDs anders, bleibt die Spalte leer,
-obwohl die Zahlen in der Antwort stehen.
-
-Verlässlicher ist der Eintrag des Managers selbst: Was darin als Liste von
-Einträgen mit ID und Punktzahl steht, sind seine Spieler. `spielerImEintrag()`
-braucht unseren Kader dafür **gar nicht**; der steuert nur Name, Position und
-das Aufstellungszeichen bei. Kennt er einen Spieler nicht, kommen Name und
-Position aus der Antwort — und das Zeichen entfällt, statt „Bank" zu raten.
-
-Der stärkste Hinweis auf das richtige Feld ist der **Name der Managersumme**:
-Kickbase benennt beide Ebenen gleich (`mdp` über `mdp`). Deshalb gewinnt ein
-Feld, das genauso heißt, gegen jeden anderen Kandidaten — und nur ein solches
-Feld darf auch dann zählen, wenn alle Werte gleich sind. Vor dem Anpfiff stehen
-alle Spieler auf 0; das ist echt und keine zufällige Nullspalte.
-
-Der Weg über den Kader bleibt als **zweiter** Versuch, falls eine Antwort die
-Spieler nicht beim Manager führt, sondern in einer eigenen Liste.
-
-**Das ID-Feld wird nicht am Namen erkannt.** Erst galten nur `pi`, `i` und `id`.
-Heißt es anders (`pid`, `playerId`, …), fiel die ganze Liste durch und die
-Einzelpunkte blieben leer, obwohl sie in der Antwort standen. Eine ID erkennt man
-aber an ihrer Eigenschaft: **je Eintrag verschieden**. Bekannte Namen gewinnen,
-alles andere kommt danach.
-
-**Das Punktefeld bleibt dagegen am Namen verankert** — es zählt nur ein Feld, das
-so heißt wie die Managersumme oder nach Punkten klingt. Sonst würde jede Zahl im
-Eintrag (Größe, Gewicht, Trikotnummer) zur Punktzahl, und eine falsche Zahl ist
-hier schlimmer als gar keine: Danach entscheidet jemand.
-
-**Findet sich nichts, zeigt die Seite einen Managereintrag im Rohzustand.** Die
-Antwort liegt ohnehin vor — das kostet keinen zusätzlichen Aufruf und beantwortet
-die Frage, woran es liegt, ohne die Diagnoseseite mit ihren vierzehn Aufrufen.
-
-### Was der Live-Endpunkt wirklich liefert
-
-An echten Daten abgelesen (`/v4/leagues/{id}/live`, Managereintrag):
-
-```json
-{ "i": "1142416", "n": "O-L-I", "adm": false,
-  "sp": 448, "mdp": 448, "shp": 0, "tv": 136147433,
-  "spl": 13, "mdpl": 13, "pa": true,
-  "lp": [1580, 11949, 15589, 3129, 9642, …] }
-```
-
-- `mdp` = **Spieltagspunkte** des Managers, `sp` = Saisonpunkte (am 1. Spieltag
-  gleich), `mdpl`/`spl` = die jeweiligen Plätze.
-- **`lp` ist eine Liste blanker Zahlen — die Spieler-IDs seiner Elf, ohne Punkte.**
-
-Daraus folgt zweierlei. Erstens: Die **Aufstellung** kommt jetzt aus der
-Live-Antwort statt aus der Datenbank — sie ist aktueller. Erkannt wird sie an ihrer
-Form (Array aus mindestens zwei eindeutigen Zahlen), nicht am Namen `lp`. Namen und
-Positionen steuern Kader, Pool und Events bei; das kostet keinen Aufruf.
-
-Zweitens: **Die Einzelpunkte stehen nicht in dieser Antwort.** Sie brauchen einen
-zweiten Endpunkt.
-
-#### Bewiesen wird über die Summe, nicht über den Feldnamen
-
-Der erste Anlauf suchte nach einer Liste mit mindestens zwei bekannten Spieler-IDs.
-Für einen Endpunkt, der **einen** Spieler beschreibt, konnte das nie zutreffen — ein
-Denkfehler.
-
-Es gibt aber eine harte Prüfgröße, dieselbe Idee wie die Kalibrierung des
-Kontostands: **Die Summe der Elf muss `mdp` ergeben.** `feldMitSumme()` probiert
-jedes numerische Feld der Kaderantwort durch und nimmt das, dessen Summe über die
-elf Spieler genau die Spieltagspunkte des Managers trifft. Ein Feld, das nur so
-heißt, fällt durch; die Saisonpunkte fallen durch; der Marktwert fällt durch.
-
-Eine Summe von **0 gilt nicht als Beweis** — vor dem Anpfiff steht alles auf 0 und
-jedes leere Feld würde „passen".
-
-Passt nichts, werden die geprüften Felder mit ihren Summen genannt, nach Nähe zum
-Sollwert sortiert. Auch das sagt etwas: Man sieht, ob man knapp daneben liegt oder
-im falschen Endpunkt sucht.
-
-#### Geholt wird auf Klick, gelesen aus der Datenbank
-
-Der bewiesene Pfad steht in `pool_cache` unter `live_pfad` (`spielerPfad`,
-`spielerFeld`). Ihn abzufragen kostet **einen Aufruf je Manager** — das läuft
-deshalb nur auf Knopfdruck. Die geholten Punkte liegen unter `live_punkte_{liga}`;
-der Seitenaufruf liest sie von dort und kostet nichts.
-
-Angezeigt wird immer **Kickbases eigene Managersumme**, nicht die Summe der
-Spieler. Weichen beide ab, sagt die Zeile das — der Unterschied ist eine
-Information (Bank, noch nicht gewertete Spiele), kein Fehler zum Verstecken.
-
-### Die Spielerlisten hängen je Manager einzeln im Baum
-
-`players[0].pl`, `players[1].pl`, … — jede ist ein eigener Fund.
-`sammleTreffer()` führt alle Funde **desselben Feldpaars** zusammen. Der erste
-Anlauf nahm nur den besten und zeigte damit die Elf eines einzigen Managers,
-während alle anderen als „keine Daten" dastanden.
-
-Aus demselben Grund läuft die Suche über **alle** Einträge einer Liste. Eine
-Abkürzung auf die ersten drei sah in der Attrappe richtig aus und hätte ab dem
-vierten Manager nichts mehr gefunden.
-
-### Gesucht wird auf Klick, gelesen wird mit einem Aufruf
-
-Die Suche kostet bis zu elf Anfragen. Sie läuft deshalb **nur über
-`/api/live` per POST**, nie beim Rendern — genau der Fehler, der beim
-Spielerpool schon einmal 19 Anfragen in einen Seitenaufruf gelegt hat.
-
-Der gefundene Pfad steht in `pool_cache` unter `live_pfad`. Danach kostet ein
-Seitenaufruf einen Aufruf. Kader und Aufstellung kommen aus der Datenbank und
-kosten nichts.
-
-**Automatisch aufgefrischt wird nur auf Wunsch**, höchstens einmal je Minute
-und mit sichtbarem Countdown. Vorbelegt ist aus.
-
-### Zwischen zwei Spieltagen sieht das anders aus
-
-Dann antwortet der Endpunkt nicht oder trägt die IDs nicht mehr. Die Seite sagt
-das (`liefert gerade keine Punkte`), statt eine Tabelle voller Nullen zu zeigen
-— eine Null ist hier nicht von „kein Spieltag" zu unterscheiden.
-
-Aus demselben Grund ist die Suche nur **während** eines Spieltags
-aussagekräftig, und die Diagnoseseite `/livepunkte?league=…` sagt das oben
-ausdrücklich. Sie zeigt alle Kandidaten mit Fund, Feldnamen und einer Probe.
-
-**Auch die Diagnoseseite läuft erst auf Klick** (`&suchen=1`). Sie probiert elf
-Endpunkte durch, dazu Rangliste und Kader: 14 Aufrufe — und die fielen vorher bei
-**jedem Öffnen** an, Neuladen inklusive. Ein paar Neuladungen reichen, um in
-Kickbases Drosselung zu laufen; genau daran ist die App einmal ausgefallen. Offen
-kostet die Seite jetzt einen Aufruf (die Mitgliedsprüfung).
-
-Gemessen mit `KB_ZAEHLEN=1`, das jeden Aufruf der Attrappe protokolliert:
-
-| Seite | Aufrufe |
-|---|---|
-| `/liga/live` | 3 |
-| `/liga?league=…` | 4 |
-| `/livepunkte` (offen) | 1 |
-| `/livepunkte&suchen=1` | 14 |
-
-**Diese Regel gilt für alle Diagnoseseiten**, nicht nur für diese: Was mehr als
-eine Handvoll Aufrufe kostet, gehört hinter einen Knopf. Die übrigen Diagnoseseiten
-sind noch nicht umgestellt.
-
-### Was die Seite nicht weiß
-
-Ob ein Spiel läuft, schon vorbei ist oder noch nicht angepfiffen wurde. Ein
-Spieler mit 0 Punkten kann gespielt und nichts geholt haben oder noch gar nicht
-dran gewesen sein. Es steht deshalb nirgends „x von 11 fertig" — das wäre
-geraten.
-
-Die **Aufstellung stammt aus der Datenbank**. Wer seine Elf seit dem letzten
-Aktualisieren geändert hat, steht hier noch mit der alten; die Seite sagt das
-unter der Tabelle.
+## Zwei Seiten, die es einmal gab: News und Live-Punkte
+
+**Spieler-News** (`/liga/news`) ließ Claude per Websuche Meldungen zu Kader und
+Transfermarkt recherchieren — Sammelmodus über zwölf Spieler je Aufruf, alles
+vom Modell geprüft statt übernommen, „nichts gefunden" als Ergebnis gespeichert,
+eine ausbleibende Antwort nicht. **Live-Punkte** (`/liga/live`) suchte den
+Live-Endpunkt über die bekannten Manager-IDs statt über Feldnamen und bewies das
+Punktefeld über die Summe der Elf gegen `mdp`.
+
+Beide sind auf Wunsch des Nutzers **komplett entfernt**: Seiten, Routen
+(`/api/news`, `/api/live`), `lib/news.js`, `lib/live.js`, `lib/liveabruf.js`,
+die Diagnose `/livepunkte`, ihre Durchrechnungen und die Attrappen-Schalter
+`KB_LIVE`, `KB_LIVE_NUR_SUMMEN`, `KB_MDP_IM_KADER`. Die Tabelle `news` wird
+nicht mehr angelegt, eine vorhandene nicht gelöscht.
+
+Drei Lektionen daraus leben an anderer Stelle weiter und stehen dort:
+**Ein stiller Ausfall sieht aus wie ein Ergebnis** (Freigabe-Mail, Spielplan),
+**der Browser fasst selbst nach, statt Vercels Zeitgrenze zu reißen**
+(Startelf-Abruf), und **Diagnoseseiten laufen erst auf Klick** — was mehr als
+eine Handvoll Aufrufe kostet, gehört hinter einen Knopf.
 
 ## Der Spielplan
 
@@ -708,7 +430,7 @@ und leere Tabellen kosten nichts; die `CREATE`-Anweisungen sind nur aus
 
 Vor jedem Spielernamen steht ein Zeichen: wie sicher er am kommenden Spieltag in
 der Startelf steht. Es gilt auf **allen** Seiten, auf denen Spieler vorkommen —
-Kader, freie Spieler, Transfermarkt, News, Live und die Aufstellungswahl.
+Kader, freie Spieler, Transfermarkt und die Aufstellungswahl.
 
 | Zeichen | `prob` | Bedeutung |
 |---|---|---|
@@ -780,7 +502,7 @@ Warum überhaupt mehrere Anfragen: 470 Aufrufe mal 600 ms Mindestabstand sind
 in sein Zeitbudget passt (rund 60 Spieler), und meldet in `offen`, wie viel
 fehlt; **der Browser fasst selbst nach**. Für den Nutzer ist es ein Klick.
 
-Genau der Weg, den die News-Recherche schon geht — und aus demselben Grund: Ein
+Denselben Weg ging einmal die News-Recherche, und aus demselben Grund: Ein
 Abbruch kostet nur das laufende Bündel, alles davor steht in der Datenbank. Der
 Abbrechen-Zustand steht dabei in einem **Ref**, nicht in `useState`: Die
 Schleife läuft in einem Abschluss über den Stand vom Beginn des Laufs und hätte
@@ -798,7 +520,7 @@ Zwei Dinge bleiben wie geplant:
 
 **`stufe = NULL` ist ein Ergebnis.** „Gefragt, Kickbase sagt nichts" wird
 gespeichert, sonst kostet derselbe Spieler bei jedem Lauf erneut einen Aufruf —
-dieselbe Lektion wie bei den News. Als beantwortet gilt aber **nur ein 404**:
+die Lektion aus der früheren News-Recherche. Als beantwortet gilt aber **nur ein 404**:
 Bei einer Drosselung oder einem Ausfall wäre der Vermerk gelogen und der Spieler
 bliebe eine Woche ohne Angabe.
 
@@ -1109,13 +831,13 @@ ein; offene Arbeit liefe ins Leere. Es kostet rund eine Zehntelsekunde.
 schon in der Datenbank. Er wird aber **vermerkt** (`zugang.melde_fehler`) und
 auf der Verwaltungsseite an der Zeile genannt, mit dem Grund im Wortlaut. Ohne
 das sähe „keine Mail bekommen" genauso aus wie „es hat eben niemand
-angefragt" — derselbe stille Ausfall, der bei den News schon einmal 70 Spieler
-fälschlich als erledigt abgelegt hat.
+angefragt" — derselbe stille Ausfall, der bei der früheren News-Recherche
+einmal 70 Spieler fälschlich als erledigt abgelegt hat.
 
 ### Warum hier doch ein Schlüssel auf dem Server liegt
 
 Das Projekt hält bewusst **keinen** eigenen LLM-Schlüssel vor: Bei „Frag die
-Liga" und den News zahlt jeder Nutzer selbst. Hier ist es umgekehrt — die
+Liga" zahlt jeder Nutzer selbst. Hier ist es umgekehrt — die
 Nachricht geht **an** den Betreiber, über seinen Zugang, für seine eigene App.
 Der Grundsatz bleibt: *Nichts, was ein Nutzer auslöst, kostet den Betreiber
 LLM-Guthaben.* Eine Anfrage-Mail ist keine LLM-Anfrage.
@@ -1567,23 +1289,16 @@ app/
   liga/transfermarkt/Marktliste.jsx  "use client" — filtern nach Anbieter
   liga/Verlauf.jsx                 "use client" — Teamwert-Verlauf als Liniendiagramm
   liga/Frag.jsx                    "use client" — Fragen an ein LLM, Schlüssel im Browser
-  liga/news/page.js                Spieler-News: eigener Kader und Transfermarkt
-  liga/news/Newsliste.jsx          "use client" — Recherche in Bündeln, Fortschritt
   spielplan/page.js                Diagnose: wer spielt wann gegen wen
   startelf/page.js                 Diagnose: stimmt die prob-Skala, geht es billiger
   _ui/Startelf.jsx                 das Zeichen vor dem Namen, ohne Angabe nichts
   _ui/Schloss.jsx                  steht, wo eine Zahl stünde, die jemand nicht zeigt
   _ui/Startelflegende.jsx          was die fünf Zeichen heißen, plus Abrufstand
-  liga/live/page.js                Live-Punkte am Spieltag, je Manager und Spieler
-  liga/live/Auffrischen.jsx        "use client" — von Hand oder alle 60 s
-  livepunkte/page.js               Diagnose: welcher Endpunkt liefert Live-Punkte
   _ui/Hinweis.jsx                  "use client" — Hinweis als anklickbares Popup
   _ui/Schublade.jsx                "use client" — Off-Canvas, schließt über den Verlauf
   liga/layout.js                   children + paralleler Slot @panel
   liga/@panel/(.)manager/[id]/     fängt die Managerseite ab und zeigt sie als Schublade
   api/frag/route.js                Frage → Antwortstrom
-  api/news/route.js                Ein Bündel Spieler recherchieren und ablegen
-  api/live/route.js                Live-Endpunkt suchen und merken
   api/startelf/route.js            Ein Bündel Startelf-Chancen holen
   _ui/Startelfholen.jsx            "use client" — ein Klick, Browser fasst nach
   api/modelle/route.js             Modellliste beim Anbieter erfragen
@@ -1616,13 +1331,10 @@ lib/
                     — Tagesstützstellen 0 Uhr, ohne DB
   tagesverlauf.js   rekonstruiereVerlauf(), schreibeRekonstruktion() — bis zum Reset
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
-  news.js           holeNews(), findeArray(), saubereMeldung() — Websuche via Claude
   startelf.js       STUFEN, stufe(), leseChance(), ernte() — Chance, ohne DB
   startelfabruf.js  importiereStartelf(), standStartelf() — prob je Spieler holen
   spielplan.js      leseSpielplan() — den Spielplan lesen, ohne DB
   spieleabruf.js    importiereSpielplan() — die 34 Spieltage in einem Aufruf
-  live.js           findePunkte(), sammleTreffer() — Live-Punkte finden, ohne DB
-  liveabruf.js      holeLivestand(), sucheLivePfad() — Live-Stand holen und merken
   zugang.js         pruefeAnmeldung(), zugangZuToken(), entscheide(),
                     geheimeZugaenge(), setzePrivat() — Freigabeliste
   privatsphaere.js  wenVerbergen(), verbergeKonten(), verbergeTagesstand()
@@ -1703,7 +1415,7 @@ bist in keiner Liga".
 > `catch` um `holeLigen()` verschluckt damit auch die Weiterleitung zur Anmeldung.
 > `istWeiterleitung()` in `lib/auth.js` erkennt sie am `digest` und lässt sie durch.
 
-Nachgemessen mit `KB_429=1`: `/`, `/liga`, `/liga?league=…` und `/liga/live` antworten alle
+Nachgemessen mit `KB_429=1`: `/`, `/liga`, `/liga?league=…` und `/liga/markt` antworten alle
 mit 200 und sagen, was los ist.
 
 ### Nur holen, was sich geändert hat

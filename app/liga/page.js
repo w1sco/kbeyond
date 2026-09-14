@@ -270,11 +270,9 @@ export default async function Liga({ searchParams }) {
           {/* Formulare statt Links: ein GET, das Daten verändert, lässt sich
               von einer fremden Seite aus auslösen. */}
           <Aktion pfad="aktualisieren" leagueId={leagueId} haupt>Alles aktualisieren</Aktion>
-          <a href={`/liga/live?league=${leagueId}`} className="kb-btn">Live-Punkte</a>
           <a href={`/liga/transfermarkt?league=${leagueId}`} className="kb-btn">Transfermarkt</a>
           <a href={`/liga/markt?league=${leagueId}`} className="kb-btn">Freie Spieler</a>
           <a href={`/liga/aufschlaege?league=${leagueId}`} className="kb-btn">Aufschläge</a>
-          <a href={`/liga/news?league=${leagueId}`} className="kb-btn">News</a>
           <a href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Einstellungen</a>
           <Link href="/liga" className="kb-btn">Liga wechseln</Link>
           {admin && (

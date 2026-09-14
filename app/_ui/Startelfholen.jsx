@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 //
 // Ein Aufruf je Spieler passt nicht in einen Request — deshalb fasst der
 // Browser selbst nach, bis nichts mehr offen ist, und zeigt dabei, wie
-// weit er ist. Genau der Weg, den die News-Recherche schon geht.
+// weit er ist. Denselben Weg ging einmal die News-Recherche.
 //
 // **Abbrechen kostet nichts.** Was geholt ist, steht in der Datenbank;
 // der nächste Klick macht dort weiter, wo dieser aufgehört hat.
