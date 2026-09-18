@@ -298,7 +298,7 @@ startelf(player_id PK, stufe, spieltag, stand)   -- ligaunabhängig
   stufe 1–5 aus `prob`, NULL = gefragt und nichts geliefert
   spieltag = für welchen Spieltag die Prognose gilt
 kader(league_id, manager_id, player_id, name, position, marktwert, kaufpreis,
-      punkte, aufgestellt, stand)
+      punkte, schnitt, aufgestellt, stand)   -- schnitt = Punkte je Spiel (`ap`)
   + Index (league_id)                                 -- PK (league_id, manager_id, player_id)
 ```
 
@@ -1278,6 +1278,7 @@ app/
   liga/page.js                     Hauptseite: Auswahl, Kalibrierung, Status, Datenlücke
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
   liga/aufschlaege/page.js         Aufschläge über Marktwert, je Herkunft und Zeitraum
+  liga/elf/page.js                 Aufgestellte Elf: Summe der Punkteschnitte je Manager
   liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
   liga/manager/[id]/Aufstellung.jsx      "use client" — elf Spieler auf dem Platz
@@ -1327,6 +1328,7 @@ lib/
   rekonstruktion.js rekonstruiere(), holePool(), aktualisierePool()
   rhythmus.js       bildeAuftritte(), prognostiziere(), vorAnpfiff() — 14 Tage, ohne DB
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
+  elfstaerke.js     bewerteElf() — aufgestellte Elf nach Punkteschnitt, ohne DB
   verlauf.js        tagesraster(), tagesreihen(), tageZwischen(), wertAmTag()
                     — Tagesstützstellen 0 Uhr, ohne DB
   tagesverlauf.js   rekonstruiereVerlauf(), schreibeRekonstruktion() — bis zum Reset
@@ -1725,6 +1727,34 @@ fallen dort von selbst heraus.
 Die **Restzeit wird auf dem Server formatiert**, nicht im Browser. Ein `Date.now()` beim
 Rendern ist unrein und liefe beim Hydrieren auseinander; der Linter fängt das inzwischen
 als Fehler ab.
+
+### Aufgestellte Elf nach Punkteschnitt
+
+`/liga/elf` beantwortet: Wie stark ist die Elf, die jeder **gerade aufgestellt**
+hat? Je Manager die Summe der **Punkteschnitte je Spiel** (Kickbase-Feld `ap`)
+über seine aufgestellten Spieler, daraus eine Tabelle mit Rang. Der Name klappt
+die Elf auf, mit Schnitt und Startelf-Zeichen je Spieler.
+
+**Das ist eine Momentaufnahme, keine Prognose**: „Hätten alle wie bisher
+gepunktet, stünde diese Elf bei X." Die Seite sagt das so.
+
+Drei Dinge daran sind Absicht:
+
+- **Kostet keinen Kickbase-Aufruf.** Aufstellung (`lo`) und Schnitt (`ap`)
+  kommen mit dem Kader beim Aktualisieren; `kader.schnitt` ist eine neue
+  Spalte, mitgeschrieben in `ladeKader()`. Die Seite liest nur die Datenbank.
+- **Was fehlt, fehlt sichtbar.** Ein Spieler ohne Schnitt zählt als 0 **und
+  wird als Lücke gezählt** — eine zu niedrige Summe sähe sonst aus wie eine
+  schwache Elf statt wie eine Datenlücke. Dieselbe Regel wie beim Kaderwert
+  im Verlauf.
+- **Ohne Aufstellung keine Zahl.** Wer keine gespeichert hat, steht mit „–" am
+  Ende, nicht mit 0 mittendrin. Ein Rang teilt sich bei gleicher Summe.
+
+Die Aufstellung ist so alt wie der letzte Aktualisieren-Lauf — dieselbe
+Einschränkung wie bei der Managerseite, und die Seite nennt den Stand.
+
+`lib/elfstaerke.js` ist reine Rechnung; 13 Fälle in `pruefstand/elfstaerke.mjs`
+(Bank zählt nicht, Lücke gezählt, gleicher Rang, Zahlen als Text aus NUMERIC).
 
 ### Wahrscheinliche Aufstellung
 

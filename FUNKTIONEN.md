@@ -647,6 +647,21 @@ nicht neben einem mit 22 von 22 stehen, als wären die Zahlen vergleichbar.
 **Ø relativ gewichtet jeden Kauf gleich**, sonst bestimmte ein einziger teurer
 Spieler die Quote der ganzen Liga.
 
+### 7.12 Aufgestellte Elf
+
+Wie stark ist die Elf, die jeder Manager **gerade aufgestellt** hat? Je Manager
+wird der **Punkteschnitt je Spiel** seiner aufgestellten Spieler aufsummiert;
+daraus entsteht eine Tabelle mit Rang. Der Name klappt die Elf auf.
+
+- Momentaufnahme, keine Prognose: „Hätten alle wie bisher gepunktet, stünde
+  diese Elf bei dieser Zahl."
+- Ein Spieler ohne Schnitt zählt als 0 und steht als **Lücke** daneben — statt
+  die Summe stillschweigend zu drücken.
+- Wer keine Aufstellung gespeichert hat, steht ohne Zahl am Ende.
+- Kostet keinen Kickbase-Aufruf: Aufstellung und Schnitt kommen mit dem Kader
+  beim Aktualisieren. Die Aufstellung ist entsprechend so alt wie der letzte
+  Lauf.
+
 ### 7.13 Frag die Liga
 
 Freie Fragen zum Datensatz („Wen muss X verkaufen, um aus dem Minus zu

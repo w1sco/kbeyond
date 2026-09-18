@@ -2069,3 +2069,15 @@ th.kb-namensspalte { z-index: 3; }
    im Unterschied zu „nicht wählbar" (disabled). */
 .kb-sortchip--aus { text-decoration: line-through; opacity: 0.65; }
 
+
+/* Eine Zeile, die aufklappt: Pfeil davor, kein Browser-Marker. */
+summary.kb-aufklappzeile { cursor: pointer; list-style: none; }
+summary.kb-aufklappzeile::-webkit-details-marker { display: none; }
+summary.kb-aufklappzeile::before { content: "▸ "; color: var(--kb-text-leise); }
+details[open] > summary.kb-aufklappzeile::before { content: "▾ "; }
+
+/* Die aufgeklappte Elf: Namen links, Schnitt rechts – kein Mittelsatz
+   aus der umgebenden Tabelle. */
+.kb-elfliste td { text-align: left; }
+.kb-elfliste td:last-child { text-align: right; white-space: nowrap; }
+

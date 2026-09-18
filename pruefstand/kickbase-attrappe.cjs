@@ -169,11 +169,15 @@ function fuerPfad(pfad) {
         it: eigene.map((s, i) => ({
           pi: String(s.i), pn: s.n, pos: s.pos, mv: s.mv,
           p: 1000 + i,
+          // Punkteschnitt je Spiel, wie in echt unter `ap`. Der zweite
+          // Spieler hat keinen – die Seite „Aufgestellte Elf" muss die
+          // Lücke zählen statt sie als 0 zu verstecken.
+          ...(i === 1 ? {} : { ap: 60 - i * 5 }),
           ...(i < wieViele ? { lo: i } : {}),
         })),
       };
     }
-    return { it: eigene };
+    return { it: eigene.map((s, i) => ({ ...s, ...(i === 1 ? {} : { ap: 60 - i * 5 }) })) };
   }
 
   // Der Spielplan: alle Spieltage in einem Aufruf, wie im Original.

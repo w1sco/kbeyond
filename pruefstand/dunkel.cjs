@@ -18,6 +18,7 @@ const SEITEN = [
   ["Freie Spieler", `/liga/markt?league=${LIGA}`],
   ["Transfermarkt", `/liga/transfermarkt?league=${LIGA}`],
   ["Aufschläge", `/liga/aufschlaege?league=${LIGA}`],
+  ["Aufgestellte Elf", `/liga/elf?league=${LIGA}`],
   ["Einstellungen", `/liga/einstellungen?league=${LIGA}`],
   ["Zugang", "/zugang"],
   ["Alter Markt", `/markt?league=${LIGA}`],
