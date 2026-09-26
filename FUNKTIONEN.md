@@ -372,6 +372,12 @@ In der Detailzeile stehen zusätzlich **wie viele Spieler gestiegen und wie
 viele gefallen** sind: Eine Summe nahe null kann Stillstand bedeuten oder ein
 Aufheben von Gewinnen und Verlusten.
 
+**Verglichen werden die zwei jüngsten Ablesungen, nicht „heute gegen gestern".**
+Wer mehrere Tage nicht aktualisiert, bekommt die Bewegung über alle Anpassungen
+seit der letzten Ablesung. Die Statusleiste nennt deshalb die beiden Tage
+(`22.09. → 26.09.`) und warnt bei mehr als einem Tag Abstand; die Managerseite
+zeigt dieselben Tage hinter der Verteilung.
+
 ### 7.5 Managerseite
 
 Erreichbar über den Namen in der Tabelle. Enthält:

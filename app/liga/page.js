@@ -2,7 +2,7 @@ import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTagesverlauf, sql, getVortag } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
-import { euro, zeitpunkt, vorZeit, inZeit, fuerTag, MW_UHRZEIT } from "@/lib/format";
+import { euro, zeitpunkt, vorZeit, inZeit, fuerTag, tagKurz, MW_UHRZEIT } from "@/lib/format";
 import Tabelle from "./Tabelle";
 import Frag from "./Frag";
 import Verlauf from "./Verlauf";
@@ -374,6 +374,12 @@ export default async function Liga({ searchParams }) {
             also, ob die eigenen Leute gerade eher steigen oder fallen.
           </p>
           <p>
+            <strong>Verglichen werden die zwei jüngsten Ablesungen</strong> — welche, steht
+            in der Statusleiste. Wer mehrere Tage nicht aktualisiert, sieht dort die
+            Spanne: Dann steckt in der Zahl die Bewegung über alle Anpassungen seit der
+            letzten Ablesung, nicht die einer Nacht.
+          </p>
+          <p>
             <strong>Transfers zählen nicht mit.</strong> Gerechnet wird je Spieler sein
             Marktwert heute minus sein Marktwert gestern — ein Kaufpreis kommt darin
             nirgends vor. Wer für 20 Mio kauft, steht deshalb nicht mit +20 Mio da,
@@ -435,6 +441,26 @@ export default async function Liga({ searchParams }) {
         <div>
           <span className="kb-label">Kader</span>
           {kaderStand ? zeitpunkt(kaderStand) : "nie geladen"}
+        </div>
+        <div>
+          {/* Welche zwei Ablesungen der MW-Trend vergleicht. Steht das
+              nicht da, liest sich eine Woche ohne Aktualisieren wie ein
+              einziger Tag — die Zahl wäre dieselbe, die Aussage nicht. */}
+          <span className="kb-label">MW-Trend</span>
+          {trend.vortag ? (
+            <>
+              {tagKurz(trend.vortag)} → {tagKurz(trend.tag)}
+              {trend.abstand > 1 ? (
+                <span className="kb-warntext"> {trend.abstand} Tage — mehrere Anpassungen</span>
+              ) : (
+                <span className="kb-leise"> eine Anpassung</span>
+              )}
+            </>
+          ) : trend.tag ? (
+            <>erst eine Ablesung ({tagKurz(trend.tag)}) — ab dem nächsten Marktwert-Tag</>
+          ) : (
+            "noch keine Ablesung"
+          )}
         </div>
       </div>
 

@@ -10,7 +10,7 @@ import { sitzung, verlangeLiga } from "@/lib/auth";
 import { holeNamen, benenne } from "@/lib/spielernamen";
 import { holeAufschlaege, aktuellAmMarkt } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
-import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe, restzeit } from "@/lib/format";
+import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe, restzeit, tagKurz } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
 import Aufstellung from "./Aufstellung";
 import Blaettern from "./Blaettern";
@@ -292,6 +292,8 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
           {trend && (
             <span className="kb-leise">
               {" "}{trend.gestiegen} ↑ · {trend.gefallen} ↓ von {trend.spieler}
+              {" · "}{tagKurz(mw.vortag)} → {tagKurz(mw.tag)}
+              {mw.abstand > 1 && <span className="kb-warntext"> ({mw.abstand} Tage)</span>}
             </span>
           )}
         </div>

@@ -1353,7 +1353,7 @@ lib/
   loginbonus.js     loginBonus(), tagesBonus(), kommendeLoginBoni() — ohne DB
   schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
-  format.js         euro, euroKurz, prozent, zeitpunkt, vorZeit, restzeit, position,
+  format.js         euro, euroKurz, prozent, zeitpunkt, tagKurz, vorZeit, restzeit, position,
                     wochentag — deutscher Wochentag,
                     mwTag, letztesMwUpdate — Marktwert-Tag ab 22:04,
                     inZeit, normalisiereSpieler, findeSpielerListe, findeBild
@@ -1602,6 +1602,24 @@ Gezählt wird nur, wer an **beiden** Tagen einen Wert hat. Nach der ersten Aktua
 steht der Trend deshalb auf „–“; ab der zweiten am nächsten Marktwert-Tag ist er da. Die
 Detailzeile zeigt zusätzlich, wie viele Spieler gestiegen und wie viele gefallen sind —
 eine Summe nahe null kann Stillstand sein oder ein Aufheben von Gewinnen und Verlusten.
+
+#### „Täglich" heißt: die zwei jüngsten Ablesungen
+
+Verglichen werden die **zwei jüngsten Marktwert-Tage in `mw_beobachtung`**, nicht
+„heute gegen gestern". Wer vier Tage nicht aktualisiert, bekommt die Bewegung über vier
+Anpassungen — dieselbe Spalte, dieselbe Farbe, aber eine andere Aussage. Die Zahl war
+richtig, nur stand nirgends, worüber sie geht. Deshalb nennt die Statusleiste jetzt die
+beiden Tage (`22.09. → 26.09.`) und warnt bei mehr als einem Tag Abstand („4 Tage —
+mehrere Anpassungen"); die Managerseite hängt dieselben Tage an die Verteilung.
+`getMwTrend()` liefert dafür `abstand`.
+
+Nachgemessen im Prüfstand: Die Saat trägt zwei Tage, die Ligaseite zeigt −100.000 € bei
+zwei Spielern (−500 Tsd, +400 Tsd; der Spieler mit nur einem Tag zählt nicht), −700.000 €
+und ±0 — genau die Summen der Saat. Drei Tage zurückgeschoben steht „4 Tage" daneben.
+
+Was der Code nicht prüfen kann: dass Kickbase weiterhin um 22:04 anpasst. Verschöbe sich
+die Uhrzeit nach hinten, landete eine Ablesung dazwischen unter dem neuen Tag mit den
+alten Werten — der Trend stünde dann einen Tag auf 0 und am nächsten doppelt.
 
 #### Frische richtet sich jetzt auch nach 22:04
 
