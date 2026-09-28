@@ -143,9 +143,10 @@ Punkt 2 wurde nachträglich ergänzt, weil ein Kauf (Baur, 8.8.) fehlte: Der Spi
 #### Neuzugänge: täglich nachsehen, ergänzen statt ersetzen
 
 Die Bundesliga steht nicht still — Spieler kommen neu dazu, wechseln den Verein, ändern
-ihren Marktwert. `aktualisierePool()` geht deshalb einmal am Tag alle 18 Vereine durch,
-nach **derselben Regel wie Teamwerte und Kader**: Ist der Stand von vor der letzten
-deutschen Mitternacht, wird nachgesehen. Neuzugänge werden im Ergebnis namentlich genannt
+ihren Marktwert. `aktualisierePool()` geht deshalb einmal am Tag alle 18 Vereine durch:
+Ist der Stand von vor der letzten **Marktwertanpassung (22:04)**, wird nachgesehen.
+Dabei schreibt der Lauf die Marktwerte aller Spieler nach `mw_beobachtung` — daraus
+entstehen 24 h und 7 Tage auf der Marktseite. Neuzugänge werden im Ergebnis namentlich genannt
 („2 neue Spieler (Neuzugang Winter, …)"), damit man sieht, dass es greift.
 
 **Zusammengeführt, nicht überschrieben.** Der Pool wurde früher bei jedem Aufbau komplett
@@ -591,11 +592,63 @@ gleich aussehen zu lassen.
 
 ### Filter nach Startelf-Chance
 
-Über der Liste: **Alle · Spielt sicher · Spielt evtl. · Ohne Nicht-Spieler**,
-mit Anzahl je Chip. „Sicher" heißt Stufe 1–2, „evtl." 1–3, „ohne" alles außer
-Stufe 5. **Wer keine Angabe hat, ist weder sicher noch vielleicht** — Unbekanntes
-zählt nur mit, wo nichts Bestimmtes verlangt wird. Nur das ✕ ist „spielt
-definitiv nicht"; eine fehlende Angabe ist keine Aussage.
+Über der Liste: **Alle · ohne ✕** und fünf überschneidungsfreie Gruppen —
+★ ✔ spielt sicher (Stufe 1–2), ? spielt evtl. (3), ! eher nicht (4),
+✕ spielt nicht (5), ohne Angabe. Mehrfachauswahl, mit Anzahl je Chip.
+**Wer keine Angabe hat, ist eine eigene Gruppe** — weder sicher noch
+vielleicht, aber auch nicht „spielt nicht". Eine fehlende Angabe ist keine
+Aussage.
+
+**Gewählt heißt: nur diese.** Die erste Mehrfachauswahl startete mit allen
+Gruppen an, und ein Tipp auf „spielt sicher" schaltete genau diese Gruppe
+**aus** — wer die Sicheren sehen wollte, bekam alle anderen. Die Rechnung
+stimmte, die Bedienung war verkehrt herum. Jetzt ist die Auswahl anfangs leer
+(= alle), jeder Tipp nimmt eine Gruppe dazu oder weg, alle fünf gewählt fällt
+zurück auf „Alle". „ohne ✕" ist die Abkürzung für die vier übrigen Gruppen.
+
+Die Zahlen auf den Chips zählen **innerhalb der gewählten Position** — sonst
+stünde dort „12 spielen sicher" und die Liste zeigte drei Torhüter. Eine
+gewählte Gruppe bleibt abwählbar, auch wenn sie in der Position leer ist.
+
+Nachgemessen im Browser bei 1280 und 390 px: sicher → nur die Sicheren, dazu
+evtl. → beide, sicher wieder weg → nur evtl., „ohne ✕" → alle außer Stufe 5.
+
+### 24 Stunden und 7 Tage: die Marktwert-Bewegung
+
+Neben dem Marktwert stehen zwei Zahlen wie in der Kickbase-App: die Änderung
+bei der letzten Anpassung (**24 h**) und über die letzten sieben (**7 Tage**).
+Auf breiten Displays als eigene, sortierbare Spalten; auf dem Handy als Zeile
+unter dem Marktwert, sortiert über eine Chipleiste.
+
+**Aus eigenen Ablesungen, nicht von Kickbase.** In keiner Liste, die wir
+ohnehin holen, ist ein Feld dafür belegt, und die Kurve je Spieler wären rund
+470 Aufrufe. Der Pool-Lauf liest aber ohnehin die Marktwerte **aller**
+Bundesliga-Spieler — `aktualisierePool()` schreibt sie jetzt nach
+`mw_beobachtung`, derselben Mitschrift, aus der der MW-Trend der Ligaseite
+entsteht. **Kein einziger zusätzlicher Aufruf.** Vorher standen dort nur die
+Spieler aus Managerkadern; freie Spieler hatten keine Ablesung.
+
+`getMwBewegung()` vergleicht den jüngsten Marktwert-Tag mit **genau** einem
+und **genau** sieben Tagen davor. Fehlt eine dieser Ablesungen, steht „–" —
+ein Abstand über acht Tage, der als „7 Tage" dasteht, wäre eine falsche
+Aussage. Wer am jüngsten Tag selbst fehlt (sein Verein kam im Lauf nicht
+dran), bekommt ebenfalls nichts. In der Sortierung stehen Spieler ohne Wert
+**immer am Ende**, in beide Richtungen. Über der Liste steht, von welcher
+Anpassung der Stand ist und für wie viele Spieler es beide Werte gibt.
+
+Damit jeder Marktwert-Tag eine Ablesung bekommt, gilt der Pool jetzt ab der
+**letzten Marktwertanpassung (22:04)** als veraltet statt ab Mitternacht.
+Nach Mitternacht gezählt, fiele ein Tag aus, sobald jemand erst abends nach
+22:04 aktualisiert. Es bleibt ein Lauf je Tag.
+
+Folge: 24 h füllt sich ab dem zweiten Tag, 7 Tage ab dem achten — bei
+täglichem Aktualisieren. Die Seite sagt das im Hinweis. Nachgemessen im
+Prüfstand: +500 Tsd / −2 Mio und −100 Tsd / „–" wie gesät, eine Ablesung von
+vor acht Tagen zählt nicht als „7 Tage".
+
+Sollte `/ligamonitor` im rohen Marktangebot ein Feld für die 24-h- oder
+7-Tage-Bewegung zeigen, ließe sich die Anlaufzeit sparen. Bis das belegt ist,
+wird nichts geraten.
 
 ### Die Schätzung gab es einmal
 

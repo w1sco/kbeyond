@@ -12,6 +12,7 @@ import { importiereSpielplan } from "@/lib/spieleabruf";
 import { pruefeApi, sitzung } from "@/lib/auth";
 import { bremseZuruecksetzen } from "@/lib/kickbase";
 import { holeMitspieler } from "@/lib/mitspieler";
+import { letztesMwUpdate } from "@/lib/format";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -92,15 +93,23 @@ export async function POST(request) {
 
     // 3. Spielerpool – Neuzugänge, Vereinswechsel, neue Marktwerte.
     //
-    //    Einmal am Tag, nach derselben Regel wie Teamwerte und Kader: Ist
-    //    der Stand von vor der letzten Mitternacht, wird nachgesehen.
+    //    Einmal am Tag: Ist der Stand von vor der letzten
+    //    Marktwertanpassung, wird nachgesehen.
     //
     //    Das lief früher beim Seitenaufruf der Marktseite los — 19 Anfragen
     //    mitten im Rendern, an der Bremse vorbei. Jetzt hier, im Lauf, den
     //    der Nutzer bewusst auslöst.
+    //
+    //    Bezug ist die letzte Marktwertanpassung (22:04), nicht Mitternacht:
+    //    Der Lauf liest dabei die Marktwerte aller Spieler mit, und daraus
+    //    entsteht die 24-Stunden-Bewegung auf der Marktseite. Nach
+    //    Mitternacht gezählt, fiele ein Marktwert-Tag aus, sobald jemand
+    //    erst abends nach 22:04 aktualisiert. Die Zahl der Läufe bleibt
+    //    dieselbe: einer je Tag.
     const pool = await holePool();
+    const mwBezug = letztesMwUpdate() ?? mitternachtDeutsch();
     const poolAlt =
-      pool.leer || !pool.stand || new Date(pool.stand) < mitternachtDeutsch();
+      pool.leer || !pool.stand || new Date(pool.stand) < mwBezug;
 
     if (!poolAlt && !voll) {
       erledigt.push("Spielerliste aktuell");

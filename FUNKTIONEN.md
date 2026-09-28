@@ -546,9 +546,17 @@ vorher, ~ heißt knapp (oder der Spieler ist überfällig und kann jeden Tag
 kommen), ✕ heißt erst danach. Der Anpfiff kommt aus dem Spielplan; kennt der
 keinen, aus der Einstellung (Freitag 20:30) — die Seite sagt, welches.
 
-**Filter nach Startelf-Chance:** Alle · Spielt sicher (★ ✔) · Spielt evtl.
-(★ ✔ ?) · Ohne Nicht-Spieler (alles außer ✕). Wer keine Angabe hat, gilt
-weder als sicher noch als vielleicht.
+**Filter nach Startelf-Chance:** Alle · ohne ✕ · ★ ✔ spielt sicher ·
+? spielt evtl. · ! eher nicht · ✕ spielt nicht · ohne Angabe. Mehrfachauswahl:
+Gewählt heißt „nur diese", nichts gewählt heißt alle. Wer keine Angabe hat,
+ist eine eigene Gruppe. Die Zahlen auf den Chips zählen innerhalb der
+gewählten Position.
+
+**Marktwert 24 h und 7 Tage:** wie in der Kickbase-App, aus eigenen
+Ablesungen. Der tägliche Pool-Lauf liest die Marktwerte aller
+Bundesliga-Spieler ohnehin; verglichen wird mit der Ablesung von genau einem
+und genau sieben Marktwert-Tagen davor. Fehlt sie, steht „–". Auf dem Handy
+stehen beide Werte unter dem Marktwert.
 
 **Wer die Liga verlässt, fliegt aus der Liste.** Die Spielerliste wird beim
 Aktualisieren zusammengeführt, nicht ersetzt (damit ein ausgefallener

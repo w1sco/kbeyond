@@ -9,8 +9,24 @@ const SPALTEN = [
   { key: "name", label: "Spieler", text: true },
   { key: "position", label: "Pos.", text: true, sek: true },
   { key: "marktwert", label: "Marktwert" },
+  // Auf dem Handy ausgeblendet: Dort stehen beide Werte unter dem
+  // Marktwert, sortiert wird über die Chipleiste.
+  { key: "mw24", label: "24 h", sek: true, bewegung: true },
+  { key: "mw7", label: "7 Tage", sek: true, bewegung: true },
   { key: "wieder", label: "Wieder am Markt" },
 ];
+
+// Eine Marktwert-Bewegung: grün hoch, rot runter, ±0 gedämpft. Keine
+// Ablesung von damals heißt „–“, nicht 0 — null ist keine Aussage.
+function Bewegung({ wert, kurz = false }) {
+  if (wert == null) return <span className="kb-gedaempft">–</span>;
+  if (wert === 0) return <span className="kb-gedaempft">±0</span>;
+  return (
+    <span className={wert < 0 ? "kb-minus" : "kb-plus"}>
+      {wert > 0 ? "+" : ""}{kurz ? euroKurz(wert) : euro(wert)}
+    </span>
+  );
+}
 
 // Sortierwert der Prognose: was am ehesten kommt, steht oben.
 // Aufsteigend gelesen — deshalb kleine Zahlen für "bald".
@@ -54,9 +70,14 @@ function merkeZyklus(schluessel, n) {
 // ── Filter nach Startelf-Chance ─────────────────────────────────────
 //
 // Fünf Gruppen, **überschneidungsfrei** — nur so ergibt eine Mehrfachauswahl
-// einen Sinn: Angekreuzt heißt drin, jede Gruppe für sich. „Spielt sicher"
-// und „spielt evtl." zusammen sind dann genau die, die man aufstellen kann;
-// das ✕ abwählen nimmt die raus, die definitiv nicht spielen.
+// einen Sinn. „Spielt sicher" und „spielt evtl." zusammen sind dann genau
+// die, die man aufstellen kann.
+//
+// **Gewählt heißt: nur diese.** Die erste Fassung startete mit allen
+// Gruppen an, und ein Tipp auf „spielt sicher" schaltete genau diese
+// Gruppe AUS — wer die Sicheren sehen wollte, bekam alle anderen. Jetzt ist
+// die Auswahl anfangs leer (= alle), und jeder Tipp nimmt eine Gruppe dazu
+// oder wieder weg, wie bei jedem Filter.
 //
 // Wer keine Angabe hat, ist eine eigene Gruppe: weder sicher noch
 // vielleicht, aber auch nicht „spielt nicht". Eine fehlende Angabe ist
@@ -68,7 +89,8 @@ const ELF_GRUPPEN = [
   { schluessel: "nie",    label: "✕ spielt nicht",    passt: (st) => st === 5 },
   { schluessel: "offen",  label: "ohne Angabe",       passt: (st) => st == null },
 ];
-const ALLE_GRUPPEN = ELF_GRUPPEN.map((g) => g.schluessel);
+// Die Abkürzung für „alle raus, die definitiv nicht spielen".
+const OHNE_NIE = ELF_GRUPPEN.map((g) => g.schluessel).filter((s) => s !== "nie");
 
 // Das Zeichen zur Frage „läuft er noch vor dem Anpfiff aus?"
 function VorAnpfiff({ a }) {
@@ -128,18 +150,19 @@ export default function Freieliste({
   konto = null, teamwert = 0, ligaAufschlag = null, eigenerKader = [], boni = null,
 }) {
   const [gewaehlt, setGewaehlt] = useState(() => new Set());
-  // Welche Gruppen drin sind — anfangs alle. Ein Chip schaltet seine
-  // Gruppe um; „Alle" holt alle zurück.
-  const [elfAktiv, setElfAktiv] = useState(() => new Set(ALLE_GRUPPEN));
+  // Welche Gruppen gezeigt werden. Leer heißt: keine Einschränkung.
+  const [elfWahl, setElfWahl] = useState(() => new Set());
   function gruppeUmschalten(schluessel) {
-    setElfAktiv((alt) => {
+    setElfWahl((alt) => {
       const neu = new Set(alt);
       if (neu.has(schluessel)) neu.delete(schluessel);
       else neu.add(schluessel);
-      return neu;
+      // Alle fünf gewählt ist dasselbe wie keine Einschränkung.
+      return neu.size === ELF_GRUPPEN.length ? new Set() : neu;
     });
   }
-  const alleGruppen = elfAktiv.size === ELF_GRUPPEN.length;
+  const alleGruppen = elfWahl.size === 0;
+  const ohneNie = elfWahl.size === OHNE_NIE.length && OHNE_NIE.every((s) => elfWahl.has(s));
 
   // ── Der Rhythmus als Regler ──────────────────────────────────────
   //
@@ -173,17 +196,22 @@ export default function Freieliste({
 
   // Wie viele je Gruppe — steht auf den Chips, damit man vor dem Klick
   // sieht, ob sich einer lohnt. Dieselbe Regel wie bei den Positionen.
-  const jeGruppe = useMemo(() => {
-    const z = new Map();
-    for (const g of ELF_GRUPPEN) {
-      z.set(g.schluessel, spieler.filter((x) => g.passt(x.startelf ?? null)).length);
-    }
-    return z;
-  }, [spieler]);
   const [sortKey, setSortKey] = useState("marktwert");
   const [absteigend, setAbsteigend] = useState(true);
   const [suche, setSuche] = useState("");
   const [pos, setPos] = useState("alle");
+
+  // Gezählt wird innerhalb der gewählten Position — sonst stünde auf dem
+  // Chip „12 spielen sicher" und die Liste zeigte drei Torhüter.
+  const jeGruppe = useMemo(() => {
+    const basis = pos === "alle" ? spieler : spieler.filter((x) => x.position === pos);
+    const z = new Map([["alle", basis.length]]);
+    for (const g of ELF_GRUPPEN) {
+      z.set(g.schluessel, basis.filter((x) => g.passt(x.startelf ?? null)).length);
+    }
+    z.set("ohneNie", basis.filter((x) => (x.startelf ?? null) !== 5).length);
+    return z;
+  }, [spieler, pos]);
 
   // Wie viele freie Spieler es je Position gibt. Steht auf den Chips, damit
   // man vor dem Klick sieht, ob sich einer lohnt.
@@ -197,7 +225,7 @@ export default function Freieliste({
     const s = suche.trim().toLowerCase();
     let gefiltert = pos === "alle" ? mitPrognose : mitPrognose.filter((x) => x.position === pos);
     if (!alleGruppen) {
-      const aktiv = ELF_GRUPPEN.filter((g) => elfAktiv.has(g.schluessel));
+      const aktiv = ELF_GRUPPEN.filter((g) => elfWahl.has(g.schluessel));
       gefiltert = gefiltert.filter((x) => aktiv.some((g) => g.passt(x.startelf ?? null)));
     }
     if (s) gefiltert = gefiltert.filter((x) => (x.name ?? "").toLowerCase().includes(s));
@@ -212,6 +240,16 @@ export default function Freieliste({
         return absteigend ? av - bv : bv - av;
       }
       const spalte = SPALTEN.find((x) => x.key === sortKey);
+      if (spalte?.bewegung) {
+        // Ohne Ablesung von damals ans Ende, in beide Richtungen — als 0
+        // gelesen stünden sie mitten zwischen Gewinnern und Verlierern.
+        const av = a[sortKey];
+        const bv = b[sortKey];
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        return absteigend ? bv - av : av - bv;
+      }
       if (spalte?.text) {
         const av = a[sortKey] ?? "";
         const bv = b[sortKey] ?? "";
@@ -222,13 +260,13 @@ export default function Freieliste({
         : Number(a[sortKey] ?? 0) - Number(b[sortKey] ?? 0);
     });
     return kopie;
-  }, [mitPrognose, sortKey, absteigend, suche, pos, elfAktiv, alleGruppen]);
+  }, [mitPrognose, sortKey, absteigend, suche, pos, elfWahl, alleGruppen]);
 
   function klick(key) {
     if (key === sortKey) setAbsteigend(!absteigend);
     else {
       setSortKey(key);
-      setAbsteigend(key === "marktwert" || key === "wieder");
+      setAbsteigend(key === "marktwert" || key === "wieder" || key === "mw24" || key === "mw7");
     }
   }
 
@@ -283,27 +321,39 @@ export default function Freieliste({
           : <>Kein Anpfiff bekannt — die Frage „vor dem Anpfiff?&ldquo; bleibt offen.</>}
       </div>
 
-      {/* Filter nach Startelf-Chance: Mehrfachauswahl, jede Gruppe für
-          sich an- oder abwählbar. Angekreuzt = drin. */}
+      {/* Filter nach Startelf-Chance: Mehrfachauswahl. Gewählt = nur
+          diese; nichts gewählt = alle. */}
       <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Startelf-Chance">
         <button
           type="button"
           className={`kb-sortchip${alleGruppen ? " kb-sortchip--aktiv" : ""}`}
-          onClick={() => setElfAktiv(new Set(ALLE_GRUPPEN))}
+          aria-pressed={alleGruppen}
+          onClick={() => setElfWahl(new Set())}
         >
-          Alle <span className="kb-chipzahl">{spieler.length}</span>
+          Alle <span className="kb-chipzahl">{jeGruppe.get("alle")}</span>
+        </button>
+        <button
+          type="button"
+          className={`kb-sortchip${ohneNie ? " kb-sortchip--aktiv" : ""}`}
+          aria-pressed={ohneNie}
+          title="Alle außer denen, die definitiv nicht spielen"
+          onClick={() => setElfWahl(ohneNie ? new Set() : new Set(OHNE_NIE))}
+        >
+          ohne ✕ <span className="kb-chipzahl">{jeGruppe.get("ohneNie")}</span>
         </button>
         {ELF_GRUPPEN.map((g) => {
           const anzahl = jeGruppe.get(g.schluessel) ?? 0;
-          const an = elfAktiv.has(g.schluessel);
+          const an = elfWahl.has(g.schluessel);
           return (
             <button
               key={g.schluessel}
               type="button"
               role="checkbox"
               aria-checked={an}
-              className={`kb-sortchip${an && !alleGruppen ? " kb-sortchip--aktiv" : ""}${an ? "" : " kb-sortchip--aus"}`}
-              disabled={anzahl === 0}
+              className={`kb-sortchip${an ? " kb-sortchip--aktiv" : ""}`}
+              // Eine gewählte Gruppe bleibt abwählbar, auch wenn sie in
+              // dieser Position gerade leer ist.
+              disabled={anzahl === 0 && !an}
               onClick={() => gruppeUmschalten(g.schluessel)}
             >
               {g.label} <span className="kb-chipzahl">{anzahl}</span>
@@ -339,6 +389,21 @@ export default function Freieliste({
         value={suche}
         onChange={(e) => setSuche(e.target.value)}
       />
+
+      {/* Sortierung fürs Handy: 24 h und 7 Tage haben dort keine eigene
+          Spalte und damit keine Überschrift zum Antippen. */}
+      <div className="kb-sortleiste" role="group" aria-label="Sortierung">
+        {SPALTEN.filter((s) => s.key !== "position").map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            className={`kb-sortchip${s.key === sortKey ? " kb-sortchip--aktiv" : ""}`}
+            onClick={() => klick(s.key)}
+          >
+            {s.label}{pfeil(s.key)}
+          </button>
+        ))}
+      </div>
 
       {zeilen.length === 0 ? (
         <p className="kb-info">Kein Spieler passt.</p>
@@ -398,7 +463,14 @@ export default function Freieliste({
                         <span className="kb-kurz">{euroKurz(s.marktwert)}</span>
                       </>
                     )}
+                    {/* Auf dem Handy stehen die beiden Bewegungen hier,
+                        weil ihre Spalten keinen Platz haben. */}
+                    <span className="kb-mwbewegung">
+                      24h <Bewegung wert={s.mw24} kurz /> · 7T <Bewegung wert={s.mw7} kurz />
+                    </span>
                   </td>
+                  <td className="kb-sek"><Bewegung wert={s.mw24} /></td>
+                  <td className="kb-sek"><Bewegung wert={s.mw7} /></td>
                   <td>
                     <Prognose p={s.prognose} zyklus={zyklus} />
                     <VorAnpfiff a={s.anpfiff} />

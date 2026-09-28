@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, getStartelf, naechsterAnpfiff } from "@/lib/db";
+import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, getStartelf, naechsterAnpfiff, getMwBewegung } from "@/lib/db";
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { geheimeZugaenge } from "@/lib/zugang";
 import { wenVerbergen, verbergeKonten } from "@/lib/privatsphaere";
@@ -11,7 +11,7 @@ import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege }
 import { werteAus } from "@/lib/aufschlag";
 import { bildeAuftritte, naechsterWochentagText, ZYKLUS_TAGE, ANGEBOT_DAUER_H } from "@/lib/rhythmus";
 import { sitzung, verlangeLiga } from "@/lib/auth";
-import { euro, prozent, zeitpunkt, wochentag, ausEingabe, ZONE } from "@/lib/format";
+import { euro, prozent, zeitpunkt, wochentag, ausEingabe, tagKurz, ZONE } from "@/lib/format";
 import { spieltagWahl } from "@/lib/loginbonus";
 import Freieliste from "./Freieliste";
 import Hinweis from "../../_ui/Hinweis";
@@ -79,6 +79,7 @@ export default async function Markt({ searchParams }) {
   const meinTeamwert = ich ? tw.map.get(String(ich.id))?.teamwert ?? 0 : 0;
   const elf = await getStartelf();
   const elfStand = await standStartelf();
+  const bewegung = await getMwBewegung();
   const meinKader = (ich ? kader.proManager.get(String(ich.id)) ?? [] : [])
     .map((s) => ({ ...s, startelf: elf.get(String(s.id)) ?? null }));
 
@@ -130,6 +131,10 @@ export default async function Markt({ searchParams }) {
       ...s,
       marktwert: s.marktwert == null ? null : Number(s.marktwert),
       startelf: elf.get(String(s.id)) ?? null,
+      // Marktwert-Bewegung über einen und sieben Marktwert-Tage, null =
+      // keine Ablesung von genau damals.
+      mw24: bewegung.map.get(String(s.id))?.d1 ?? null,
+      mw7: bewegung.map.get(String(s.id))?.d7 ?? null,
       // Die Anker als Zahlen: So überstehen sie die Server-Grenze, und der
       // Regler rechnet im Browser daraus den Termin.
       rueckkehr: {
@@ -343,6 +348,42 @@ export default async function Markt({ searchParams }) {
           <strong>„ca.&ldquo;</strong> steht bei Spielern, die erst einmal beobachtet wurden.
           Wer zweimal da war, hat den Rhythmus schon bestätigt; ein einzelner Anker kann auch
           ein Fremdangebot sein, das durch die Filter gerutscht ist.
+        </p>
+      </Hinweis>
+
+      {/* Woher die 24-Stunden- und 7-Tage-Werte stammen, und wie alt sie
+          sind. Ohne diese Zeile sähe eine leere Spalte aus wie „keine
+          Bewegung". */}
+      <p className="kb-anpfiffzeile kb-leise">
+        {bewegung.tag ? (
+          <>
+            Marktwert-Bewegung: Stand Anpassung vom <strong>{tagKurz(bewegung.tag)}</strong> ·
+            24 h für {bewegung.mitTag} von {bewegung.gesamt} Spielern, 7 Tage für{" "}
+            {bewegung.mitWoche}
+          </>
+        ) : (
+          <>Marktwert-Bewegung: noch keine Ablesung — einmal aktualisieren.</>
+        )}
+      </p>
+
+      <Hinweis kurz="Woher 24 h und 7 Tage kommen" titel="Marktwert-Bewegung">
+        <p>
+          <strong>24 h</strong> ist die Änderung bei der letzten Marktwertanpassung (täglich
+          22:04 Uhr), <strong>7 Tage</strong> die Änderung über die letzten sieben
+          Anpassungen — dieselben zwei Zahlen wie in der Kickbase-App.
+        </p>
+        <p>
+          <strong>Gerechnet aus eigenen Ablesungen.</strong> Kickbase liefert die Werte in
+          keiner Liste, die diese App ohnehin holt. Beim Aktualisieren werden aber einmal je
+          Marktwert-Tag die Marktwerte aller Bundesliga-Spieler gelesen — ohne zusätzlichen
+          Aufruf. Daraus entstehen beide Spalten.
+        </p>
+        <p>
+          <strong>Deshalb braucht es eine Ablesung von genau damals.</strong> Für 24 h die
+          vom Vortag, für 7 Tage die von vor genau einer Woche. Fehlt sie, weil an dem Tag
+          niemand aktualisiert hat, steht dort „–“ und nicht eine Zahl über einen anderen
+          Zeitraum. Wer täglich einmal aktualisiert, hat die 24 h ab dem zweiten Tag und die
+          7 Tage ab dem achten.
         </p>
       </Hinweis>
 
