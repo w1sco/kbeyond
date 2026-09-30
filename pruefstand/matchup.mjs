@@ -142,6 +142,52 @@ pruefe("Verein ohne beendete Partie: niemand offen", werIstOffen({
 pruefe("letzteEnden: nur beendete Partien",
   [...letzteEnden(SPIELE, Date.parse(tag(8)) + 3600_000).keys()].sort(), ["A", "B"]);
 
+// ── Eigene Stärke: was ein Verein selbst erzielt ───────────────────
+{
+  const aus = werteMatchupsAus({ spiele: SPIELE, leistungen: LEISTUNGEN, vollstaendig: ALLE, bereich: { von: 1, bis: 3 } });
+  const e = Object.fromEntries(aus.zeilen.map((x) => [x.team, x]));
+  pruefe("A erzielt (100 + 10) / 2", e.A.erzielt.alle.schnitt, 55);
+  pruefe("C erzielt (200 + 75) / 2", e.C.erzielt.alle.schnitt, 137.5);
+  pruefe("B im Sturm: (50 + 0) / 2", e.B.erzielt.ANG.schnitt, 25);
+  pruefe("Ligaschnitt: 465 Punkte auf 6 Seiten", aus.ligaschnitt.alle, 77.5);
+
+  // Eigene Seite halb geladen: zählt für das Erzielte nicht mit.
+  const h = werteMatchupsAus({ spiele: SPIELE, leistungen: LEISTUNGEN,
+    vollstaendig: new Set([...ALLE].filter((x) => x !== "2|C")), bereich: { von: 1, bis: 3 } });
+  const hc = h.zeilen.find((x) => x.team === "C");
+  pruefe("halbe eigene Seite: C zählt nur Spiel 3", [hc.spieleEigen, hc.erzielt.alle.schnitt], [1, 75]);
+
+  // Das Programm mit eigener Stärke: eine kommende Partie A – C.
+  const kommend = [...SPIELE.slice(0, 3), { mi: "k", spieltag: 4, heim: "A", gast: "C", gewertet: false }];
+  const mit = Object.fromEntries(programm({ spiele: kommend, zeilen: aus.zeilen, ligaschnitt: aus.ligaschnitt,
+    position: "alle", anzahl: 1, mitEigener: true }).map((r) => [r.team, r]));
+  // A: erzielt 55, C lässt 20 zu, Liga 77,5 → 55 + 20 − 77,5
+  pruefe("A mit eigener Stärke: 55 + 20 − 77,5", mit.A.erwartung, -2.5);
+  // C: erzielt 137,5, A lässt 125 zu → 137,5 + 125 − 77,5
+  pruefe("C mit eigener Stärke: 137,5 + 125 − 77,5", mit.C.erwartung, 185);
+  pruefe("Erwartung je Gegner steht einzeln da", mit.C.gegner[0].erwartung, 185);
+  pruefe("gereiht wird nach der Erwartung", [mit.C.rang, mit.A.rang], [1, 2]);
+  pruefe("ohne kommende Partie keine Erwartung", mit.B.erwartung, null);
+
+  const ohne = Object.fromEntries(programm({ spiele: kommend, zeilen: aus.zeilen, ligaschnitt: aus.ligaschnitt,
+    position: "alle", anzahl: 1 }).map((r) => [r.team, r]));
+  pruefe("Schalter aus: gereiht nach dem Gegner allein", [ohne.C.wert, ohne.A.wert], [125, 20]);
+
+  // Wer selbst kein gezähltes Spiel hat, bekommt mit Schalter keinen Rang —
+  // die Gegner allein würden eine Stärke vortäuschen, die niemand kennt.
+  const ohneEigen = aus.zeilen.map((x) => x.team === "A"
+    ? { ...x, spieleEigen: 0, erzielt: { alle: { schnitt: null }, ANG: { schnitt: null } } } : x);
+  const r = Object.fromEntries(programm({ spiele: kommend, zeilen: ohneEigen, ligaschnitt: aus.ligaschnitt,
+    position: "alle", anzahl: 1, mitEigener: true }).map((x) => [x.team, x]));
+  pruefe("ohne eigene Spiele: keine Erwartung, kein Rang", [r.A.erwartung, r.A.rang], [null, null]);
+  pruefe("negative Werte: addiert, nicht multipliziert",
+    programm({ spiele: kommend, position: "alle", anzahl: 1, mitEigener: true, ligaschnitt: { alle: 10 },
+      zeilen: [
+        { team: "A", spieleEigen: 3, erzielt: { alle: { schnitt: -5 } }, jePosition: { alle: { schnitt: 0 } } },
+        { team: "C", spieleEigen: 3, erzielt: { alle: { schnitt: 0 } }, jePosition: { alle: { schnitt: -5 } } },
+      ] }).find((x) => x.team === "A").erwartung, -20);
+}
+
 // ── Das Programm: die nächsten Gegner ──────────────────────────────
 {
   const Z = (team, alle, ang, wenig = false) => ({

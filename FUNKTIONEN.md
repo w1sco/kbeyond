@@ -697,6 +697,10 @@ die als Nächstes gegen ihn antreten.
   zulassen, im Schnitt. Oben steht, wer das leichteste Programm hat; darunter
   die eigenen Spieler dieses Vereins. Ein Schnitt nur, wenn alle diese Gegner
   bekannt sind, sonst „2 von 3 bekannt“.
+- **Mit eigener Stärke** (Vorgabe, abschaltbar): Je Partie zählt eigene
+  Punkte je Spiel + was der Gegner zulässt − Ligaschnitt. So steht oben, wer
+  leichte Gegner hat **und** selbst viel punktet. Unter der Zahl die Zerlegung
+  „eigen · Gegner · Liga“.
 - **Schneller:** Wessen Saisonpunkte sich seit der letzten Abfrage nicht
   bewegt haben, wird ohne Aufruf abgehakt — nur, wenn das Feld für diesen
   Spieler durch die eigene Summe belegt ist. Der Zähler läuft live mit,

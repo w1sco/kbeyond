@@ -48,6 +48,9 @@ export default async function Matchup({ searchParams }) {
   const zeit = ZEITRAEUME.find((z) => z.schluessel === p.zeit) ?? ZEITRAEUME[1];
   const ansicht = p.ansicht === "programm" ? "programm" : "zulassen";
   const vor = VORSCHAU.includes(Number(p.vor)) ? Number(p.vor) : 3;
+  // Leichte Gegner allein reichen nicht — die eigene Mannschaft muss auch
+  // punkten. Vorgabe ist deshalb „mit eigener Stärke“.
+  const mitEigener = p.wertung !== "gegner";
 
   const g = await ladeGrundlage();
   const [leistungen, stand, kader] = await Promise.all([
@@ -58,7 +61,7 @@ export default async function Matchup({ searchParams }) {
 
   const bereich = bereichFuer(g.spiele, zeit.spieltage);
   const vollstaendig = vollstaendigeSeiten(g);
-  const { zeilen, ohnePosition } = werteMatchupsAus({
+  const { zeilen, ohnePosition, ligaschnitt } = werteMatchupsAus({
     spiele: g.spiele, leistungen, vollstaendig, bereich,
   });
 
@@ -101,7 +104,9 @@ export default async function Matchup({ searchParams }) {
   }
 
   // Das Programm: je Verein die nächsten `vor` Gegner und was sie zulassen.
-  const programmZeilen = programm({ spiele: g.spiele, zeilen, position: pos, anzahl: vor });
+  const programmZeilen = programm({
+    spiele: g.spiele, zeilen, position: pos, anzahl: vor, mitEigener, ligaschnitt });
+  const liga = ligaschnitt?.[pos] ?? null;
 
   const name = (team) => g.vereine.get(team) ?? `Verein #${team}`;
   const zahl = (n) => (n == null ? "–" : n.toLocaleString("de-DE", { maximumFractionDigits: 1 }));
@@ -112,7 +117,8 @@ export default async function Matchup({ searchParams }) {
     (!vollstaendig.has(`${s.mi}|${s.heim}`) || !vollstaendig.has(`${s.mi}|${s.gast}`))).length;
   const adresse = (neu) => {
     const q = new URLSearchParams({
-      league: leagueId, ansicht, pos, zeit: zeit.schluessel, vor: String(vor), ...neu });
+      league: leagueId, ansicht, pos, zeit: zeit.schluessel, vor: String(vor),
+      wertung: mitEigener ? "beides" : "gegner", ...neu });
     return `/liga/matchup?${q}`;
   };
 
@@ -124,7 +130,9 @@ export default async function Matchup({ searchParams }) {
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Matchups</h1>
           <p className="kb-unter">
             {ansicht === "programm"
-              ? `Wer hat über die nächsten ${vor === 1 ? "Partie" : `${vor} Partien`} die Gegner, gegen die am meisten herauskommt — ${POS_NAMEN[pos]}`
+              ? mitEigener
+                ? `Was über die nächsten ${vor === 1 ? "Partie" : `${vor} Partien`} zu erwarten ist, eigene Stärke und Gegner zusammen — ${POS_NAMEN[pos]}`
+                : `Wer hat über die nächsten ${vor === 1 ? "Partie" : `${vor} Partien`} die Gegner, gegen die am meisten herauskommt — ${POS_NAMEN[pos]}`
               : `Punkte, die jeder Verein je Spiel zulässt — ${POS_NAMEN[pos]}`}
             {bereich ? `, gemessen an Spieltag ${bereich.von}–${bereich.bis}` : ""}
           </p>
@@ -143,6 +151,15 @@ export default async function Matchup({ searchParams }) {
           seine nächsten 1, 3 oder 5 Gegner genommen, und für jeden, wie viele Punkte er auf
           der gewählten Position je Spiel zulässt. Der Schnitt darüber steht oben, wenn das
           Programm leicht ist. Die Spieler dieses Vereins sind die Kandidaten.
+        </p>
+        <p>
+          <strong>Mit eigener Stärke</strong> (Vorgabe) zählt auch, wie viel die eigene
+          Mannschaft auf der Position selbst punktet — leichte Gegner allein reichen nicht.
+          Je Partie gilt: <em>eigene Punkte je Spiel + was der Gegner zulässt −
+          Ligaschnitt</em>. Beides wird als Abstand zum Ligaschnitt gemessen und
+          zusammengezählt: Wer 10 über dem Schnitt punktet und auf einen Gegner trifft, der 5
+          über dem Schnitt zulässt, landet 15 darüber. Die Zahl bleibt in Punkten. Sie ist
+          eine Einordnung aus dem, was bisher passiert ist, keine Vorhersage.
         </p>
         <p>
           <strong>Ein Schnitt nur, wenn jeder dieser Gegner bekannt ist.</strong> Fehlt einer,
@@ -205,6 +222,17 @@ export default async function Matchup({ searchParams }) {
         ))}
       </div>
       {ansicht === "programm" && (
+        <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Wertung" style={{ marginTop: 8 }}>
+          {[["beides", "mit eigener Stärke"], ["gegner", "nur Gegner"]].map(([k, label]) => (
+            <Link key={k} href={adresse({ wertung: k })}
+                  className={`kb-sortchip${(mitEigener ? "beides" : "gegner") === k ? " kb-sortchip--aktiv" : ""}`}
+                  aria-current={(mitEigener ? "beides" : "gegner") === k ? "true" : undefined}>
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
+      {ansicht === "programm" && (
         <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Vorschau" style={{ marginTop: 8 }}>
           {VORSCHAU.map((n) => (
             <Link key={n} href={adresse({ vor: String(n) })}
@@ -230,7 +258,9 @@ export default async function Matchup({ searchParams }) {
               <tr>
                 <th scope="col" className="kb-rang">#</th>
                 <th scope="col" className="kb-namensspalte">Verein</th>
-                <th scope="col" className="kb-aktiv" title="Schnitt der zugelassenen Punkte je Spiel über die nächsten Gegner">Ø Gegner</th>
+                {mitEigener
+                  ? <th scope="col" className="kb-aktiv" title="Eigene Punkte je Spiel + was die Gegner zulassen − Ligaschnitt, im Schnitt über die nächsten Partien">Erwartung</th>
+                  : <th scope="col" className="kb-aktiv" title="Schnitt der zugelassenen Punkte je Spiel über die nächsten Gegner">Ø Gegner</th>}
                 <th scope="col">Die nächsten Gegner</th>
               </tr>
             </thead>
@@ -250,11 +280,19 @@ export default async function Matchup({ searchParams }) {
                       )}
                     </td>
                     <td>
-                      {r.schnitt != null ? <strong>{zahl(r.schnitt)}</strong>
+                      {r.wert != null ? <strong>{zahl(r.wert)}</strong>
                         : r.gegner.length === 0 ? <span className="kb-gedaempft">–</span>
-                        : <span className="kb-leise">{r.bekannt} von {r.gegner.length} bekannt</span>}
-                      {r.schnitt != null && r.gegner.length < vor && (
+                        : r.bekannt < r.gegner.length ? <span className="kb-leise">{r.bekannt} von {r.gegner.length} bekannt</span>
+                        : <span className="kb-leise">eigene fehlt</span>}
+                      {r.wert != null && r.gegner.length < vor && (
                         <span className="kb-leise"> nur {r.gegner.length}</span>
+                      )}
+                      {/* Woraus die Erwartung besteht — sonst ist sie eine Zahl
+                          ohne Herkunft. */}
+                      {mitEigener && (
+                        <span className="kb-matchupmeine">
+                          eigen {zahl(r.eigen)} · Gegner {zahl(r.schnitt)} · Liga {zahl(liga)}
+                        </span>
                       )}
                     </td>
                     <td>
@@ -263,7 +301,10 @@ export default async function Matchup({ searchParams }) {
                           <span key={`${x.spieltag}-${x.gegner}`}
                                 title={`Spieltag ${x.spieltag}${x.datum ? ` · ${zeitpunkt(x.datum)}` : ""} · ${x.heim ? "zu Hause" : "auswärts"}`}>
                             <span className="kb-leise">{x.heim ? "H" : "A"}</span> {name(x.gegner)}{" "}
-                            <span className={x.schnitt == null ? "kb-gedaempft" : ""}>{zahl(x.schnitt)}</span>
+                            {(() => {
+                              const w = mitEigener ? x.erwartung : x.schnitt;
+                              return <span className={w == null ? "kb-gedaempft" : ""}>{zahl(w)}</span>;
+                            })()}
                           </span>
                         ))}
                         {r.gegner.length === 0 && <span className="kb-gedaempft">keine Partie mehr</span>}

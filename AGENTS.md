@@ -451,6 +451,34 @@ zu Hause oder auswärts, steht als H/A beim Gegner.
 (Leverkusen 27,8 vor Bayern 27,5 mit „nur 2“ vor Stuttgart 20,5 — wie vorab
 gerechnet).
 
+#### Mit eigener Stärke (Vorgabe)
+
+Leichte Gegner allein reichen nicht, die eigene Mannschaft muss auch punkten.
+Der Schalter „mit eigener Stärke / nur Gegner“ (`?wertung=beides|gegner`)
+nimmt deshalb dazu, was ein Verein auf der Position **selbst erzielt** — aus
+denselben Punkten je Spiel, mit derselben Sicherung (nur vollständig geladene
+eigene Seiten). Je Partie:
+
+```
+Erwartung = eigene Punkte je Spiel + was der Gegner zulässt − Ligaschnitt
+```
+
+Beide Größen als Abstand zum Ligaschnitt, zusammengezählt und wieder auf den
+Schnitt gesetzt. Die Zahl bleibt in Punkten; unter ihr steht die Zerlegung
+„eigen · Gegner · Liga“, damit sie eine Herkunft hat.
+
+**Addiert, nicht multipliziert.** Das übliche Modell rechnet Angriff mal
+Abwehr durch Schnitt. Punkte auf einer Position können aber negativ sein
+(eine Abwehr mit Gegentoren), und ein Produkt zweier negativer Werte käme als
+starke Erwartung heraus. Eigens durchgerechnet: −5 und −5 bei Liga 10 ergeben
+−20, nicht +2,5.
+
+Ohne gezähltes eigenes Spiel keine Erwartung und kein Rang („eigene fehlt“) —
+die Gegner allein würden eine Stärke vortäuschen, die niemand kennt.
+13 Fälle dazu in `pruefstand/matchup.mjs`; im Prüfstand springt Bayern mit
+eigener Stärke vor Stuttgart (27 gegen 11,5), obwohl beide denselben Gegner
+haben — genau der Unterschied, um den es geht.
+
 ### Die Daten: dieselbe Quelle wie die frühere Gegner-Seite
 
 `/v4/competitions/1/players/{pid}/performance` liefert je Spieler eine Reihe
@@ -535,7 +563,7 @@ Dazu: nur gewertete Partien (Tore vorhanden), unter drei Spielen „wenig
 Daten", Punkte ohne bekannte Position zählen nur in „Gesamt" und werden
 genannt. Die alte Saison in der Reihe zählt nicht (`aktuelleSaison()`).
 
-`lib/matchup.js` ist reine Rechnung: 65 Fälle in `pruefstand/matchup.mjs` —
+`lib/matchup.js` ist reine Rechnung: 78 Fälle in `pruefstand/matchup.mjs` —
 Summen und Ränge, geteilte Ränge, halb geladene Seite, laufendes Spiel,
 Samstagsfall, alte Saison, negative Punkte, und jede Bedingung fürs
 Überspringen einzeln verletzt. Im Prüfstand nachgemessen: Knopf
