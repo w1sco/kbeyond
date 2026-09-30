@@ -676,6 +676,23 @@ daraus entsteht eine Tabelle mit Rang. Der Name klappt die Elf auf.
   beim Aktualisieren. Die Aufstellung ist entsprechend so alt wie der letzte
   Lauf.
 
+### 7.12b Matchups
+
+*Gegen wen hat mein Stürmer am Wochenende leichtes Spiel?* Je Verein die
+Kickbase-Punkte, die seine Gegner in seinen Spielen geholt haben, getrennt nach
+Position (TW, ABW, MF, ANG, Gesamt), als Schnitt je Spiel. Oben steht, wer am
+meisten zulässt; daneben, wer als Nächstes gegen diesen Verein spielt. Zeitraum:
+letzte 3, letzte 5, ganze Saison. Unter dem Verein stehen die eigenen Spieler,
+die als Nächstes gegen ihn antreten.
+
+- **Daten:** Punkte je Spieler und Partie aus der Leistungsreihe, samt Verein
+  zum Zeitpunkt des Spiels. Ein Kickbase-Aufruf je Spieler — deshalb ein
+  eigener Knopf auf der Seite, nie im Aktualisieren-Lauf. Gefragt wird nur, wer
+  seit seiner letzten Abfrage gespielt hat.
+- **Nur vollständige Partien:** Eine Partie zählt erst, wenn alle Spieler des
+  Gegners nach dem Abpfiff abgefragt sind; sonst steht sie als „offen" da.
+- **Stichprobe sichtbar:** unter drei Spielen „wenig Daten".
+
 ### 7.13 Frag die Liga
 
 Freie Fragen zum Datensatz („Wen muss X verkaufen, um aus dem Minus zu

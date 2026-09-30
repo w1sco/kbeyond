@@ -69,6 +69,10 @@ const VEREINSKADER = {
   ],
 };
 
+// Die Ansetzungen der Attrappe: Spieltag i = SPIELPAARE[i], Heim zuerst.
+// Spielplan und Leistungsreihe lesen aus derselben Liste.
+const SPIELPAARE = [[7, 2], [3, 7], [2, 3], [7, 3], [3, 2], [2, 7]];
+
 function antwort(daten, status = 200) {
   return new Response(JSON.stringify(daten), {
     status,
@@ -184,7 +188,7 @@ function fuerPfad(pfad) {
   // Gewertete Partien tragen Tore, kommende lassen sie weg – daran
   // erkennt der Leser sie, nicht an einem Statuscode.
   if (pfad.includes("/competitions/1/matchdays")) {
-    const paare = [[7, 2], [3, 7], [2, 3], [7, 3], [3, 2], [2, 7]];
+    const paare = SPIELPAARE;
     const it = paare.map(([h, g], i) => ({
       day: i + 1,
       mdln: `Spieltag ${i + 1}`,
@@ -202,9 +206,40 @@ function fuerPfad(pfad) {
     return { it, day: 3 };
   }
 
-  // Die Leistungsreihe je Spieler ist mit der Gegner-Seite raus.
-  // Ein Aufruf darauf ist jetzt ein 404 wie jeder andere unbekannte
-  // Pfad — genau das soll er sein.
+  // Die Leistungsreihe je Spieler — für die Matchup-Seite.
+  //
+  // Je Saison eine Reihe `ph`; `pt` ist der Verein zum Zeitpunkt des Spiels.
+  // Bewusst mit Ecken: eine alte Saison (darf nicht mitzählen), negative
+  // Punkte, ein Spieler ohne Einsatz in einer Partie (kein `p`), kommende
+  // Partien ohne `p`, und einer, den es nicht gibt (404).
+  const leistung = pfad.match(/\/players\/(\d+)\/performance/);
+  if (leistung) {
+    const pid = leistung[1];
+    if (pid === "303") {
+      const fehler = new Error("API-Fehler: 404");
+      fehler.status = 404;
+      throw fehler;
+    }
+    const tid = Object.keys(VEREINSKADER).find((t) =>
+      (VEREINSKADER[t] ?? []).some((s) => String(s.i ?? s.pi) === pid)) ?? "7";
+    const ph = SPIELPAARE
+      .map(([h, g], i) => ({ h: String(h), g: String(g), i }))
+      .filter((s) => s.h === tid || s.g === tid)
+      .map((s) => {
+        const e = { mi: String(9000 + s.i), day: s.i + 1, pt: tid, cur: s.i === 2 };
+        // Gespielt sind nur die ersten beiden Spieltage (siehe matchdays).
+        if (s.i < 2 && !(pid === "302" && s.i === 0)) {
+          e.p = pid === "201" && s.i === 1 ? -20 : (Number(pid) % 100) + (s.i + 1) * 10;
+        }
+        return e;
+      });
+    return {
+      it: [
+        { sid: "40", ti: "2025/2026", ph: [{ mi: "8000", day: 1, p: 999, pt: tid }] },
+        { sid: "42", ti: "2026/2027", ph },
+      ],
+    };
+  }
 
   // Das Spielerprofil. Interessant ist hier nur `prob` – die
   // Startelf-Wahrscheinlichkeit (1 sicher … 5 spielt nicht).

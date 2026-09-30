@@ -274,6 +274,7 @@ export default async function Liga({ searchParams }) {
           <a href={`/liga/markt?league=${leagueId}`} className="kb-btn">Freie Spieler</a>
           <a href={`/liga/aufschlaege?league=${leagueId}`} className="kb-btn">Aufschläge</a>
           <a href={`/liga/elf?league=${leagueId}`} className="kb-btn">Aufgestellte Elf</a>
+          <a href={`/liga/matchup?league=${leagueId}`} className="kb-btn">Matchups</a>
           <a href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Einstellungen</a>
           <Link href="/liga" className="kb-btn">Liga wechseln</Link>
           {admin && (

@@ -295,6 +295,9 @@ markt_beobachtung(league_id, player_id, ablauf, gesehen)   -- PK (league_id, pla
   + Index (league_id, player_id)
 spiele(spieltag, heim, gast, datum, mi, tore_heim, tore_gast, stand)
   PK (spieltag, heim, gast), UNIQUE (mi) — ligaunabhängig, aus /matchdays
+spieler_punkte(player_id, mi, team_id, spieltag, punkte, position)  -- PK (player_id, mi)
+  team_id = Verein ZUM ZEITPUNKT DES SPIELS; ligaunabhängig
+leistung_geprueft(player_id PK, bis_tag, geprueft)   -- maßgeblich: geprueft
 startelf(player_id PK, stufe, spieltag, stand)   -- ligaunabhängig
   stufe 1–5 aus `prob`, NULL = gefragt und nichts geliefert
   spieltag = für welchen Spieltag die Prognose gilt
@@ -408,6 +411,66 @@ demselben Grund nennt auch der Pool-Schritt seinen Fehler im Wortlaut.
 
 `/spielplan?league=…` bleibt als Diagnose stehen, falls Kickbase die Form
 ändert. Wie alle teuren Diagnoseseiten läuft sie erst auf Klick.
+
+## Matchups: wer lässt auf welcher Position viel zu?
+
+`/liga/matchup` nach dem Vorbild des Matchup-Tools von KickbaseNerd: je Verein
+die Kickbase-Punkte, die seine **Gegner** in seinen Spielen geholt haben,
+getrennt nach Position (TW, ABW, MF, ANG, Gesamt), geteilt durch die Zahl der
+Spiele. Oben steht, wer am meisten zulässt; die Spalte „Als Nächstes gegen"
+sagt, wessen Spieler davon am kommenden Spieltag profitieren. Zeitraum:
+letzte 3, letzte 5 oder ganze Saison. Unter dem Vereinsnamen stehen die
+**eigenen Spieler**, die als Nächstes gegen diesen Verein spielen — gefiltert
+nach der gewählten Position.
+
+### Die Daten: dieselbe Quelle wie die frühere Gegner-Seite
+
+`/v4/competitions/1/players/{pid}/performance` liefert je Spieler eine Reihe
+über alle Saisons mit `mi`, `day`, `p` und **`pt`** — dem Verein **zum
+Zeitpunkt des Spiels**. Belegt seit der Gegner-Seite. `spieler_punkte` und
+`leistung_geprueft` standen seit deren Abbau noch in der Datenbank und werden
+wieder angelegt; `spieler_punkte.position` kam dazu (bei alten Zeilen leer,
+dann gilt die Position aus dem Pool).
+
+**Der Preis ist derselbe: ein Aufruf je Spieler.** Deshalb:
+
+- **Nie im Aktualisieren-Lauf.** Ein eigener Knopf auf der Seite, der Browser
+  fasst nach (`/api/matchup`, derselbe Weg wie beim Startelf-Abruf). Abbrechen
+  kostet nichts.
+- **Nur wer nachgespielt hat.** `werIstOffen()` fragt jeden, dessen Verein seit
+  seiner letzten Abfrage eine Partie **beendet** hat. Nach einem vollen
+  Spieltag sind das alle (rund 470, gut fünf Minuten), nach einem
+  Freitagsspiel zwei Vereine.
+
+### Vollständig heißt: nach dem Abpfiff gefragt
+
+Die Gegner-Seite hat einmal 202 gegen 23 bei einer einzigen Partie gezeigt,
+weil eine halb geladene Mannschaft aussah wie ein schwacher Auftritt. Eine
+Partie zählt deshalb erst, wenn **jeder Spieler, der heute für den Gegner im
+Pool steht, nach ihrem Ende abgefragt wurde** (`vollstaendigeSeiten()`,
+Anstoß + 3 h). Sonst steht sie als „offen" daneben.
+
+**An der Uhrzeit, nicht an der Spieltagsnummer.** Die alte Fassung merkte sich
+„bis Spieltag N abgeholt". Wer am Samstag abrief, hatte die Sonntagspartie
+noch nicht — und sie stand trotzdem als erledigt da. Ihre Punkte wären nie
+hereingekommen.
+
+Dazu: nur gewertete Partien (Tore vorhanden), unter drei Spielen „wenig
+Daten", Punkte ohne bekannte Position zählen nur in „Gesamt" und werden
+genannt. Die alte Saison in der Reihe zählt nicht (`aktuelleSaison()`).
+
+`lib/matchup.js` ist reine Rechnung: 42 Fälle in `pruefstand/matchup.mjs` —
+Summen und Ränge, geteilte Ränge, halb geladene Seite, laufendes Spiel,
+Samstagsfall, alte Saison, negative Punkte. Im Prüfstand nachgemessen: Knopf
+geklickt, 7 Spieler geholt (einer mit 404), Tabelle zeigt 33 / 22 / 17,5 wie
+vorab gerechnet.
+
+### Es ginge billiger — wenn es den Endpunkt gibt
+
+Ein Endpunkt mit den Punkten **aller Spieler einer Partie** machte aus rund
+470 Aufrufen je Spieltag neun. Keiner ist belegt. `/spielplan?league=…&partie=1`
+probiert fünf Kandidaten an der jüngsten gewerteten Partie durch (klickgesichert).
+Erst wenn einer passt, wird umgestellt.
 
 ### Die Gegner-Seite gab es einmal
 
@@ -1332,6 +1395,9 @@ app/
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
   liga/aufschlaege/page.js         Aufschläge über Marktwert, je Herkunft und Zeitraum
   liga/elf/page.js                 Aufgestellte Elf: Summe der Punkteschnitte je Manager
+  liga/matchup/page.js             Matchups: zugelassene Punkte je Verein und Position
+  liga/matchup/Matchupholen.jsx    "use client" — Punkte je Spiel holen, Browser fasst nach
+  api/matchup/route.js             Ein Bündel Leistungsreihen holen
   liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
   liga/manager/[id]/Aufstellung.jsx      "use client" — elf Spieler auf dem Platz
@@ -1382,13 +1448,15 @@ lib/
   rhythmus.js       bildeAuftritte(), prognostiziere(), vorAnpfiff() — 14 Tage, ohne DB
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   elfstaerke.js     bewerteElf() — aufgestellte Elf nach Punkteschnitt, ohne DB
+  matchup.js        werteMatchupsAus(), vollstaendigeSeiten(), werIstOffen() — ohne DB
+  matchupabruf.js   importiereLeistungen(), standLeistungen() — /performance je Spieler
   verlauf.js        tagesraster(), tagesreihen(), tageZwischen(), wertAmTag()
                     — Tagesstützstellen 0 Uhr, ohne DB
   tagesverlauf.js   rekonstruiereVerlauf(), schreibeRekonstruktion() — bis zum Reset
   anbieter.js       frageStream(), holeModelle() — Claude, ChatGPT, Gemini
   startelf.js       STUFEN, stufe(), leseChance(), ernte() — Chance, ohne DB
   startelfabruf.js  importiereStartelf(), standStartelf() — prob je Spieler holen
-  spielplan.js      leseSpielplan() — den Spielplan lesen, ohne DB
+  spielplan.js      leseSpielplan(), leseLeistungen() — Spielplan und Leistungsreihe, ohne DB
   spieleabruf.js    importiereSpielplan() — die 34 Spieltage in einem Aufruf
   zugang.js         pruefeAnmeldung(), zugangZuToken(), entscheide(),
                     geheimeZugaenge(), setzePrivat() — Freigabeliste

@@ -2091,3 +2091,13 @@ details[open] > summary.kb-aufklappzeile::before { content: "▾ "; }
     white-space: nowrap;
   }
 }
+
+/* Matchups: die eigenen Spieler unter dem Verein, gegen den sie als
+   Nächstes spielen — auf allen Breiten. */
+.kb-matchupmeine {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--kb-text-leise);
+  white-space: normal;
+}

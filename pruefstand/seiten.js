@@ -11,6 +11,7 @@ const SEITEN = [
   ["Aufschläge",         `/liga/aufschlaege?league=${LIGA}`],
   ["Aufschläge Filter",  `/liga/aufschlaege?league=${LIGA}&auf=7&her=alle`],
   ["Aufgestellte Elf",   `/liga/elf?league=${LIGA}`],
+  ["Matchups",           `/liga/matchup?league=${LIGA}`],
   ["Managerseite",       `/liga/manager/1?league=${LIGA}`],
   ["Managerseite fremd", `/liga/manager/2?league=${LIGA}`],
   ["Freie Spieler",      `/liga/markt?league=${LIGA}`],
