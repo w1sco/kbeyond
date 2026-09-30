@@ -1,7 +1,7 @@
 // Matchups: zugelassene Punkte je Verein und Position. Reine Rechnung.
 import {
   werteMatchupsAus, vollstaendigeSeiten, werIstOffen, bereichFuer, naechsterGegner,
-  teileAuf, letzteEnden,
+  teileAuf, letzteEnden, programm, naechsteGegner,
 } from "../lib/matchup.js";
 import { leseLeistungen } from "../lib/spielplan.js";
 
@@ -141,6 +141,55 @@ pruefe("Verein ohne beendete Partie: niemand offen", werIstOffen({
 }
 pruefe("letzteEnden: nur beendete Partien",
   [...letzteEnden(SPIELE, Date.parse(tag(8)) + 3600_000).keys()].sort(), ["A", "B"]);
+
+// ── Das Programm: die nächsten Gegner ──────────────────────────────
+{
+  const Z = (team, alle, ang, wenig = false) => ({
+    team, wenig, jePosition: { alle: { schnitt: alle }, ANG: { schnitt: ang } } });
+  const zeilen = [Z("A", 10, 4), Z("B", 20, 8, true), Z("C", 30, 12), Z("D", null, null)];
+  const K = (spieltag, heim, gast) => ({ mi: `k${spieltag}${heim}`, spieltag, heim, gast, gewertet: false });
+  const spiele = [
+    // schon gespielt: zählt nicht als „nächster Gegner“
+    { mi: "alt", spieltag: 4, heim: "A", gast: "D", gewertet: true },
+    K(6, "C", "A"), K(6, "D", "B"),       // absichtlich vor Spieltag 5 notiert
+    K(5, "A", "B"), K(5, "C", "D"),
+    K(7, "A", "D"), K(7, "B", "C"),
+  ];
+
+  pruefe("nächste Gegner nach Spieltag, gewertete nicht",
+    naechsteGegner(spiele, "A", 3).map((g) => g.gegner), ["B", "C", "D"]);
+  pruefe("aus Sicht des Vereins: zu Hause / auswärts",
+    [naechsteGegner(spiele, "A", 1)[0].heim, naechsteGegner(spiele, "B", 1)[0].heim], [true, false]);
+
+  const p1 = programm({ spiele, zeilen, position: "alle", anzahl: 1 });
+  const r1 = Object.fromEntries(p1.map((r) => [r.team, r]));
+  pruefe("1 Spieltag: D trifft auf C (30)", r1.D.schnitt, 30);
+  pruefe("1 Spieltag: A trifft auf B (20)", r1.A.schnitt, 20);
+  pruefe("1 Spieltag: Reihenfolge nach Schnitt, Unbekannte hinten",
+    p1.map((r) => r.team), ["D", "A", "B", "C"]);
+  pruefe("1 Spieltag: C gegen D ohne Daten — kein Schnitt, kein Rang",
+    [r1.C.schnitt, r1.C.rang, r1.C.bekannt], [null, null, 0]);
+
+  const p3 = programm({ spiele, zeilen, position: "alle", anzahl: 3 });
+  const r3 = Object.fromEntries(p3.map((r) => [r.team, r]));
+  pruefe("3 Spieltage: D gegen C, B, A = (30+20+10)/3", r3.D.schnitt, 20);
+  pruefe("3 Spieltage: D ist Rang 1", r3.D.rang, 1);
+  // Die Falle der alten Gegner-Seite: Bei unvollständigen Gegnern KEIN
+  // Schnitt aus den bekannten — der sähe aus wie ein echter.
+  pruefe("2 von 3 Gegnern bekannt: kein Schnitt", [r3.A.schnitt, r3.A.bekannt], [null, 2]);
+  pruefe("… und kein Rang", r3.A.rang, null);
+  pruefe("wenig Daten bei einem Gegner färbt ab", r3.D.wenig, true);
+  pruefe("Werte je Gegner stehen einzeln da", r3.D.gegner.map((g) => g.schnitt), [30, 20, 10]);
+
+  const p5 = programm({ spiele, zeilen, position: "alle", anzahl: 5 });
+  const r5 = Object.fromEntries(p5.map((r) => [r.team, r]));
+  pruefe("Saisonende: nur 3 Partien übrig, Schnitt über 3", [r5.D.gegner.length, r5.D.schnitt], [3, 20]);
+
+  const pa = Object.fromEntries(programm({ spiele, zeilen, position: "ANG", anzahl: 1 }).map((r) => [r.team, r]));
+  pruefe("Position ANG: D gegen C lässt 12 zu", pa.D.schnitt, 12);
+  pruefe("ohne kommende Partie: kein Schnitt",
+    programm({ spiele: [], zeilen, anzahl: 3 }).every((r) => r.schnitt == null), true);
+}
 
 // ── Die Leistungsreihe lesen ────────────────────────────────────────
 const reihe = { it: [

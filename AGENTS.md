@@ -424,6 +424,33 @@ letzte 3, letzte 5 oder ganze Saison. Unter dem Vereinsnamen stehen die
 **eigenen Spieler**, die als Nächstes gegen diesen Verein spielen — gefiltert
 nach der gewählten Position.
 
+### Zweite Ansicht: das leichte Programm
+
+Dieselben Zahlen von der anderen Seite gelesen. „Wer lässt zu“ fragt: gegen
+wen ist es leicht? **„Leichtes Programm“** (`?ansicht=programm`) fragt: welcher
+Verein hat über die nächsten **1, 3 oder 5** Partien (`?vor=`) die Gegner,
+gegen die am meisten herauskommt? Je Verein die nächsten Gegner, je Gegner,
+was er auf der gewählten Position je Spiel zulässt, und der Schnitt darüber.
+Unter dem Verein stehen die **eigenen Spieler dieses Vereins** — deren
+Programm ist es.
+
+Beide Ansichten teilen Position und Zeitraum und stehen auf einer Seite; wer
+umschaltet, behält seine Wahl. Gerechnet wird in `programm()` in
+`lib/matchup.js`, aus dem Ergebnis von `werteMatchupsAus()` — kein
+zusätzlicher Aufruf, keine zusätzliche Abfrage.
+
+**Ein Schnitt nur, wenn jeder dieser Gegner bekannt ist.** Die frühere
+Gegner-Seite bildete bei einem bekannten von fünf Gegnern einen „gewichteten
+Schnitt“, der schlicht dessen Wert war. Hier steht dann „2 von 3 bekannt“ und
+kein Rang. Hat ein Verein weniger Partien übrig als verlangt (Saisonende),
+zählt, was es gibt, mit „nur 2“ daneben. Kein Heimvorteil: Der hing bei der
+Gegner-Seite einmal an einer einzigen Partie und trug den halben Score. Ob
+zu Hause oder auswärts, steht als H/A beim Gegner.
+
+15 Fälle in `pruefstand/matchup.mjs`, im Prüfstand und Browser nachgemessen
+(Leverkusen 27,8 vor Bayern 27,5 mit „nur 2“ vor Stuttgart 20,5 — wie vorab
+gerechnet).
+
 ### Die Daten: dieselbe Quelle wie die frühere Gegner-Seite
 
 `/v4/competitions/1/players/{pid}/performance` liefert je Spieler eine Reihe
@@ -508,7 +535,7 @@ Dazu: nur gewertete Partien (Tore vorhanden), unter drei Spielen „wenig
 Daten", Punkte ohne bekannte Position zählen nur in „Gesamt" und werden
 genannt. Die alte Saison in der Reihe zählt nicht (`aktuelleSaison()`).
 
-`lib/matchup.js` ist reine Rechnung: 50 Fälle in `pruefstand/matchup.mjs` —
+`lib/matchup.js` ist reine Rechnung: 65 Fälle in `pruefstand/matchup.mjs` —
 Summen und Ränge, geteilte Ränge, halb geladene Seite, laufendes Spiel,
 Samstagsfall, alte Saison, negative Punkte, und jede Bedingung fürs
 Überspringen einzeln verletzt. Im Prüfstand nachgemessen: Knopf
@@ -1445,7 +1472,7 @@ app/
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
   liga/aufschlaege/page.js         Aufschläge über Marktwert, je Herkunft und Zeitraum
   liga/elf/page.js                 Aufgestellte Elf: Summe der Punkteschnitte je Manager
-  liga/matchup/page.js             Matchups: zugelassene Punkte je Verein und Position
+  liga/matchup/page.js             Matchups: wer lässt zu, und wer hat das leichte Programm
   liga/matchup/Matchupholen.jsx    "use client" — Punkte je Spiel holen, Browser fasst nach
   api/matchup/route.js             Ein Bündel Leistungsreihen holen
   liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
@@ -1498,8 +1525,8 @@ lib/
   rhythmus.js       bildeAuftritte(), prognostiziere(), vorAnpfiff() — 14 Tage, ohne DB
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   elfstaerke.js     bewerteElf() — aufgestellte Elf nach Punkteschnitt, ohne DB
-  matchup.js        werteMatchupsAus(), vollstaendigeSeiten(), werIstOffen(),
-                    teileAuf() — wer ohne Aufruf abgehakt wird, ohne DB
+  matchup.js        werteMatchupsAus(), programm(), vollstaendigeSeiten(),
+                    werIstOffen(), teileAuf() — ohne DB
   matchupabruf.js   importiereLeistungen(), standLeistungen() — /performance je Spieler
   verlauf.js        tagesraster(), tagesreihen(), tageZwischen(), wertAmTag()
                     — Tagesstützstellen 0 Uhr, ohne DB

@@ -4,8 +4,8 @@ import { initSchema, getKader } from "@/lib/db";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { ladeGrundlage, ladeLeistungen, standLeistungen } from "@/lib/matchupabruf";
 import {
-  werteMatchupsAus, vollstaendigeSeiten, bereichFuer, naechsterGegner,
-  POSITIONEN, ZEITRAEUME, MIN_SPIELE,
+  werteMatchupsAus, vollstaendigeSeiten, bereichFuer, naechsterGegner, programm,
+  POSITIONEN, ZEITRAEUME, MIN_SPIELE, VORSCHAU,
 } from "@/lib/matchup";
 import { zeitpunkt } from "@/lib/format";
 import Hinweis from "../../_ui/Hinweis";
@@ -17,9 +17,15 @@ const POS_NAMEN = { alle: "alle Positionen", TW: "Torhüter", ABW: "Abwehr", MF:
 
 // Matchups: Wie viele Punkte lässt jeder Verein zu — je Position?
 //
-// Nach dem Vorbild des Matchup-Tools von KickbaseNerd: Oben stehen die
-// Vereine, die am meisten zulassen. Wer als Nächstes gegen sie spielt, hat
-// das leichte Matchup.
+// Zwei Ansichten auf dieselben Zahlen:
+//
+//   „Wer lässt zu“ — nach dem Vorbild des Matchup-Tools von KickbaseNerd:
+//   oben die Vereine, die am meisten zulassen. Wer als Nächstes gegen sie
+//   spielt, hat das leichte Matchup.
+//
+//   „Leichtes Programm“ — dieselbe Frage von der anderen Seite: Welcher
+//   Verein hat über die nächsten 1, 3 oder 5 Spieltage die Gegner, gegen
+//   die am meisten Punkte herauskommen? Dessen Spieler sind die Kandidaten.
 //
 // Die Seite selbst kostet keinen Kickbase-Aufruf außer der Mitgliedsprüfung
 // (und der Rangliste, falls die eigene Zuordnung nur über den Namen geht).
@@ -40,6 +46,8 @@ export default async function Matchup({ searchParams }) {
 
   const pos = ["alle", ...POSITIONEN].includes(p.pos) ? p.pos : "alle";
   const zeit = ZEITRAEUME.find((z) => z.schluessel === p.zeit) ?? ZEITRAEUME[1];
+  const ansicht = p.ansicht === "programm" ? "programm" : "zulassen";
+  const vor = VORSCHAU.includes(Number(p.vor)) ? Number(p.vor) : 3;
 
   const g = await ladeGrundlage();
   const [leistungen, stand, kader] = await Promise.all([
@@ -78,14 +86,22 @@ export default async function Matchup({ searchParams }) {
   const teamVon = new Map();
   for (const [team, ids] of g.kader) for (const id of ids) teamVon.set(id, team);
   const meineGegen = new Map(); // gegnerischer Verein → meine Spieler
+  const meineBei = new Map();   // eigener Verein → meine Spieler
   for (const s of meineId ? kader.proManager.get(meineId) ?? [] : []) {
     if (pos !== "alle" && s.position !== pos) continue;
     const team = teamVon.get(String(s.id));
-    const n = team ? naechsterGegner(g.spiele, team) : null;
+    if (!team) continue;
+    const spieler = s.name ?? `Spieler #${s.id}`;
+    if (!meineBei.has(team)) meineBei.set(team, []);
+    meineBei.get(team).push(spieler);
+    const n = naechsterGegner(g.spiele, team);
     if (!n) continue;
     if (!meineGegen.has(n.gegner)) meineGegen.set(n.gegner, []);
-    meineGegen.get(n.gegner).push(s.name ?? `Spieler #${s.id}`);
+    meineGegen.get(n.gegner).push(spieler);
   }
+
+  // Das Programm: je Verein die nächsten `vor` Gegner und was sie zulassen.
+  const programmZeilen = programm({ spiele: g.spiele, zeilen, position: pos, anzahl: vor });
 
   const name = (team) => g.vereine.get(team) ?? `Verein #${team}`;
   const zahl = (n) => (n == null ? "–" : n.toLocaleString("de-DE", { maximumFractionDigits: 1 }));
@@ -95,7 +111,8 @@ export default async function Matchup({ searchParams }) {
     s.gewertet && bereich && s.spieltag >= bereich.von && s.spieltag <= bereich.bis &&
     (!vollstaendig.has(`${s.mi}|${s.heim}`) || !vollstaendig.has(`${s.mi}|${s.gast}`))).length;
   const adresse = (neu) => {
-    const q = new URLSearchParams({ league: leagueId, pos, zeit: zeit.schluessel, ...neu });
+    const q = new URLSearchParams({
+      league: leagueId, ansicht, pos, zeit: zeit.schluessel, vor: String(vor), ...neu });
     return `/liga/matchup?${q}`;
   };
 
@@ -106,8 +123,10 @@ export default async function Matchup({ searchParams }) {
           <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Matchups</h1>
           <p className="kb-unter">
-            Punkte, die jeder Verein je Spiel zulässt — {POS_NAMEN[pos]}
-            {bereich ? `, Spieltag ${bereich.von}–${bereich.bis}` : ""}
+            {ansicht === "programm"
+              ? `Wer hat über die nächsten ${vor === 1 ? "Partie" : `${vor} Partien`} die Gegner, gegen die am meisten herauskommt — ${POS_NAMEN[pos]}`
+              : `Punkte, die jeder Verein je Spiel zulässt — ${POS_NAMEN[pos]}`}
+            {bereich ? `, gemessen an Spieltag ${bereich.von}–${bereich.bis}` : ""}
           </p>
         </div>
       </header>
@@ -118,6 +137,18 @@ export default async function Matchup({ searchParams }) {
           Kickbase-Punkten geholt haben, getrennt nach Position, geteilt durch die Zahl der
           Spiele. <strong>Oben steht, wer am meisten zulässt.</strong> Wer als Nächstes gegen
           diesen Verein spielt, hat das leichte Matchup — die Spalte rechts sagt, wer das ist.
+        </p>
+        <p>
+          <strong>„Leichtes Programm“</strong> dreht die Frage um: Für jeden Verein werden
+          seine nächsten 1, 3 oder 5 Gegner genommen, und für jeden, wie viele Punkte er auf
+          der gewählten Position je Spiel zulässt. Der Schnitt darüber steht oben, wenn das
+          Programm leicht ist. Die Spieler dieses Vereins sind die Kandidaten.
+        </p>
+        <p>
+          <strong>Ein Schnitt nur, wenn jeder dieser Gegner bekannt ist.</strong> Fehlt einer,
+          steht „2 von 3 bekannt“ und kein Rang — ein Schnitt aus den bekannten sähe aus wie
+          ein echter, wäre aber nur der Wert eines einzelnen Gegners. Heimvorteil wird nicht
+          eingerechnet; ob zu Hause oder auswärts, steht beim Gegner dabei.
         </p>
         <p>
           Am meisten sagt die Tabelle zusammen mit der Startelf-Chance: ein Spieler, der
@@ -144,7 +175,18 @@ export default async function Matchup({ searchParams }) {
 
       <Matchupholen leagueId={leagueId} stand={stand} />
 
-      <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Position">
+      {/* Zwei Ansichten, ein Werkzeug: Position und Zeitraum gelten für beide. */}
+      <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Ansicht">
+        {[["zulassen", "Wer lässt zu"], ["programm", "Leichtes Programm"]].map(([k, label]) => (
+          <Link key={k} href={adresse({ ansicht: k })}
+                className={`kb-sortchip${ansicht === k ? " kb-sortchip--aktiv" : ""}`}
+                aria-current={ansicht === k ? "page" : undefined}>
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Position" style={{ marginTop: 8 }}>
         {["alle", ...POSITIONEN].map((k) => (
           <Link key={k} href={adresse({ pos: k })}
                 className={`kb-sortchip${pos === k ? " kb-sortchip--aktiv" : ""}`}
@@ -162,6 +204,17 @@ export default async function Matchup({ searchParams }) {
           </Link>
         ))}
       </div>
+      {ansicht === "programm" && (
+        <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Vorschau" style={{ marginTop: 8 }}>
+          {VORSCHAU.map((n) => (
+            <Link key={n} href={adresse({ vor: String(n) })}
+                  className={`kb-sortchip${vor === n ? " kb-sortchip--aktiv" : ""}`}
+                  aria-current={vor === n ? "true" : undefined}>
+              {n === 1 ? "nächstes Spiel" : `nächste ${n}`}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {!bereich ? (
         <p className="kb-info">Noch keine gewertete Partie im Spielplan.</p>
@@ -170,6 +223,58 @@ export default async function Matchup({ searchParams }) {
           Für diesen Zeitraum ist noch keine Partie vollständig geladen — oben die Punkte je
           Spiel holen.
         </p>
+      ) : ansicht === "programm" ? (
+        <div className="kb-tabellenrahmen" style={{ marginTop: 12 }}>
+          <table className="kb-tabelle kb-tabelle--schmal">
+            <thead>
+              <tr>
+                <th scope="col" className="kb-rang">#</th>
+                <th scope="col" className="kb-namensspalte">Verein</th>
+                <th scope="col" className="kb-aktiv" title="Schnitt der zugelassenen Punkte je Spiel über die nächsten Gegner">Ø Gegner</th>
+                <th scope="col">Die nächsten Gegner</th>
+              </tr>
+            </thead>
+            <tbody>
+              {programmZeilen.map((r, i) => {
+                const meine = meineBei.get(r.team) ?? [];
+                return (
+                  <tr key={r.team} className={i % 2 ? "kb-zeile--grau" : "kb-zeile--weiss"}>
+                    <td className="kb-rang">{r.rang ?? "–"}</td>
+                    <td className="kb-namensspalte">
+                      <span className="kb-spielername">{name(r.team)}</span>
+                      {r.wenig && <span className="kb-leise"> wenig Daten</span>}
+                      {meine.length > 0 && (
+                        <span className="kb-matchupmeine" title="Deine Spieler in diesem Verein">
+                          deine: {meine.join(", ")}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {r.schnitt != null ? <strong>{zahl(r.schnitt)}</strong>
+                        : r.gegner.length === 0 ? <span className="kb-gedaempft">–</span>
+                        : <span className="kb-leise">{r.bekannt} von {r.gegner.length} bekannt</span>}
+                      {r.schnitt != null && r.gegner.length < vor && (
+                        <span className="kb-leise"> nur {r.gegner.length}</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="kb-programm">
+                        {r.gegner.map((x) => (
+                          <span key={`${x.spieltag}-${x.gegner}`}
+                                title={`Spieltag ${x.spieltag}${x.datum ? ` · ${zeitpunkt(x.datum)}` : ""} · ${x.heim ? "zu Hause" : "auswärts"}`}>
+                            <span className="kb-leise">{x.heim ? "H" : "A"}</span> {name(x.gegner)}{" "}
+                            <span className={x.schnitt == null ? "kb-gedaempft" : ""}>{zahl(x.schnitt)}</span>
+                          </span>
+                        ))}
+                        {r.gegner.length === 0 && <span className="kb-gedaempft">keine Partie mehr</span>}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="kb-tabellenrahmen" style={{ marginTop: 12 }}>
           <table className="kb-tabelle kb-tabelle--schmal">

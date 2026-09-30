@@ -20,6 +20,7 @@ const SEITEN = [
   ["Aufschläge", `/liga/aufschlaege?league=${LIGA}`],
   ["Aufgestellte Elf", `/liga/elf?league=${LIGA}`],
   ["Matchups", `/liga/matchup?league=${LIGA}`],
+  ["Matchups Programm", `/liga/matchup?league=${LIGA}&ansicht=programm`],
   ["Einstellungen", `/liga/einstellungen?league=${LIGA}`],
   ["Zugang", "/zugang"],
   ["Alter Markt", `/markt?league=${LIGA}`],

@@ -692,6 +692,11 @@ die als Nächstes gegen ihn antreten.
 - **Nur vollständige Partien:** Eine Partie zählt erst, wenn alle Spieler des
   Gegners nach dem Abpfiff abgefragt sind; sonst steht sie als „offen" da.
 - **Stichprobe sichtbar:** unter drei Spielen „wenig Daten".
+- **Leichtes Programm:** zweite Ansicht auf derselben Seite. Je Verein die
+  nächsten 1, 3 oder 5 Gegner und was sie auf der gewählten Position je Spiel
+  zulassen, im Schnitt. Oben steht, wer das leichteste Programm hat; darunter
+  die eigenen Spieler dieses Vereins. Ein Schnitt nur, wenn alle diese Gegner
+  bekannt sind, sonst „2 von 3 bekannt“.
 - **Schneller:** Wessen Saisonpunkte sich seit der letzten Abfrage nicht
   bewegt haben, wird ohne Aufruf abgehakt — nur, wenn das Feld für diesen
   Spieler durch die eigene Summe belegt ist. Der Zähler läuft live mit,

@@ -2101,3 +2101,8 @@ details[open] > summary.kb-aufklappzeile::before { content: "▾ "; }
   color: var(--kb-text-leise);
   white-space: normal;
 }
+
+/* Matchups, „Leichtes Programm“: die nächsten Gegner untereinander, je mit
+   H/A und dem, was sie zulassen. Untereinander statt nebeneinander, damit
+   fünf Vereinsnamen auch auf dem Handy lesbar bleiben. */
+.kb-programm { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
