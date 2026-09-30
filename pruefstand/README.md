@@ -250,3 +250,13 @@ war davon nichts zu sehen.
 
 Das Spielfeld (`.kb-platz`) ist ausgenommen — es ist in beiden Themen grün, die
 weißen Spielerpunkte darauf sind dort richtig und keine Fundstelle.
+
+## KB_TP_ANDERS
+
+Die Vereinskader der Attrappe tragen `tp` (Saisonpunkte), genau passend zur
+Summe der Leistungsreihe. Daran belegt der Matchup-Abruf das Feld, bevor er
+Spieler ohne neue Punkte überspringt. `KB_TP_ANDERS=1` gibt Harry Kane andere
+Saisonpunkte, als hätte er seither gespielt — er muss dann gefragt werden,
+die übrigen nicht. Mit `KB_ZAEHLEN=1` lässt sich nachzählen, welche
+`/performance`-Aufrufe tatsächlich rausgehen.
+

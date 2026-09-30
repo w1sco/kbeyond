@@ -297,7 +297,8 @@ spiele(spieltag, heim, gast, datum, mi, tore_heim, tore_gast, stand)
   PK (spieltag, heim, gast), UNIQUE (mi) — ligaunabhängig, aus /matchdays
 spieler_punkte(player_id, mi, team_id, spieltag, punkte, position)  -- PK (player_id, mi)
   team_id = Verein ZUM ZEITPUNKT DES SPIELS; ligaunabhängig
-leistung_geprueft(player_id PK, bis_tag, geprueft)   -- maßgeblich: geprueft
+leistung_geprueft(player_id PK, bis_tag, geprueft, tp, tp_passt)
+  maßgeblich: geprueft; tp/tp_passt = Saisonpunkte damals und ob sie zur Summe passten
 startelf(player_id PK, stufe, spieltag, stand)   -- ligaunabhängig
   stufe 1–5 aus `prob`, NULL = gefragt und nichts geliefert
   spieltag = für welchen Spieltag die Prognose gilt
@@ -442,6 +443,54 @@ dann gilt die Position aus dem Pool).
   Spieltag sind das alle (rund 470, gut fünf Minuten), nach einem
   Freitagsspiel zwei Vereine.
 
+### Schneller: überspringen, wer nicht gepunktet hat
+
+Der erste Abruf nach einem Spieltag fragte alle rund 470 Spieler. Etwa die
+Hälfte eines Kaders spielt aber gar nicht — Ersatztorhüter, Jugend,
+Verletzte —, und ihre Leistungsreihe bringt keine einzige Punktzahl.
+
+**Die Spielerliste führt jetzt die Saisonpunkte mit** (`saisonpunkte` im
+Pool, nur aus `tp`, demselben Feld wie in Kader und Markt; kein zweiter
+Kandidat, weil `p` in der Leistungsreihe „Punkte in diesem Spiel“ heißt).
+Haben sich die Saisonpunkte eines Spielers seit seiner letzten Abfrage nicht
+bewegt, hat er nichts dazugeholt: `teileAuf()` hakt ihn ohne Aufruf ab. Wer
+genau 0 geholt hat, fehlt dann als Zeile, trägt aber auch nichts zur Summe bei.
+
+**Nichts daran ist geraten, weil jeder Spieler es selbst belegt.** Bei jeder
+Abfrage wird die Summe seiner Saisonspiele mit `tp` verglichen und in
+`leistung_geprueft.tp_passt` vermerkt. Übersprungen wird nur, wer (1) so
+belegt ist, (2) in einer Spielerliste steht, die **jünger als sein letztes
+Spiel** ist — sonst hieße „unverändert“ nur „noch nicht nachgelesen“ —, und
+(3) dieselben Saisonpunkte hat wie damals. Steht `tp` im Vereinskader für
+etwas anderes oder fehlt es, passt die Summe nie, und es wird gefragt wie
+bisher. Die Seite sagt deshalb auch, wenn die Spielerliste älter als das
+letzte Spiel ist: erst „Alles aktualisieren“, dann holen.
+
+Nachgemessen im Prüfstand: erster Lauf 7 Aufrufe, alle bis auf den 404 als
+belegt vermerkt. Dann ein neuer Spieltag simuliert, bei einem Spieler die
+Saisonpunkte verschoben: **2 Aufrufe** (der mit neuen Punkten und der nie
+belegte), 5 ohne Aufruf abgehakt.
+
+### Die Anzeige zählt live mit, Abbrechen wirkt sofort
+
+Die Route antwortet als **Strom, eine Zeile je Spieler** (NDJSON). Vorher kam
+die Antwort erst nach 45 Sekunden am Stück — so lange stand der Zähler still,
+und es sah aus, als hinge der Abruf. Gemessen: eine Zeile alle 0,6 s.
+
+Abbrechen bricht den laufenden Request ab; der Server hört am Signal der
+Anfrage auf, statt sein Zeitbudget auszuschöpfen. Geschrieben wird nach
+**jedem** Spieler, nicht gesammelt: Das kostet nichts, weil die Bremse ab dem
+Start des letzten Aufrufs zählt und das Schreiben in die Wartezeit fällt — und
+ein Abbruch verliert so nichts. Gemessen: Abbruch bei „3 von 7“, danach keine
+weiteren Aufrufe, 3 Spieler offen.
+
+Dazu legt die Route das Schema nur einmal je warmer Instanz an statt in jeder
+Runde gut 40 Abfragen lang.
+
+**Die Bremse von 600 ms bleibt.** Halb so viel Abstand wäre doppelt so schnell
+— und doppelt so viele Anfragen je Minute bei Kickbase, genau das, was schon
+einmal zur Sperre geführt hat.
+
 ### Vollständig heißt: nach dem Abpfiff gefragt
 
 Die Gegner-Seite hat einmal 202 gegen 23 bei einer einzigen Partie gezeigt,
@@ -459,9 +508,10 @@ Dazu: nur gewertete Partien (Tore vorhanden), unter drei Spielen „wenig
 Daten", Punkte ohne bekannte Position zählen nur in „Gesamt" und werden
 genannt. Die alte Saison in der Reihe zählt nicht (`aktuelleSaison()`).
 
-`lib/matchup.js` ist reine Rechnung: 42 Fälle in `pruefstand/matchup.mjs` —
+`lib/matchup.js` ist reine Rechnung: 50 Fälle in `pruefstand/matchup.mjs` —
 Summen und Ränge, geteilte Ränge, halb geladene Seite, laufendes Spiel,
-Samstagsfall, alte Saison, negative Punkte. Im Prüfstand nachgemessen: Knopf
+Samstagsfall, alte Saison, negative Punkte, und jede Bedingung fürs
+Überspringen einzeln verletzt. Im Prüfstand nachgemessen: Knopf
 geklickt, 7 Spieler geholt (einer mit 404), Tabelle zeigt 33 / 22 / 17,5 wie
 vorab gerechnet.
 
@@ -1448,7 +1498,8 @@ lib/
   rhythmus.js       bildeAuftritte(), prognostiziere(), vorAnpfiff() — 14 Tage, ohne DB
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   elfstaerke.js     bewerteElf() — aufgestellte Elf nach Punkteschnitt, ohne DB
-  matchup.js        werteMatchupsAus(), vollstaendigeSeiten(), werIstOffen() — ohne DB
+  matchup.js        werteMatchupsAus(), vollstaendigeSeiten(), werIstOffen(),
+                    teileAuf() — wer ohne Aufruf abgehakt wird, ohne DB
   matchupabruf.js   importiereLeistungen(), standLeistungen() — /performance je Spieler
   verlauf.js        tagesraster(), tagesreihen(), tageZwischen(), wertAmTag()
                     — Tagesstützstellen 0 Uhr, ohne DB

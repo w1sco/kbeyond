@@ -1,6 +1,7 @@
 // Matchups: zugelassene Punkte je Verein und Position. Reine Rechnung.
 import {
   werteMatchupsAus, vollstaendigeSeiten, werIstOffen, bereichFuer, naechsterGegner,
+  teileAuf, letzteEnden,
 } from "../lib/matchup.js";
 import { leseLeistungen } from "../lib/spielplan.js";
 
@@ -111,6 +112,35 @@ pruefe("ein laufendes Spiel macht niemanden offen", werIstOffen({
   spiele: SPIELE.slice(0, 2), kader: KADER, geprueftAm: new Map(), jetzt: Date.parse(tag(1)) + 3600_000 }), []);
 pruefe("Verein ohne beendete Partie: niemand offen", werIstOffen({
   spiele: [SPIELE[3]], kader: KADER, geprueftAm: new Map(), jetzt: ende2 }), []);
+
+// ── Wer ohne Aufruf abgehakt werden darf ───────────────────────────
+// Alle drei Bedingungen: Feld belegt, Spielerliste jünger als das Spiel,
+// Saisonpunkte unverändert. Jede einzeln verletzt heißt: fragen.
+{
+  const teamVon = new Map([["a1", "A"], ["a2", "A"], ["b1", "B"], ["c1", "C"]]);
+  const letztesEnde = new Map([["A", 1000], ["B", 1000], ["C", 1000]]);
+  const basis = {
+    teamVon, letztesEnde, poolStand: 2000,
+    tpJetzt:  new Map([["a1", 30], ["a2", 50], ["b1", 0],  ["c1", 12]]),
+    tpDamals: new Map([["a1", 30], ["a2", 40], ["b1", 0],  ["c1", 12]]),
+    tpPasst:  new Map([["a1", true], ["a2", true], ["b1", true], ["c1", false]]),
+  };
+  const t = teileAuf({ ...basis, offen: ["a1", "a2", "b1", "c1"] });
+  pruefe("unverändert und belegt: abgehakt", t.ueberspringen, ["a1", "b1"]);
+  pruefe("Punkte bewegt oder Feld nicht belegt: fragen", t.fragen, ["a2", "c1"]);
+  pruefe("Spielerliste älter als das Spiel: alle fragen",
+    teileAuf({ ...basis, poolStand: 500, offen: ["a1", "b1"] }).fragen, ["a1", "b1"]);
+  pruefe("ohne Spielerliste-Stand: alle fragen",
+    teileAuf({ ...basis, poolStand: null, offen: ["a1"] }).fragen, ["a1"]);
+  pruefe("ohne tp in der Liste: fragen",
+    teileAuf({ ...basis, tpJetzt: new Map(), offen: ["a1"] }).fragen, ["a1"]);
+  pruefe("nie gefragt, also nie belegt: fragen",
+    teileAuf({ ...basis, tpPasst: new Map(), offen: ["a1"] }).fragen, ["a1"]);
+  pruefe("0 Punkte bleibt 0: abgehakt, nicht mit null verwechselt",
+    teileAuf({ ...basis, offen: ["b1"] }).ueberspringen, ["b1"]);
+}
+pruefe("letzteEnden: nur beendete Partien",
+  [...letzteEnden(SPIELE, Date.parse(tag(8)) + 3600_000).keys()].sort(), ["A", "B"]);
 
 // ── Die Leistungsreihe lesen ────────────────────────────────────────
 const reihe = { it: [

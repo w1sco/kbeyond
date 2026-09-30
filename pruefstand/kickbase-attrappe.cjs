@@ -53,19 +53,23 @@ const KADER = {
 };
 
 const TEAMS = [7, 2, 3];
+// `tp` sind die Saisonpunkte — genau die Summe der gewerteten Spiele aus
+// der Leistungsreihe unten. Daran belegt der Matchup-Abruf das Feld, bevor
+// er Spieler ohne neue Punkte überspringt. KB_TP_ANDERS=1 verschiebt die
+// Punkte eines Spielers, als hätte er seither gespielt.
 const VEREINSKADER = {
   7: [
-    { i: "101", n: "Harry Kane", mv: 68800000, pos: 4 },
-    { i: "201", n: "Jonathan Tah", mv: 32200000, pos: 2 },
-    { i: "301", n: "Freier Stürmer", mv: 22000000, pos: 4 },
+    { i: "101", n: "Harry Kane", mv: 68800000, pos: 4, tp: process.env.KB_TP_ANDERS === "1" ? 50 : 32 },
+    { i: "201", n: "Jonathan Tah", mv: 32200000, pos: 2, tp: -9 },
+    { i: "301", n: "Freier Stürmer", mv: 22000000, pos: 4, tp: 32 },
   ],
   2: [
-    { i: "102", n: "Angelo Stiller", mv: 36600000, pos: 3 },
-    { i: "302", n: "Freier Verteidiger", mv: 9000000, pos: 2 },
+    { i: "102", n: "Angelo Stiller", mv: 36600000, pos: 3, tp: 12 },
+    { i: "302", n: "Freier Verteidiger", mv: 9000000, pos: 2, tp: 0 },
   ],
   3: [
-    { i: "103", n: "Patrik Schick", mv: 29400000, pos: 4 },
-    { i: "303", n: "Billiger Ersatz", mv: 400000, pos: 3 },
+    { i: "103", n: "Patrik Schick", mv: 29400000, pos: 4, tp: 23 },
+    { i: "303", n: "Billiger Ersatz", mv: 400000, pos: 3, tp: 0 },
   ],
 };
 

@@ -692,6 +692,10 @@ die als Nächstes gegen ihn antreten.
 - **Nur vollständige Partien:** Eine Partie zählt erst, wenn alle Spieler des
   Gegners nach dem Abpfiff abgefragt sind; sonst steht sie als „offen" da.
 - **Stichprobe sichtbar:** unter drei Spielen „wenig Daten".
+- **Schneller:** Wessen Saisonpunkte sich seit der letzten Abfrage nicht
+  bewegt haben, wird ohne Aufruf abgehakt — nur, wenn das Feld für diesen
+  Spieler durch die eigene Summe belegt ist. Der Zähler läuft live mit,
+  Abbrechen wirkt sofort und verliert nichts.
 
 ### 7.13 Frag die Liga
 
