@@ -176,22 +176,67 @@ pruefe("letzteEnden: nur beendete Partien",
   // Wer selbst kein gezähltes Spiel hat, bekommt mit Schalter keinen Rang —
   // die Gegner allein würden eine Stärke vortäuschen, die niemand kennt.
   const ohneEigen = aus.zeilen.map((x) => x.team === "A"
-    ? { ...x, spieleEigen: 0, erzielt: { alle: { schnitt: null }, ANG: { schnitt: null } } } : x);
+    ? { ...x, spieleEigen: 0, erzielt: { alle: { wert: null }, ANG: { wert: null } } } : x);
   const r = Object.fromEntries(programm({ spiele: kommend, zeilen: ohneEigen, ligaschnitt: aus.ligaschnitt,
     position: "alle", anzahl: 1, mitEigener: true }).map((x) => [x.team, x]));
   pruefe("ohne eigene Spiele: keine Erwartung, kein Rang", [r.A.erwartung, r.A.rang], [null, null]);
   pruefe("negative Werte: addiert, nicht multipliziert",
     programm({ spiele: kommend, position: "alle", anzahl: 1, mitEigener: true, ligaschnitt: { alle: 10 },
       zeilen: [
-        { team: "A", spieleEigen: 3, erzielt: { alle: { schnitt: -5 } }, jePosition: { alle: { schnitt: 0 } } },
-        { team: "C", spieleEigen: 3, erzielt: { alle: { schnitt: 0 } }, jePosition: { alle: { schnitt: -5 } } },
+        { team: "A", spieleEigen: 3, erzielt: { alle: { wert: -5 } }, jePosition: { alle: { wert: 0 } } },
+        { team: "C", spieleEigen: 3, erzielt: { alle: { wert: 0 } }, jePosition: { alle: { wert: -5 } } },
       ] }).find((x) => x.team === "A").erwartung, -20);
+}
+
+// ── Je Spieler statt je Mannschaft ─────────────────────────────────
+// Y spielt gegen P (Dreierkette, je 15), Z gegen Q (Fünferkette, je 10).
+// Je Mannschaft lässt Z mehr zu (50 gegen 45), je Spieler Y (15 gegen 10).
+{
+  const sp = [
+    { mi: "s1", spieltag: 1, heim: "Y", gast: "P", datum: tag(1), gewertet: true },
+    { mi: "s2", spieltag: 1, heim: "Z", gast: "Q", datum: tag(1), gewertet: true },
+    { mi: "s3", spieltag: 1, heim: "W", gast: "R", datum: tag(1), gewertet: true },
+    { mi: "s4", spieltag: 2, heim: "R", gast: "W", datum: tag(8), gewertet: true },
+  ];
+  const le = [
+    ...[1, 2, 3].map(() => L("s1", "P", "ABW", 15)),
+    ...[1, 2, 3, 4, 5].map(() => L("s2", "Q", "ABW", 10)),
+    L("s1", "Y", "ANG", 8),
+    L("s2", "Z", "ANG", 4), L("s2", "Z", "ANG", 4),
+    // W: einmal ein Verteidiger mit 30, einmal vier mit je 5
+    L("s3", "R", "ABW", 30),
+    ...[1, 2, 3, 4].map(() => L("s4", "R", "ABW", 5)),
+  ];
+  const voll = new Set(sp.flatMap((x) => [`${x.mi}|${x.heim}`, `${x.mi}|${x.gast}`]));
+  const auf = (mass) => {
+    const r = werteMatchupsAus({ spiele: sp, leistungen: le, vollstaendig: voll, bereich: { von: 1, bis: 2 }, mass });
+    return { ...r, z: Object.fromEntries(r.zeilen.map((x) => [x.team, x])) };
+  };
+  const m = auf("mannschaft");
+  const s = auf("spieler");
+  pruefe("je Mannschaft: Z lässt mehr zu (50 gegen 45)", [m.z.Z.jePosition.ABW.wert, m.z.Y.jePosition.ABW.wert], [50, 45]);
+  pruefe("je Mannschaft: Z vor Y", [m.z.Z.jePosition.ABW.rang < m.z.Y.jePosition.ABW.rang], [true]);
+  pruefe("je Spieler: Y lässt mehr zu (15 gegen 10)", [s.z.Y.jePosition.ABW.wert, s.z.Z.jePosition.ABW.wert], [15, 10]);
+  pruefe("je Spieler: Reihenfolge kippt, Y vor Z", [s.z.Y.jePosition.ABW.rang < s.z.Z.jePosition.ABW.rang], [true]);
+  pruefe("Einsätze gezählt", [s.z.Y.jePosition.ABW.einsaetze, s.z.Z.jePosition.ABW.einsaetze], [3, 5]);
+  pruefe("erzielt je Spieler: Y 8, Z 4", [s.z.Y.erzielt.ANG.wert, s.z.Z.erzielt.ANG.wert], [8, 4]);
+  pruefe("erzielt je Mannschaft: beide 8", [m.z.Y.erzielt.ANG.wert, m.z.Z.erzielt.ANG.wert], [8, 8]);
+  // Zusammengefasst, nicht Schnitt der Schnitte: (30 + 20) / 5 = 10, nicht (30 + 5) / 2
+  pruefe("über Spiele zusammengefasst, nicht Schnitt der Schnitte", s.z.W.jePosition.ABW.wert, 10);
+  pruefe("ohne Einsatz auf der Position: kein Wert, kein Rang",
+    [s.z.Y.jePosition.TW.wert, s.z.Y.jePosition.TW.rang], [null, null]);
+  pruefe("Ligaschnitt je Spieler: 145 Punkte aus 13 Einsätzen",
+    Math.round(s.ligaschnitt.ABW * 1000) / 1000, Math.round(145 / 13 * 1000) / 1000);
+  pruefe("Ligaschnitt je Mannschaft: 145 Punkte auf 8 Seiten", m.ligaschnitt.ABW, 145 / 8);
+  pruefe("Vorgabe der Bibliothek bleibt je Mannschaft",
+    werteMatchupsAus({ spiele: sp, leistungen: le, vollstaendig: voll, bereich: { von: 1, bis: 2 } })
+      .zeilen.find((x) => x.team === "Z").jePosition.ABW.wert, 50);
 }
 
 // ── Das Programm: die nächsten Gegner ──────────────────────────────
 {
   const Z = (team, alle, ang, wenig = false) => ({
-    team, wenig, jePosition: { alle: { schnitt: alle }, ANG: { schnitt: ang } } });
+    team, wenig, jePosition: { alle: { wert: alle }, ANG: { wert: ang } } });
   const zeilen = [Z("A", 10, 4), Z("B", 20, 8, true), Z("C", 30, 12), Z("D", null, null)];
   const K = (spieltag, heim, gast) => ({ mi: `k${spieltag}${heim}`, spieltag, heim, gast, gewertet: false });
   const spiele = [

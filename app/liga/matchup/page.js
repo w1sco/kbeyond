@@ -5,7 +5,7 @@ import { sitzung, verlangeLiga } from "@/lib/auth";
 import { ladeGrundlage, ladeLeistungen, standLeistungen } from "@/lib/matchupabruf";
 import {
   werteMatchupsAus, vollstaendigeSeiten, bereichFuer, naechsterGegner, programm,
-  POSITIONEN, ZEITRAEUME, MIN_SPIELE, VORSCHAU,
+  POSITIONEN, ZEITRAEUME, MIN_SPIELE, VORSCHAU, MASSE,
 } from "@/lib/matchup";
 import { zeitpunkt } from "@/lib/format";
 import Hinweis from "../../_ui/Hinweis";
@@ -51,6 +51,11 @@ export default async function Matchup({ searchParams }) {
   // Leichte Gegner allein reichen nicht — die eigene Mannschaft muss auch
   // punkten. Vorgabe ist deshalb „mit eigener Stärke“.
   const mitEigener = p.wertung !== "gegner";
+  // Je Spieler (Vorgabe) oder je Mannschaft. Je Spieler, weil ein Manager
+  // einen Verteidiger besitzt und nicht die Kette — und weil eine Fünferkette
+  // sonst mehr „zulässt“ als eine Dreierkette, nur weil mehr Leute darin stehen.
+  const mass = MASSE.includes(p.je) ? p.je : "spieler";
+  const einheit = mass === "spieler" ? "je Spieler" : "je Spiel";
 
   const g = await ladeGrundlage();
   const [leistungen, stand, kader] = await Promise.all([
@@ -62,14 +67,14 @@ export default async function Matchup({ searchParams }) {
   const bereich = bereichFuer(g.spiele, zeit.spieltage);
   const vollstaendig = vollstaendigeSeiten(g);
   const { zeilen, ohnePosition, ligaschnitt } = werteMatchupsAus({
-    spiele: g.spiele, leistungen, vollstaendig, bereich,
+    spiele: g.spiele, leistungen, vollstaendig, bereich, mass,
   });
 
   // Sortiert nach der gewählten Position: wer am meisten zulässt, oben.
   // Ohne gezähltes Spiel ans Ende.
   zeilen.sort((a, b) => {
-    const av = a.jePosition[pos].schnitt;
-    const bv = b.jePosition[pos].schnitt;
+    const av = a.jePosition[pos].wert;
+    const bv = b.jePosition[pos].wert;
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
@@ -118,7 +123,7 @@ export default async function Matchup({ searchParams }) {
   const adresse = (neu) => {
     const q = new URLSearchParams({
       league: leagueId, ansicht, pos, zeit: zeit.schluessel, vor: String(vor),
-      wertung: mitEigener ? "beides" : "gegner", ...neu });
+      wertung: mitEigener ? "beides" : "gegner", je: mass, ...neu });
     return `/liga/matchup?${q}`;
   };
 
@@ -133,8 +138,11 @@ export default async function Matchup({ searchParams }) {
               ? mitEigener
                 ? `Was über die nächsten ${vor === 1 ? "Partie" : `${vor} Partien`} zu erwarten ist, eigene Stärke und Gegner zusammen — ${POS_NAMEN[pos]}`
                 : `Wer hat über die nächsten ${vor === 1 ? "Partie" : `${vor} Partien`} die Gegner, gegen die am meisten herauskommt — ${POS_NAMEN[pos]}`
-              : `Punkte, die jeder Verein je Spiel zulässt — ${POS_NAMEN[pos]}`}
+              : mass === "spieler"
+                ? `Punkte, die ein Spieler gegen jeden Verein im Schnitt holt — ${POS_NAMEN[pos]}`
+                : `Punkte, die jeder Verein je Spiel zulässt — ${POS_NAMEN[pos]}`}
             {bereich ? `, gemessen an Spieltag ${bereich.von}–${bereich.bis}` : ""}
+            {ansicht === "programm" ? ` · ${einheit}` : ""}
           </p>
         </div>
       </header>
@@ -142,9 +150,23 @@ export default async function Matchup({ searchParams }) {
       <Hinweis kurz="Wie man die Tabelle liest" titel="Matchups">
         <p>
           Gezählt wird, was die <strong>Gegner</strong> eines Vereins in dessen Spielen an
-          Kickbase-Punkten geholt haben, getrennt nach Position, geteilt durch die Zahl der
-          Spiele. <strong>Oben steht, wer am meisten zulässt.</strong> Wer als Nächstes gegen
-          diesen Verein spielt, hat das leichte Matchup — die Spalte rechts sagt, wer das ist.
+          Kickbase-Punkten geholt haben, getrennt nach Position. <strong>Oben steht, wer am
+          meisten zulässt.</strong> Wer als Nächstes gegen diesen Verein spielt, hat das
+          leichte Matchup — die Spalte rechts sagt, wer das ist.
+        </p>
+        <p>
+          <strong>Je Spieler (Vorgabe)</strong> teilt durch die Einsätze auf der Position,
+          nicht durch die Spiele. Sonst sähe ein Verein abwehrschwach aus, nur weil seine
+          Gegner mit Fünferkette angetreten sind: fünf Verteidiger in der Summe statt drei.
+          Gerechnet wird über den ganzen Zeitraum zusammengefasst, alle Punkte durch alle
+          Einsätze. <strong>Je Mannschaft</strong> zeigt die Summe je Spiel, also wie viel
+          insgesamt herauskommt.
+        </p>
+        <p>
+          Zwei Grenzen. Es zählt die Position, die Kickbase führt, nicht die Rolle auf dem
+          Platz — ein Schienenspieler, den Kickbase als Mittelfeld führt, zählt dort. Und
+          ein Einwechselspieler zählt als voller Einsatz, auch nach zehn Minuten; das drückt
+          den Schnitt je Spieler bei allen Vereinen ähnlich.
         </p>
         <p>
           <strong>„Leichtes Programm“</strong> dreht die Frage um: Für jeden Verein werden
@@ -221,6 +243,15 @@ export default async function Matchup({ searchParams }) {
           </Link>
         ))}
       </div>
+      <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Maß" style={{ marginTop: 8 }}>
+        {[["spieler", "je Spieler"], ["mannschaft", "je Mannschaft"]].map(([k, label]) => (
+          <Link key={k} href={adresse({ je: k })}
+                className={`kb-sortchip${mass === k ? " kb-sortchip--aktiv" : ""}`}
+                aria-current={mass === k ? "true" : undefined}>
+            {label}
+          </Link>
+        ))}
+      </div>
       {ansicht === "programm" && (
         <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Wertung" style={{ marginTop: 8 }}>
           {[["beides", "mit eigener Stärke"], ["gegner", "nur Gegner"]].map(([k, label]) => (
@@ -259,8 +290,8 @@ export default async function Matchup({ searchParams }) {
                 <th scope="col" className="kb-rang">#</th>
                 <th scope="col" className="kb-namensspalte">Verein</th>
                 {mitEigener
-                  ? <th scope="col" className="kb-aktiv" title="Eigene Punkte je Spiel + was die Gegner zulassen − Ligaschnitt, im Schnitt über die nächsten Partien">Erwartung</th>
-                  : <th scope="col" className="kb-aktiv" title="Schnitt der zugelassenen Punkte je Spiel über die nächsten Gegner">Ø Gegner</th>}
+                  ? <th scope="col" className="kb-aktiv" title={`Eigene Punkte ${einheit} + was die Gegner zulassen − Ligaschnitt, im Schnitt über die nächsten Partien`}>Erwartung</th>
+                  : <th scope="col" className="kb-aktiv" title={`Was die nächsten Gegner ${einheit} zulassen, im Schnitt`}>Ø Gegner</th>}
                 <th scope="col">Die nächsten Gegner</th>
               </tr>
             </thead>
@@ -349,7 +380,11 @@ export default async function Matchup({ searchParams }) {
                     </td>
                     {["alle", ...POSITIONEN].map((k) => (
                       <td key={k} className={k === pos ? "" : "kb-sek"}>
-                        {k === pos ? <strong>{zahl(z.jePosition[k].schnitt)}</strong> : zahl(z.jePosition[k].schnitt)}
+                        {/* Woraus die Zahl besteht, im Titel: Punkte, Einsätze, Spiele. */}
+                        <span title={z.jePosition[k].summe == null ? undefined
+                          : `${zahl(z.jePosition[k].summe)} Punkte aus ${z.jePosition[k].einsaetze} Einsätzen in ${z.spiele} Spielen`}>
+                          {k === pos ? <strong>{zahl(z.jePosition[k].wert)}</strong> : zahl(z.jePosition[k].wert)}
+                        </span>
                       </td>
                     ))}
                     <td className="kb-sek">

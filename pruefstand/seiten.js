@@ -14,6 +14,7 @@ const SEITEN = [
   ["Matchups",           `/liga/matchup?league=${LIGA}`],
   ["Matchups Programm",  `/liga/matchup?league=${LIGA}&ansicht=programm&vor=5`],
   ["Matchups nur Gegner", `/liga/matchup?league=${LIGA}&ansicht=programm&wertung=gegner`],
+  ["Matchups je Mannschaft", `/liga/matchup?league=${LIGA}&je=mannschaft&pos=ABW`],
   ["Managerseite",       `/liga/manager/1?league=${LIGA}`],
   ["Managerseite fremd", `/liga/manager/2?league=${LIGA}`],
   ["Freie Spieler",      `/liga/markt?league=${LIGA}`],

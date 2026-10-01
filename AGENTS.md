@@ -424,6 +424,40 @@ letzte 3, letzte 5 oder ganze Saison. Unter dem Vereinsnamen stehen die
 **eigenen Spieler**, die als Nächstes gegen diesen Verein spielen — gefiltert
 nach der gewählten Position.
 
+### Je Spieler, nicht je Mannschaft (Vorgabe)
+
+Vereine spielen mit unterschiedlichen Formationen. Je Mannschaft gezählt,
+steckt in der Abwehr-Summe eines Gegners mit Fünferkette fünf Verteidiger,
+bei einer Dreierkette drei — ein Verein sah abwehrschwach aus, nur weil seine
+Gegner mit fünf hinten antraten. Für den Manager zählt ohnehin der einzelne
+Spieler: Er besitzt einen Verteidiger, nicht die Kette.
+
+Deshalb ist **je Spieler** die Vorgabe (`?je=spieler|mannschaft`, Schalter
+auf beiden Ansichten): alle Punkte auf der Position durch alle **Einsätze**
+auf der Position, über den Zeitraum **zusammengefasst** — nicht der Schnitt
+der Spielschnitte, sonst zöge ein Spiel mit einem einzigen Stürmer so stark
+wie eines mit drei. Ein Einsatz ist eine Zeile in `spieler_punkte`, also ein
+Spieler mit Punkten in dieser Partie. Gilt für alles: was ein Verein zulässt,
+was er selbst erzielt, der Ligaschnitt — und damit für die Erwartung, die je
+Spieler genau die Frage beantwortet: Was holt **ein** Verteidiger von X gegen Y?
+
+Ohne Einsatz auf der Position steht „–“, nicht 0: Es gibt nichts zu teilen.
+Der Titel jeder Zahl nennt, woraus sie besteht („35 Punkte aus 2 Einsätzen in
+2 Spielen“). `werteMatchupsAus()` liefert beide Maße (`schnitt` je Spiel,
+`jeSpieler`) und im gewählten `wert`, nach dem Rang und Programm rechnen.
+
+**Zwei Grenzen, beide auf der Seite genannt.** Es zählt die **Position, die
+Kickbase führt**, nicht die Rolle auf dem Platz — ein Schienenspieler, den
+Kickbase als Mittelfeld führt, zählt dort. Das ist für die Aufstellung auch die
+maßgebliche. Und ein **Einwechselspieler zählt als voller Einsatz**, auch nach
+zehn Minuten. Ob die Leistungsreihe Minuten mitführt, ist nicht belegt; erst
+prüfen, dann nur Einsätze mit nennenswerter Spielzeit zählen.
+
+Durchgerechnet: Dreierkette mit je 15 gegen Fünferkette mit je 10 — je
+Mannschaft 45 gegen 50, je Spieler 15 gegen 10, die Reihenfolge kippt. Dazu
+die Zusammenfassung über Spiele (30 + 4 × 5 ergibt 10, nicht 17,5) und der
+Ligaschnitt in beiden Maßen. 12 Fälle, zusammen 90 in `pruefstand/matchup.mjs`.
+
 ### Zweite Ansicht: das leichte Programm
 
 Dieselben Zahlen von der anderen Seite gelesen. „Wer lässt zu“ fragt: gegen
@@ -563,7 +597,7 @@ Dazu: nur gewertete Partien (Tore vorhanden), unter drei Spielen „wenig
 Daten", Punkte ohne bekannte Position zählen nur in „Gesamt" und werden
 genannt. Die alte Saison in der Reihe zählt nicht (`aktuelleSaison()`).
 
-`lib/matchup.js` ist reine Rechnung: 78 Fälle in `pruefstand/matchup.mjs` —
+`lib/matchup.js` ist reine Rechnung: 90 Fälle in `pruefstand/matchup.mjs` —
 Summen und Ränge, geteilte Ränge, halb geladene Seite, laufendes Spiel,
 Samstagsfall, alte Saison, negative Punkte, und jede Bedingung fürs
 Überspringen einzeln verletzt. Im Prüfstand nachgemessen: Knopf

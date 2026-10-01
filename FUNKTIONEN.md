@@ -697,6 +697,11 @@ die als Nächstes gegen ihn antreten.
   zulassen, im Schnitt. Oben steht, wer das leichteste Programm hat; darunter
   die eigenen Spieler dieses Vereins. Ein Schnitt nur, wenn alle diese Gegner
   bekannt sind, sonst „2 von 3 bekannt“.
+- **Je Spieler** (Vorgabe, umschaltbar auf je Mannschaft): Punkte auf der
+  Position durch die Einsätze auf der Position, über den Zeitraum
+  zusammengefasst. So wird eine Fünferkette nicht mit einer Dreierkette
+  verglichen — es zählt, was ein einzelner Spieler holt. Gilt für beide
+  Ansichten und die Erwartung.
 - **Mit eigener Stärke** (Vorgabe, abschaltbar): Je Partie zählt eigene
   Punkte je Spiel + was der Gegner zulässt − Ligaschnitt. So steht oben, wer
   leichte Gegner hat **und** selbst viel punktet. Unter der Zahl die Zerlegung
