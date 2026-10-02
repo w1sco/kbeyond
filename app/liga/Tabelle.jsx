@@ -339,7 +339,7 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId, vortag = 
                           </span>
                         );
                       })()}
-                      <Link
+                      <Link prefetch={false}
                         href={`/liga/manager/${k.id}?league=${leagueId}`}
                         className="kb-managerlink kb-name"
                       >
@@ -379,7 +379,7 @@ export default function Tabelle({ konten, meineId, unsicher, leagueId, vortag = 
                             </div>
                           ))}
                         </div>
-                        <Link
+                        <Link prefetch={false}
                           href={`/liga/manager/${k.id}?league=${leagueId}`}
                           className="kb-btn kb-detailknopf"
                         >

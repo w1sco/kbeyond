@@ -23,7 +23,7 @@ export default async function Elf({ searchParams }) {
   if (!leagueId) {
     return (
       <main className="kb-seite">
-        <p className="kb-info">Liga fehlt. <Link href="/liga">Zur Ligaauswahl</Link></p>
+        <p className="kb-info">Liga fehlt. <Link prefetch={false} href="/liga">Zur Ligaauswahl</Link></p>
       </main>
     );
   }
@@ -50,7 +50,7 @@ export default async function Elf({ searchParams }) {
     <main className="kb-seite kb-seite--schmal">
       <header className="kb-kopf">
         <div>
-          <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+          <Link prefetch={false} href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Aufgestellte Elf</h1>
           <p className="kb-unter">
             Summe der Punkteschnitte je aufgestelltem Spieler ·
@@ -112,7 +112,7 @@ export default async function Elf({ searchParams }) {
                     <details>
                       <summary className="kb-spielername kb-aufklappzeile">{z.name}</summary>
                       <p className="kb-leise" style={{ margin: "4px 0" }}>
-                        <Link href={`/liga/manager/${z.id}?league=${leagueId}`}>Managerseite →</Link>
+                        <Link prefetch={false} href={`/liga/manager/${z.id}?league=${leagueId}`}>Managerseite →</Link>
                       </p>
                       {z.elf.length === 0 ? (
                         <p className="kb-leise">Keine Aufstellung gespeichert.</p>

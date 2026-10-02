@@ -56,7 +56,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
   if (!manager) {
   return (
       <main className="kb-seite kb-seite--schmal">
-        <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+        <Link prefetch={false} href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
         <h1 className="kb-titel" style={{ marginTop: 10 }}>Manager nicht gefunden</h1>
         <p className="kb-info">
           In dieser Liga gibt es keinen Manager mit der ID {id}. Möglicherweise wurde er
@@ -233,7 +233,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
       <header className="kb-kopf">
         <div>
           {!imPanel && (
-            <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+            <Link prefetch={false} href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
           )}
           <h1 className="kb-titel" style={{ marginTop: imPanel ? 0 : 8 }}>
             {manager.n}
@@ -251,7 +251,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
             vorher={vorher ? { id: vorher.id, name: vorher.name } : null}
             nachher={nachher ? { id: nachher.id, name: nachher.name } : null}
           />
-          <Link href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Korrektur eintragen</Link>
+          <Link prefetch={false} href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Korrektur eintragen</Link>
         </div>
       </header>
 
@@ -428,7 +428,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
             Kein Kader gespeichert und Kickbase liefert gerade keine auswertbare Liste.
             Über „Kader laden“ auf der Ligaseite lässt sich das nachholen; den Rohaufbau
             der Antwort zeigt die{" "}
-            <Link href={`/manager?league=${leagueId}&uid=${id}`}>Manager-Diagnose</Link>.
+            <Link prefetch={false} href={`/manager?league=${leagueId}&uid=${id}`}>Manager-Diagnose</Link>.
           </p>
         )}
 

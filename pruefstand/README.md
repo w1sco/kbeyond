@@ -260,3 +260,17 @@ Saisonpunkte, als hätte er seither gespielt — er muss dann gefragt werden,
 die übrigen nicht. Mit `KB_ZAEHLEN=1` lässt sich nachzählen, welche
 `/performance`-Aufrufe tatsächlich rausgehen.
 
+## vorladen.cjs — nur gegen einen fertigen Build
+
+Next.js lädt verlinkte Seiten nur im fertigen Build vor, der Entwicklungsserver
+nie. Was dabei schiefgeht, sieht der übrige Prüfstand deshalb nicht.
+
+```bash
+npx next build
+npx next start -p 3301 &   # mit DATABASE_URL und NODE_OPTIONS wie oben
+node pruefstand/vorladen.cjs 3301
+```
+
+Gezählt werden die Anfragen nach dem Laden und je Filterklick auf der
+Matchup-Seite; mehr als zwei je Klick ist ein Fehler.
+

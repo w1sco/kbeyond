@@ -2287,6 +2287,22 @@ Der Nutzer arbeitete bisher über die GitHub-Weboberfläche, deshalb wurden **im
 Skripte. React meldet ungültiges HTML und Hydrierungskonflikte aber über `console.error` —
 ein `<dialog>` in einem `<p>` (in `Frag.jsx`) blieb deshalb lange unbemerkt.
 
+**Kein Link lädt vor (`prefetch={false}`, an allen 43 Stellen).** Next.js lädt
+verlinkte Seiten im fertigen Build vor, sobald der Link sichtbar ist — **nur im
+fertigen Build**, im Entwicklungsmodus nie. Auf der Matchup-Seite stehen gut 20
+Filter-Links, jeder auf dieselbe dynamische Seite: Ein Klick löste rund 20
+Hintergrund-Abrufe aus, darunter einer der Seite **ganz ohne Liga in der
+Adresse**. Live zeigte die Seite danach „Liga fehlt“ oder stürzte mit „This page
+couldn't load“ ab. Der Prüfstand hat das nie gesehen, weil er im
+Entwicklungsmodus läuft. Neue Links bekommen deshalb ebenfalls
+`prefetch={false}` — hier rechnet jede Seite auf dem Server, ein Vorladen spart
+nichts und kostet Last.
+
+`pruefstand/vorladen.cjs` misst das gegen einen **fertigen Build** (`next build`,
+dann `next start -p 3301`): Anfragen nach dem Laden und je Filterklick.
+Gegengeprüft: der alte Stand 23 / 21 / 13 / 19 Anfragen und Rückgabe 1, der neue
+0 / 1 / 1 / 1 und Rückgabe 0.
+
 **`pruefstand/seiten.js` vor dem Ausliefern.** Der Build sagt nur, ob der Code übersetzt —
 nicht, ob die Seite läuft. Drei Ausfälle in Folge kamen genau daher. Der Prüfstand rendert
 jede Seite gegen ein echtes Postgres, mit abgeklemmtem Kickbase (`NODE_OPTIONS=--require

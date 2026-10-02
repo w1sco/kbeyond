@@ -80,7 +80,7 @@ export default async function Einstellungen({ searchParams }) {
 
   return (
     <main className="kb-seite kb-seite--schmal">
-      <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+      <Link prefetch={false} href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
       <h1 className="kb-titel" style={{ margin: "10px 0 20px" }}>Einstellungen · {ranking.ti}</h1>
 
       <div className="kb-hinweis kb-hinweis--info">

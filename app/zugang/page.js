@@ -58,7 +58,7 @@ export default async function Zugang() {
     <main className="kb-seite kb-seite--schmal">
       <header className="kb-kopf">
         <div>
-          <Link href="/liga" className="kb-zurueck">← zurück zur Liga</Link>
+          <Link prefetch={false} href="/liga" className="kb-zurueck">← zurück zur Liga</Link>
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Zugang</h1>
           <p className="kb-unter">Wer darf KBeyond benutzen?</p>
         </div>

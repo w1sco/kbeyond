@@ -146,7 +146,7 @@ export default async function Ligamonitor({ searchParams }) {
 
       <p className="kb-info">
         Andere IDs prüfen: <code>?league={leagueId}&uid=…&pid=…</code> ·{" "}
-        <Link href={`/liga?league=${leagueId}`}>zurück</Link>
+        <Link prefetch={false} href={`/liga?league=${leagueId}`}>zurück</Link>
       </p>
 
       <section style={{ marginTop: 18 }}>

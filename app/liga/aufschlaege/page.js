@@ -41,7 +41,7 @@ export default async function Aufschlaege({ searchParams }) {
     <main className="kb-seite">
       <header className="kb-kopf">
         <div>
-          <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+          <Link prefetch={false} href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Aufschläge · {ranking.ti}</h1>
           <p className="kb-unter">Was über dem Marktwert gezahlt wurde.</p>
         </div>

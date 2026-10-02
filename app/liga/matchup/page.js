@@ -37,7 +37,7 @@ export default async function Matchup({ searchParams }) {
   if (!leagueId) {
     return (
       <main className="kb-seite">
-        <p className="kb-info">Liga fehlt. <Link href="/liga">Zur Ligaauswahl</Link></p>
+        <p className="kb-info">Liga fehlt. <Link prefetch={false} href="/liga">Zur Ligaauswahl</Link></p>
       </main>
     );
   }
@@ -131,7 +131,7 @@ export default async function Matchup({ searchParams }) {
     <main className="kb-seite">
       <header className="kb-kopf">
         <div>
-          <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+          <Link prefetch={false} href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Matchups</h1>
           <p className="kb-unter">
             {ansicht === "programm"
@@ -217,7 +217,7 @@ export default async function Matchup({ searchParams }) {
       {/* Zwei Ansichten, ein Werkzeug: Position und Zeitraum gelten für beide. */}
       <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Ansicht">
         {[["zulassen", "Wer lässt zu"], ["programm", "Leichtes Programm"]].map(([k, label]) => (
-          <Link key={k} href={adresse({ ansicht: k })}
+          <Link prefetch={false} key={k} href={adresse({ ansicht: k })}
                 className={`kb-sortchip${ansicht === k ? " kb-sortchip--aktiv" : ""}`}
                 aria-current={ansicht === k ? "page" : undefined}>
             {label}
@@ -227,7 +227,7 @@ export default async function Matchup({ searchParams }) {
 
       <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Position" style={{ marginTop: 8 }}>
         {["alle", ...POSITIONEN].map((k) => (
-          <Link key={k} href={adresse({ pos: k })}
+          <Link prefetch={false} key={k} href={adresse({ pos: k })}
                 className={`kb-sortchip${pos === k ? " kb-sortchip--aktiv" : ""}`}
                 aria-current={pos === k ? "true" : undefined}>
             {k === "alle" ? "Gesamt" : k}
@@ -236,7 +236,7 @@ export default async function Matchup({ searchParams }) {
       </div>
       <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Zeitraum" style={{ marginTop: 8 }}>
         {ZEITRAEUME.map((z) => (
-          <Link key={z.schluessel} href={adresse({ zeit: z.schluessel })}
+          <Link prefetch={false} key={z.schluessel} href={adresse({ zeit: z.schluessel })}
                 className={`kb-sortchip${zeit.schluessel === z.schluessel ? " kb-sortchip--aktiv" : ""}`}
                 aria-current={zeit.schluessel === z.schluessel ? "true" : undefined}>
             {z.label}
@@ -245,7 +245,7 @@ export default async function Matchup({ searchParams }) {
       </div>
       <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Maß" style={{ marginTop: 8 }}>
         {[["spieler", "je Spieler"], ["mannschaft", "je Mannschaft"]].map(([k, label]) => (
-          <Link key={k} href={adresse({ je: k })}
+          <Link prefetch={false} key={k} href={adresse({ je: k })}
                 className={`kb-sortchip${mass === k ? " kb-sortchip--aktiv" : ""}`}
                 aria-current={mass === k ? "true" : undefined}>
             {label}
@@ -255,7 +255,7 @@ export default async function Matchup({ searchParams }) {
       {ansicht === "programm" && (
         <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Wertung" style={{ marginTop: 8 }}>
           {[["beides", "mit eigener Stärke"], ["gegner", "nur Gegner"]].map(([k, label]) => (
-            <Link key={k} href={adresse({ wertung: k })}
+            <Link prefetch={false} key={k} href={adresse({ wertung: k })}
                   className={`kb-sortchip${(mitEigener ? "beides" : "gegner") === k ? " kb-sortchip--aktiv" : ""}`}
                   aria-current={(mitEigener ? "beides" : "gegner") === k ? "true" : undefined}>
               {label}
@@ -266,7 +266,7 @@ export default async function Matchup({ searchParams }) {
       {ansicht === "programm" && (
         <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Vorschau" style={{ marginTop: 8 }}>
           {VORSCHAU.map((n) => (
-            <Link key={n} href={adresse({ vor: String(n) })}
+            <Link prefetch={false} key={n} href={adresse({ vor: String(n) })}
                   className={`kb-sortchip${vor === n ? " kb-sortchip--aktiv" : ""}`}
                   aria-current={vor === n ? "true" : undefined}>
               {n === 1 ? "nächstes Spiel" : `nächste ${n}`}

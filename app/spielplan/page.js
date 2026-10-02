@@ -46,7 +46,7 @@ export default async function Spielplan({ searchParams }) {
             Rund <strong>zwölf Kickbase-Aufrufe</strong>. Läuft deshalb erst auf Klick.
           </p>
           <p>
-            <Link href={`/spielplan?league=${leagueId}&suchen=1`} className="kb-btn">
+            <Link prefetch={false} href={`/spielplan?league=${leagueId}&suchen=1`} className="kb-btn">
               Suche starten
             </Link>
           </p>
@@ -62,7 +62,7 @@ export default async function Spielplan({ searchParams }) {
             Rund <strong>fünf Kickbase-Aufrufe</strong> für die jüngste gewertete Partie.
           </p>
           <p>
-            <Link href={`/spielplan?league=${leagueId}&partie=1`} className="kb-btn">
+            <Link prefetch={false} href={`/spielplan?league=${leagueId}&partie=1`} className="kb-btn">
               Partie-Suche starten
             </Link>
           </p>

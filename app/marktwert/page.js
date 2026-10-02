@@ -52,7 +52,7 @@ export default async function MarktwertDiagnose({ searchParams }) {
         />
         <div className="kb-kacheln">
           {vorschlaege.map((s) => (
-            <Link
+            <Link prefetch={false}
               key={s.player_id}
               href={`/marktwert?league=${p.league}&pid=${s.player_id}`}
               className="kb-kachel"
@@ -108,7 +108,7 @@ export default async function MarktwertDiagnose({ searchParams }) {
 
       <div className="kb-sortleiste kb-sortleiste--immer">
         {alle.map((pfad, i) => (
-          <Link
+          <Link prefetch={false}
             key={pfad}
             href={`/marktwert?league=${p.league}&pid=${p.pid}&n=${i}`}
             className={`kb-sortchip${i === index ? " kb-sortchip--aktiv" : ""}`}
@@ -124,7 +124,7 @@ export default async function MarktwertDiagnose({ searchParams }) {
         {index + 1 < alle.length && (
           <>
             {" · "}
-            <Link href={`/marktwert?league=${p.league}&pid=${p.pid}&n=${index + 1}`}>
+            <Link prefetch={false} href={`/marktwert?league=${p.league}&pid=${p.pid}&n=${index + 1}`}>
               nächsten probieren →
             </Link>
           </>

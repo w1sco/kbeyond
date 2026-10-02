@@ -55,13 +55,13 @@ export default async function Liga({ searchParams }) {
           <div className="kb-hinweis kb-hinweis--warn">
             {ausfall}
             <div style={{ marginTop: 10 }}>
-              <Link href="/liga" className="kb-btn kb-btn--klein">Neu laden</Link>
+              <Link prefetch={false} href="/liga" className="kb-btn kb-btn--klein">Neu laden</Link>
             </div>
           </div>
         )}
         <div className="kb-kacheln kb-kacheln--schmal">
           {ligen.map((l) => (
-            <Link key={l.i} href={`/liga?league=${l.i}`} className="kb-kachel">
+            <Link prefetch={false} key={l.i} href={`/liga?league=${l.i}`} className="kb-kachel">
               <strong>{l.n}</strong>
               <span className="kb-leise">Budget {euro(l.b)} · Teamwert {euro(l.tv)}</span>
             </Link>
@@ -276,9 +276,9 @@ export default async function Liga({ searchParams }) {
           <a href={`/liga/elf?league=${leagueId}`} className="kb-btn">Aufgestellte Elf</a>
           <a href={`/liga/matchup?league=${leagueId}`} className="kb-btn">Matchups</a>
           <a href={`/liga/einstellungen?league=${leagueId}`} className="kb-btn">Einstellungen</a>
-          <Link href="/liga" className="kb-btn">Liga wechseln</Link>
+          <Link prefetch={false} href="/liga" className="kb-btn">Liga wechseln</Link>
           {admin && (
-            <Link href="/zugang" className={`kb-btn${anfragen ? " kb-btn--haupt" : ""}`}>
+            <Link prefetch={false} href="/zugang" className={`kb-btn${anfragen ? " kb-btn--haupt" : ""}`}>
               Zugang{anfragen ? ` (${anfragen})` : ""}
             </Link>
           )}

@@ -167,7 +167,7 @@ export default async function Markt({ searchParams }) {
     <main className="kb-seite">
       <header className="kb-kopf">
         <div>
-          <Link href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
+          <Link prefetch={false} href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Markt · {ranking.ti}</h1>
           <p className="kb-unter">
             Spieler, die keinem Manager gehören — also bei Kickbase liegen.
@@ -213,7 +213,7 @@ export default async function Markt({ searchParams }) {
             Der Haken: Spieler, die seit dem Liga-Reset nie gehandelt wurden, gelten dadurch
             fälschlich als frei. „Alles aktualisieren“ oben lädt die Kader nach; klappt
             das nicht, zeigt die{" "}
-            <Link href={`/manager?league=${leagueId}&uid=${manager[0]?.i ?? ""}`}>
+            <Link prefetch={false} href={`/manager?league=${leagueId}&uid=${manager[0]?.i ?? ""}`}>
               Manager-Diagnose
             </Link>{" "}
             was Kickbase stattdessen liefert.
@@ -402,7 +402,7 @@ export default async function Markt({ searchParams }) {
 
       <div className="kb-sortleiste kb-sortleiste--immer">
         {SCHWELLEN.map((s) => (
-          <Link
+          <Link prefetch={false}
             key={s.wert}
             href={`/liga/markt?league=${leagueId}&min=${s.wert}`}
             className={`kb-sortchip${schwelle === s.wert ? " kb-sortchip--aktiv" : ""}`}

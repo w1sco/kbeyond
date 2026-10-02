@@ -26,7 +26,7 @@ export function DiagnoseKopf({ titel, unter, leagueId }) {
   return (
     <header className="kb-kopf">
       <div>
-        <Link href={leagueId ? `/liga?league=${leagueId}` : "/liga"} className="kb-zurueck">
+        <Link prefetch={false} href={leagueId ? `/liga?league=${leagueId}` : "/liga"} className="kb-zurueck">
           ← zurück zur Liga
         </Link>
         <h1 className="kb-titel" style={{ marginTop: 8 }}>{titel}</h1>
@@ -44,7 +44,7 @@ export function LigaFehlt({ titel }) {
       <DiagnoseKopf titel={titel} />
       <div className="kb-hinweis kb-hinweis--warn">
         Diese Seite braucht eine Liga. Ruf sie mit <code>?league=…</code> auf oder wähle
-        die Liga über die <Link href="/liga">Ligaübersicht</Link>.
+        die Liga über die <Link prefetch={false} href="/liga">Ligaübersicht</Link>.
       </div>
     </main>
   );

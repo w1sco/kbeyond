@@ -77,7 +77,7 @@ export default async function StartelfDiagnose({ searchParams }) {
             auf Klick.
           </p>
           <p>
-            <Link href={`/startelf?league=${leagueId}&suchen=1`} className="kb-btn kb-btn--haupt">
+            <Link prefetch={false} href={`/startelf?league=${leagueId}&suchen=1`} className="kb-btn kb-btn--haupt">
               Nachsehen
             </Link>
           </p>

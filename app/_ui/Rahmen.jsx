@@ -9,7 +9,7 @@ import Thema from "./Thema";
 export function Kopfleiste() {
   return (
     <header className="kb-topbar">
-      <Link href="/liga" className="kb-topbar-marke" aria-label="KBeyond – zur Ligaauswahl">
+      <Link prefetch={false} href="/liga" className="kb-topbar-marke" aria-label="KBeyond – zur Ligaauswahl">
         <Logo />
       </Link>
       <Thema />

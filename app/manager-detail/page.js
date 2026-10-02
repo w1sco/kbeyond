@@ -38,7 +38,7 @@ export default async function Detail({ searchParams }) {
         />
         <div className="kb-kacheln">
           {namen.map((x) => (
-            <Link
+            <Link prefetch={false}
               key={x.n}
               href={`/manager-detail?league=${p.league}&name=${encodeURIComponent(x.n)}`}
               className="kb-kachel"

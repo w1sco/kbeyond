@@ -155,7 +155,7 @@ export default async function AufstellungDiagnose({ searchParams }) {
         Ein Endpunkt, der <strong>antwortet</strong>, beweist nichts — er kann für jeden
         Manager dieselbe (eigene) Aufstellung liefern. Entscheidend ist die Spalte
         „verschieden“. Anderen Manager prüfen: <code>?league={leagueId}&uid=…</code> ·{" "}
-        <Link href={`/liga?league=${leagueId}`}>zurück zur Liga</Link>
+        <Link prefetch={false} href={`/liga?league=${leagueId}`}>zurück zur Liga</Link>
       </p>
 
       <section style={{ marginTop: 18 }}>
