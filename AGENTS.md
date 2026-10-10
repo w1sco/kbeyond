@@ -1057,6 +1057,21 @@ Drei Folgen, alle beabsichtigt:
 - **Alte Cookies von vor der Liste gelten nicht mehr.** Sie haben keinen
   Fingerabdruck und führen zur Anmeldung.
 
+#### Auch die Diagnoseseiten
+
+Zehn Diagnoseseiten (`/bonus`, `/feed`, `/rk`, `/manager-detail`, …) lasen
+das Token direkt aus dem Cookie und prüften nur über `verlangeLiga()`, ob es
+zu einem Liga-Mitglied gehört — **die Freigabeliste umgingen sie**. Jedes
+Liga-Mitglied mit Kickbase-Konto kam hinein, auch ohne Freigabe. Aufgefallen
+ist es bei der Frage, ob die eigenen Finanzzahlen wirklich verborgen sind:
+`/bonus` listete die Login-Boni des Importierenden, und der Login-Bonus gehört
+zu den verbergbaren Zahlen.
+
+Jetzt läuft jede Seite über `sitzung()`, und `/bonus` ist nur für den
+Betreiber offen. **Neue Seiten holen das Token nie selbst aus dem Cookie.**
+`pruefstand/zugang.mjs` führt alle Diagnoseseiten in der Probe mit dem
+fremden Token; gegen den alten Stand schlägt er elfmal an.
+
 ### Der erste ist der Betreiber — besser: die Umgebung
 
 `ZUGANG_ADMINS` (kommagetrennte E-Mail-Adressen) legt fest, wer freigeben darf.

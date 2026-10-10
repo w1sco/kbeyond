@@ -1,5 +1,4 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { sitzung } from "@/lib/auth";
 import { probiere, DiagnoseKopf, Ergebnisse, LigaFehlt } from "../_diagnose/Endpunkte";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +11,9 @@ const KANDIDATEN = (id, start, max) => [
 ];
 
 export default async function Feed({ searchParams }) {
-  const token = (await cookies()).get("kb_token")?.value;
-  if (!token) redirect("/login");
+  // sitzung() statt nur das Cookie: Erst sie prüft die Freigabeliste.
+  // Ohne sie kam jedes Liga-Mitglied mit Kickbase-Konto hier herein.
+  const { token } = await sitzung();
 
   const p = await searchParams;
   if (!p.league) return <LigaFehlt titel="Feed-Diagnose" />;

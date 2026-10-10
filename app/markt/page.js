@@ -1,18 +1,16 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
 import { euro, restzeit, normalisiereSpieler } from "@/lib/format";
-import { holeLigen } from "@/lib/auth";
+import { holeLigen, sitzung } from "@/lib/auth";
 
 
 
 export const dynamic = "force-dynamic";
 
 export default async function Markt({ searchParams }) {
-  const store = await cookies();
-  const token = store.get("kb_token")?.value;
-  if (!token) redirect("/login");
+  // sitzung() statt nur das Cookie: Erst sie prüft die Freigabeliste.
+  // Ohne sie kam jedes Liga-Mitglied mit Kickbase-Konto hier herein.
+  const { token } = await sitzung();
 
   const params = await searchParams;
   const leagueId = params.league;

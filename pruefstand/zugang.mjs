@@ -60,7 +60,13 @@ for (const pfad of ["/liga", "/liga?league=1", "/liga/markt?league=1", "/zugang"
 //
 // Der Kern der Sache: Wer sich bei Kickbase anmelden kann, hat noch lange
 // keinen Zugang zu dieser App.
-for (const pfad of ["/liga", "/liga?league=1", "/zugang"]) {
+//
+// Die Diagnoseseiten gehören dazu. Sie lasen das Token einmal direkt aus
+// dem Cookie, prüften also nur die Liga-Mitgliedschaft bei Kickbase und
+// nicht die Freigabeliste — jedes Liga-Mitglied kam hinein.
+const DIAGNOSE = ["bonus", "feed", "manager-detail", "manager", "markt", "pool",
+  "ranking", "rk", "spieler", "team"].map((s) => `/${s}?league=1`);
+for (const pfad of ["/liga", "/liga?league=1", "/zugang", ...DIAGNOSE]) {
   const r = await seite(pfad, "fremdes-token");
   pruefe(`fremdes Token: ${pfad}`, [r.status, r.ziel.includes("/login")], [307, true]);
 }
@@ -141,6 +147,11 @@ pruefe("kein Betreiber: /zugang ist zu",
   [verwaltung.status, verwaltung.ziel.includes("/liga")], [307, true]);
 pruefe("kein Betreiber: die Liga bleibt offen",
   (await seite("/liga?league=1", token)).status, 200);
+// Die Login-Boni im Feed sind die des Importierenden — also verborgen.
+const bonus = await seite("/bonus?league=1", token);
+pruefe("kein Betreiber: /bonus ist zu",
+  [bonus.status, bonus.ziel.includes("/liga")], [307, true]);
+pruefe("Betreiber: /bonus lädt", (await seite("/bonus?league=1", "pruef")).status, 200);
 
 // ── 7. Wessen Zahlen sieht wer? ────────────────────────────────────
 //

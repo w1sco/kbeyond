@@ -1,10 +1,8 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { sql, initSchema } from "@/lib/db";
 import { euro, zeitpunkt } from "@/lib/format";
 import { DiagnoseKopf, LigaFehlt } from "../_diagnose/Endpunkte";
-import { verlangeLiga } from "@/lib/auth";
+import { verlangeLiga, sitzung } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +10,9 @@ export const dynamic = "force-dynamic";
 // Damit erwischt sie auch Manager, die die Liga verlassen haben – die
 // reguläre Managerseite unter /liga/manager/{id} kennt nur aktuelle.
 export default async function Detail({ searchParams }) {
-  const token = (await cookies()).get("kb_token")?.value;
-  if (!token) redirect("/login");
+  // sitzung() statt nur das Cookie: Erst sie prüft die Freigabeliste.
+  // Ohne sie kam jedes Liga-Mitglied mit Kickbase-Konto hier herein.
+  const { token } = await sitzung();
 
   const p = await searchParams;
   if (!p.league) return <LigaFehlt titel="Transfers nach Name" />;
