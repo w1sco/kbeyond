@@ -15,6 +15,9 @@ const SEITEN = [
   ["Matchups Programm",  `/liga/matchup?league=${LIGA}&ansicht=programm&vor=5`],
   ["Matchups nur Gegner", `/liga/matchup?league=${LIGA}&ansicht=programm&wertung=gegner`],
   ["Matchups je Mannschaft", `/liga/matchup?league=${LIGA}&je=mannschaft&pos=ABW`],
+  ["Matchups Spieler",   `/liga/matchup?league=${LIGA}&ansicht=spieler&zeit=alle`],
+  // je=mannschaft: Die Spieleransicht rechnet dann eigens je Spieler nach.
+  ["Matchups Spieler ANG", `/liga/matchup?league=${LIGA}&ansicht=spieler&pos=ANG&vor=1&je=mannschaft`],
   ["Managerseite",       `/liga/manager/1?league=${LIGA}`],
   ["Managerseite fremd", `/liga/manager/2?league=${LIGA}`],
   ["Freie Spieler",      `/liga/markt?league=${LIGA}`],

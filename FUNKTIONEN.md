@@ -710,6 +710,14 @@ die als Nächstes gegen ihn antreten.
   bewegt haben, wird ohne Aufruf abgehakt — nur, wenn das Feld für diesen
   Spieler durch die eigene Summe belegt ist. Der Zähler läuft live mit,
   Abbrechen wirkt sofort und verliert nichts.
+- **Spieler** (dritte Ansicht): je Spieler die erwarteten Punkte für das
+  nächste Spiel, die nächsten 3 und 5 — eigener Schnitt je Einsatz + was der
+  jeweilige Gegner auf seiner Position je Spieler zulässt − Ligaschnitt, über
+  die Partien aufsummiert. Daraus ein sortierbares Ranking mit **Mio/Pkt**
+  (Marktwert ÷ erwartete Punkte über 1, 3 oder 5 Spiele). Filter: Position,
+  Zeitraum, Startelf-Chance (wie auf der Marktseite), „nur freie“ und „vor
+  Anpfiff am Markt“ (Rhythmus der Marktseite), dazu „ab 3 Einsätzen“
+  (Vorgabe an). Die Startelf-Chance wird gefiltert, nicht eingerechnet.
 
 ### 7.13 Frag die Liga
 

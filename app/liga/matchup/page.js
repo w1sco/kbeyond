@@ -1,15 +1,21 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getKader } from "@/lib/db";
+import { initSchema, getKader, getSettings, getBesitz, getStartelf } from "@/lib/db";
+import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe } from "@/lib/marktbeobachtung";
+import { bildeAuftritte } from "@/lib/rhythmus";
+import { ermittleAnpfiff } from "@/lib/anpfiff";
+import { standStartelf } from "@/lib/startelfabruf";
 import { sitzung, verlangeLiga } from "@/lib/auth";
 import { ladeGrundlage, ladeLeistungen, standLeistungen } from "@/lib/matchupabruf";
 import {
-  werteMatchupsAus, vollstaendigeSeiten, bereichFuer, naechsterGegner, programm,
+  werteMatchupsAus, vollstaendigeSeiten, bereichFuer, naechsterGegner, programm, spielerErwartung,
   POSITIONEN, ZEITRAEUME, MIN_SPIELE, VORSCHAU, MASSE,
 } from "@/lib/matchup";
 import { zeitpunkt } from "@/lib/format";
 import Hinweis from "../../_ui/Hinweis";
 import Matchupholen from "./Matchupholen";
+import Spielerliste from "./Spielerliste";
+import Startelflegende from "../../_ui/Startelflegende";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +33,16 @@ const POS_NAMEN = { alle: "alle Positionen", TW: "Torhüter", ABW: "Abwehr", MF:
 //   Verein hat über die nächsten 1, 3 oder 5 Spieltage die Gegner, gegen
 //   die am meisten Punkte herauskommen? Dessen Spieler sind die Kandidaten.
 //
+//   „Spieler“ — dasselbe für jeden einzelnen Spieler: sein eigener Schnitt,
+//   verschoben um das, was seine nächsten Gegner auf seiner Position
+//   zulassen. Daraus ein Ranking mit Preis je Punkt, filterbar nach
+//   Startelf-Chance und danach, ob er vor dem Anpfiff am Markt ist.
+//
 // Die Seite selbst kostet keinen Kickbase-Aufruf außer der Mitgliedsprüfung
 // (und der Rangliste, falls die eigene Zuordnung nur über den Namen geht).
 // Die Punkte je Spiel kommen über den eigenen Knopf herein.
 export default async function Matchup({ searchParams }) {
-  const { token, uid: meineUid, name: meinName } = await sitzung();
+  const { token, uid: meineUid, name: meinName, nutzer } = await sitzung();
   const p = await searchParams;
   const leagueId = p.league;
   if (!leagueId) {
@@ -46,7 +57,7 @@ export default async function Matchup({ searchParams }) {
 
   const pos = ["alle", ...POSITIONEN].includes(p.pos) ? p.pos : "alle";
   const zeit = ZEITRAEUME.find((z) => z.schluessel === p.zeit) ?? ZEITRAEUME[1];
-  const ansicht = p.ansicht === "programm" ? "programm" : "zulassen";
+  const ansicht = ["programm", "spieler"].includes(p.ansicht) ? p.ansicht : "zulassen";
   const vor = VORSCHAU.includes(Number(p.vor)) ? Number(p.vor) : 3;
   // Leichte Gegner allein reichen nicht — die eigene Mannschaft muss auch
   // punkten. Vorgabe ist deshalb „mit eigener Stärke“.
@@ -114,6 +125,77 @@ export default async function Matchup({ searchParams }) {
   const liga = ligaschnitt?.[pos] ?? null;
 
   const name = (team) => g.vereine.get(team) ?? `Verein #${team}`;
+
+  // ── Die Spieleransicht ─────────────────────────────────────────
+  //
+  // Nur, wenn sie gewählt ist: Sie zieht Markt-Mitschrift, Besitz und
+  // Startelf dazu — alles aus der Datenbank, kein Kickbase-Aufruf.
+  let spielerDaten = null;
+  let anpfiffInfo = null;
+  let elfStand = null;
+  if (ansicht === "spieler") {
+    // Je Spieler gemessen, gleich welches Maß oben gewählt ist: Es geht um
+    // einen einzelnen Spieler, nicht um die Kette.
+    const jeSpieler = mass === "spieler" ? { zeilen, ligaschnitt }
+      : werteMatchupsAus({ spiele: g.spiele, leistungen, vollstaendig, bereich, mass: "spieler" });
+    const settings = await getSettings(leagueId, nutzer);
+    const [elf, besitz, beob, amMarkt, verkauft, anp, est] = await Promise.all([
+      getStartelf(),
+      getBesitz(leagueId),
+      sammleBeobachtungen(leagueId, settings.stichtag),
+      aktuellAmMarkt(leagueId),
+      letzteVerkaeufe(leagueId, settings.stichtag),
+      ermittleAnpfiff(settings),
+      standStartelf(),
+    ]);
+    anpfiffInfo = anp;
+    elfStand = est;
+
+    // Frei ist, wen kein Kader führt und wessen letzter Transfer keinen
+    // Käufer hatte — dieselbe Regel wie auf der Marktseite.
+    const vergeben = new Set([...kader.besetzt, ...besitz.besitzer.keys()]);
+    const meine = new Set((meineId ? kader.proManager.get(meineId) ?? [] : []).map((s) => String(s.id)));
+    const basis = g.poolSpieler.filter((s) =>
+      s.teamId != null && (pos === "alle" || s.position === pos));
+    const erwartet = spielerErwartung({
+      spiele: g.spiele, leistungen, bereich,
+      zeilen: jeSpieler.zeilen, ligaschnitt: jeSpieler.ligaschnitt,
+      spieler: basis.map((s) => ({ id: s.id, team: s.teamId, position: s.position })),
+    });
+
+    spielerDaten = basis.map((s, i) => {
+      const id = String(s.id);
+      const e = erwartet[i];
+      const frei = !vergeben.has(id);
+      const bis = amMarkt.get(id)?.getTime() ?? null;
+      return {
+        id,
+        name: s.name ?? `Spieler #${id}`,
+        verein: s.verein ?? name(String(s.teamId)),
+        position: e.position ?? s.position ?? "–",
+        marktwert: s.marktwert == null ? null : Number(s.marktwert),
+        startelf: elf.get(id) ?? null,
+        frei,
+        meiner: meine.has(id),
+        schnitt: e.schnitt,
+        liga: e.liga,
+        einsaetze: e.einsaetze,
+        spieleVerein: e.spieleVerein,
+        wenig: e.wenig,
+        erwartung: e.erwartung,
+        partien: e.partien.map((x) => ({
+          gegner: name(x.gegner), heim: x.heim, spieltag: x.spieltag, erwartung: x.erwartung })),
+        // Die Anker als Zahlen, gerechnet wird im Browser mit dem Rhythmus
+        // der Marktseite. Wer in einem Kader steht, folgt keinem Rhythmus —
+        // er bekommt nur dann eine Angabe, wenn er gerade angeboten wird.
+        rueckkehr: frei ? {
+          auftritte: bildeAuftritte(beob.beobachtungen.get(id) ?? []).map((d) => d.getTime()),
+          verkauftAm: verkauft.get(id)?.getTime() ?? null,
+          aufMarktBis: bis,
+        } : bis != null ? { auftritte: [], verkauftAm: null, aufMarktBis: bis } : null,
+      };
+    });
+  }
   const zahl = (n) => (n == null ? "–" : n.toLocaleString("de-DE", { maximumFractionDigits: 1 }));
   const mitDaten = zeilen.filter((z) => z.spiele > 0).length;
   // Partien im Zeitraum, von denen mindestens eine Seite noch fehlt.
@@ -134,7 +216,9 @@ export default async function Matchup({ searchParams }) {
           <Link prefetch={false} href={`/liga?league=${leagueId}`} className="kb-zurueck">← zurück zur Liga</Link>
           <h1 className="kb-titel" style={{ marginTop: 8 }}>Matchups</h1>
           <p className="kb-unter">
-            {ansicht === "programm"
+            {ansicht === "spieler"
+              ? `Erwartete Punkte je Spieler über die nächsten Partien — ${POS_NAMEN[pos]}`
+              : ansicht === "programm"
               ? mitEigener
                 ? `Was über die nächsten ${vor === 1 ? "Partie" : `${vor} Partien`} zu erwarten ist, eigene Stärke und Gegner zusammen — ${POS_NAMEN[pos]}`
                 : `Wer hat über die nächsten ${vor === 1 ? "Partie" : `${vor} Partien`} die Gegner, gegen die am meisten herauskommt — ${POS_NAMEN[pos]}`
@@ -143,6 +227,7 @@ export default async function Matchup({ searchParams }) {
                 : `Punkte, die jeder Verein je Spiel zulässt — ${POS_NAMEN[pos]}`}
             {bereich ? `, gemessen an Spieltag ${bereich.von}–${bereich.bis}` : ""}
             {ansicht === "programm" ? ` · ${einheit}` : ""}
+            {ansicht === "spieler" ? " · je Spieler" : ""}
           </p>
         </div>
       </header>
@@ -190,6 +275,23 @@ export default async function Matchup({ searchParams }) {
           eingerechnet; ob zu Hause oder auswärts, steht beim Gegner dabei.
         </p>
         <p>
+          <strong>„Spieler“</strong> rechnet dasselbe für jeden einzelnen Spieler: seine
+          eigenen Punkte je Einsatz im gewählten Zeitraum, verschoben um das, was sein
+          nächster Gegner auf seiner Position mehr oder weniger als üblich zulässt —
+          <em> eigener Schnitt + was der Gegner je Spieler zulässt − Ligaschnitt</em>. Über
+          3 und 5 Partien wird aufsummiert: so viele Punkte holt er voraussichtlich in dieser
+          Zeit. <strong>Mio/Pkt</strong> ist der Marktwert geteilt durch diese Summe — was ein
+          erwarteter Punkt kostet. Ohne positive Erwartung steht dort nichts.
+        </p>
+        <p>
+          Der Schnitt ist <strong>je Einsatz</strong>: Ob er überhaupt spielt, weiß die Zahl
+          nicht. Dafür ist der Filter nach Startelf-Chance da — eingerechnet wird sie nicht,
+          eine Gewichtung mit fünf groben Stufen wäre eine erfundene Genauigkeit. Unter{" "}
+          {MIN_SPIELE} Einsätzen ist ein Schnitt Zufall; solche Spieler sind anfangs
+          ausgeblendet. „Vor Anpfiff am Markt“ rechnet mit demselben Rhythmus wie die
+          Marktseite, und den Regler dafür gibt es dort.
+        </p>
+        <p>
           Am meisten sagt die Tabelle zusammen mit der Startelf-Chance: ein Spieler, der
           sicher spielt und gegen einen Verein antritt, der auf seiner Position viel zulässt.
         </p>
@@ -216,7 +318,7 @@ export default async function Matchup({ searchParams }) {
 
       {/* Zwei Ansichten, ein Werkzeug: Position und Zeitraum gelten für beide. */}
       <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Ansicht">
-        {[["zulassen", "Wer lässt zu"], ["programm", "Leichtes Programm"]].map(([k, label]) => (
+        {[["zulassen", "Wer lässt zu"], ["programm", "Leichtes Programm"], ["spieler", "Spieler"]].map(([k, label]) => (
           <Link prefetch={false} key={k} href={adresse({ ansicht: k })}
                 className={`kb-sortchip${ansicht === k ? " kb-sortchip--aktiv" : ""}`}
                 aria-current={ansicht === k ? "page" : undefined}>
@@ -243,15 +345,17 @@ export default async function Matchup({ searchParams }) {
           </Link>
         ))}
       </div>
-      <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Maß" style={{ marginTop: 8 }}>
-        {[["spieler", "je Spieler"], ["mannschaft", "je Mannschaft"]].map(([k, label]) => (
-          <Link prefetch={false} key={k} href={adresse({ je: k })}
-                className={`kb-sortchip${mass === k ? " kb-sortchip--aktiv" : ""}`}
-                aria-current={mass === k ? "true" : undefined}>
-            {label}
-          </Link>
-        ))}
-      </div>
+      {ansicht !== "spieler" && (
+        <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Maß" style={{ marginTop: 8 }}>
+          {[["spieler", "je Spieler"], ["mannschaft", "je Mannschaft"]].map(([k, label]) => (
+            <Link prefetch={false} key={k} href={adresse({ je: k })}
+                  className={`kb-sortchip${mass === k ? " kb-sortchip--aktiv" : ""}`}
+                  aria-current={mass === k ? "true" : undefined}>
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
       {ansicht === "programm" && (
         <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Wertung" style={{ marginTop: 8 }}>
           {[["beides", "mit eigener Stärke"], ["gegner", "nur Gegner"]].map(([k, label]) => (
@@ -263,8 +367,9 @@ export default async function Matchup({ searchParams }) {
           ))}
         </div>
       )}
-      {ansicht === "programm" && (
+      {ansicht !== "zulassen" && (
         <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Vorschau" style={{ marginTop: 8 }}>
+          {ansicht === "spieler" && <span className="kb-leise" style={{ alignSelf: "center" }}>Preis je Punkt über:</span>}
           {VORSCHAU.map((n) => (
             <Link prefetch={false} key={n} href={adresse({ vor: String(n) })}
                   className={`kb-sortchip${vor === n ? " kb-sortchip--aktiv" : ""}`}
@@ -282,6 +387,19 @@ export default async function Matchup({ searchParams }) {
           Für diesen Zeitraum ist noch keine Partie vollständig geladen — oben die Punkte je
           Spiel holen.
         </p>
+      ) : ansicht === "spieler" ? (
+        <div style={{ marginTop: 12 }}>
+          <Startelflegende stand={elfStand} leagueId={leagueId} />
+          <Spielerliste
+            key={`${pos}-${zeit.schluessel}-${vor}`}
+            spieler={spielerDaten}
+            leagueId={leagueId}
+            jetzt={Date.now()}
+            anpfiff={anpfiffInfo?.anpfiff ? anpfiffInfo.anpfiff.getTime() : null}
+            anpfiffQuelle={anpfiffInfo?.quelle ?? null}
+            vor={vor}
+          />
+        </div>
       ) : ansicht === "programm" ? (
         <div className="kb-tabellenrahmen" style={{ marginTop: 12 }}>
           <table className="kb-tabelle kb-tabelle--schmal">

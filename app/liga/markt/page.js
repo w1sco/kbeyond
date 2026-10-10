@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, getStartelf, naechsterAnpfiff, getMwBewegung } from "@/lib/db";
+import { initSchema, getSettings, getKader, getBesitz, getTeamwerte, getStartelf, getMwBewegung } from "@/lib/db";
 import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { geheimeZugaenge } from "@/lib/zugang";
 import { wenVerbergen, verbergeKonten } from "@/lib/privatsphaere";
@@ -9,10 +9,10 @@ import { erlaubtesMinus } from "@/lib/gebot";
 import { holePool } from "@/lib/rekonstruktion";
 import { sammleBeobachtungen, aktuellAmMarkt, letzteVerkaeufe, holeAufschlaege } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
-import { bildeAuftritte, naechsterWochentagText, ZYKLUS_TAGE, ANGEBOT_DAUER_H } from "@/lib/rhythmus";
+import { bildeAuftritte, ZYKLUS_TAGE, ANGEBOT_DAUER_H } from "@/lib/rhythmus";
+import { ermittleAnpfiff } from "@/lib/anpfiff";
 import { sitzung, verlangeLiga } from "@/lib/auth";
-import { euro, prozent, zeitpunkt, wochentag, ausEingabe, tagKurz, ZONE } from "@/lib/format";
-import { spieltagWahl } from "@/lib/loginbonus";
+import { euro, prozent, zeitpunkt, tagKurz } from "@/lib/format";
 import Freieliste from "./Freieliste";
 import Hinweis from "../../_ui/Hinweis";
 import Startelflegende from "../../_ui/Startelflegende";
@@ -109,21 +109,8 @@ export default async function Markt({ searchParams }) {
 
   const jetzt = new Date();
 
-  // ── Wann pfeift der Spieltag an? ─────────────────────────────────
-  //
-  // Aus dem Spielplan: das erste Spiel, das noch bevorsteht. Kennt er
-  // keins (noch nie aktualisiert, Saisonende), gilt der eingestellte
-  // Spieltagsbeginn — Freitag 20:30, oder Samstag 15:30 — und die Seite
-  // sagt, woher die Zahl kommt.
-  let anpfiff = await naechsterAnpfiff();
-  let anpfiffQuelle = "Spielplan";
-  if (!anpfiff) {
-    const wahl = spieltagWahl(settings.spieltag_start);
-    const berlin = jetzt.toLocaleString("sv-SE", { timeZone: ZONE }).replace(" ", "T").slice(0, 16);
-    anpfiff = ausEingabe(naechsterWochentagText(
-      berlin, wochentag(jetzt), wahl.tag, wahl.schluessel === "sa" ? "15:30" : "20:30"));
-    anpfiffQuelle = `Einstellung (${wahl.label})`;
-  }
+  // Wann pfeift der Spieltag an? Spielplan, sonst die Einstellung.
+  const { anpfiff, quelle: anpfiffQuelle } = await ermittleAnpfiff(settings, jetzt);
 
   const frei = pool.spieler
     .filter((s) => !vergeben.has(String(s.id)))

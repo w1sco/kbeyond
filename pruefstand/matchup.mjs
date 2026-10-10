@@ -1,7 +1,7 @@
 // Matchups: zugelassene Punkte je Verein und Position. Reine Rechnung.
 import {
   werteMatchupsAus, vollstaendigeSeiten, werIstOffen, bereichFuer, naechsterGegner,
-  teileAuf, letzteEnden, programm, naechsteGegner,
+  teileAuf, letzteEnden, programm, naechsteGegner, spielerErwartung, preisJePunkt,
 } from "../lib/matchup.js";
 import { leseLeistungen } from "../lib/spielplan.js";
 
@@ -298,6 +298,80 @@ pruefe("negative Punkte bleiben negativ", gelesen[1].punkte, -5);
 pruefe("ohne p bleibt null, nicht 0", gelesen[2].punkte, null);
 pruefe("Verein zum Zeitpunkt des Spiels", gelesen[0].team, "7");
 pruefe("leere Antwort", leseLeistungen({}), []);
+
+// ── Erwartung je Spieler ────────────────────────────────────────────
+//
+// Vier Vereine, ein gespielter Spieltag (A–B, C–D), drei kommende Partien
+// für A: gegen C, bei D, bei B. Gemessen wird je Spieler.
+{
+  const SP = [
+    { mi: "s1", spieltag: 1, heim: "A", gast: "B", datum: tag(1), gewertet: true },
+    { mi: "s2", spieltag: 1, heim: "C", gast: "D", datum: tag(1), gewertet: true },
+    { mi: "s3", spieltag: 2, heim: "A", gast: "C", datum: tag(8), gewertet: false },
+    { mi: "s4", spieltag: 3, heim: "D", gast: "A", datum: tag(15), gewertet: false },
+    { mi: "s5", spieltag: 4, heim: "B", gast: "A", datum: tag(22), gewertet: false },
+  ];
+  const S = (spieler, mi, team, punkte) => ({ spieler, mi, team, position: "ANG", punkte });
+  const LS = [
+    S("a1", "s1", "A", 80), S("b1", "s1", "B", 20),
+    S("c1", "s2", "C", 50), S("c2", "s2", "C", 30), S("d1", "s2", "D", 40),
+  ];
+  const VOLL = new Set(["s1|A", "s1|B", "s2|C", "s2|D"]);
+  const bereich = bereichFuer(SP, null);
+  const rechne = (spieler, voll = VOLL) => {
+    const { zeilen, ligaschnitt } = werteMatchupsAus({
+      spiele: SP, leistungen: LS, vollstaendig: voll, bereich, mass: "spieler" });
+    return spielerErwartung({ spiele: SP, leistungen: LS, bereich, zeilen, ligaschnitt, spieler });
+  };
+
+  // Zugelassen je Stürmer: B 80, C 40 (D: 40/1), D 40 (C: 80/2).
+  // Ligaschnitt 220 / 5 Einsätze = 44.
+  const [a1] = rechne([{ id: "a1", team: "A", position: "ANG" }]);
+  pruefe("Spieler: eigener Schnitt je Einsatz", [a1.schnitt, a1.einsaetze, a1.spieleVerein], [80, 1, 1]);
+  pruefe("Spieler: Ligaschnitt je Spieler", a1.liga, 44);
+  // Gegen C: 80 + 40 − 44 = 76; bei D: 76; bei B: 80 + 80 − 44 = 116
+  pruefe("Spieler: je Partie", a1.partien.map((p) => p.erwartung), [76, 76, 116]);
+  pruefe("Spieler: nächstes Spiel", a1.erwartung[1].summe, 76);
+  pruefe("Spieler: 3 Spiele aufsummiert", a1.erwartung[3].summe, 268);
+  pruefe("Spieler: 5 verlangt, 3 übrig — zählt, was es gibt",
+    [a1.erwartung[5].summe, a1.erwartung[5].partien, a1.erwartung[5].nur], [268, 3, true]);
+  pruefe("Spieler: 3 verlangt, 3 da — kein „nur“", a1.erwartung[3].nur, false);
+
+  // Ein Wechsel: b1 spielte für B, steht heute bei A. Sein Schnitt bleibt
+  // seiner, die Gegner sind die von A.
+  const [b1] = rechne([{ id: "b1", team: "A", position: "ANG" }]);
+  pruefe("Spieler: Schnitt vom alten Verein, Gegner vom neuen", [b1.schnitt, b1.erwartung[1].summe], [20, 16]);
+
+  // Ein Gegner unvollständig geladen: C lässt nichts Bekanntes zu.
+  const [halb] = rechne([{ id: "a1", team: "A", position: "ANG" }],
+    new Set(["s1|A", "s1|B", "s2|C"]));
+  pruefe("Spieler: Gegner unbekannt — keine Erwartung",
+    [halb.erwartung[1].summe, halb.erwartung[1].bekannt, halb.erwartung[1].partien], [null, 0, 1]);
+  pruefe("Spieler: über 3 nur mit allen Gegnern",
+    [halb.erwartung[3].summe, halb.erwartung[3].bekannt], [null, 2]);
+
+  const [neu, ohnePos, ohneVerein] = rechne([
+    { id: "n1", team: "A", position: "ANG" },
+    { id: "a1", team: "A", position: null },
+    { id: "a1", team: null, position: "ANG" },
+  ]);
+  pruefe("Spieler: ohne Einsatz kein Schnitt, wenig Daten",
+    [neu.schnitt, neu.einsaetze, neu.wenig, neu.erwartung[1].summe], [null, 0, true, null]);
+  pruefe("Spieler: ohne Position keine Erwartung", [ohnePos.erwartung[1].summe, ohnePos.liga], [null, null]);
+  pruefe("Spieler: ohne Verein keine Partien", [ohneVerein.partien.length, ohneVerein.erwartung[1].summe], [0, null]);
+
+  // Ein Spiel außerhalb des Zeitraums zählt nicht zum eigenen Schnitt.
+  const nurSpaeter = spielerErwartung({ spiele: SP, leistungen: LS, bereich: { von: 2, bis: 2 },
+    zeilen: [], ligaschnitt: null, spieler: [{ id: "a1", team: "A", position: "ANG" }] })[0];
+  pruefe("Spieler: Zeitraum gilt auch für den eigenen Schnitt", [nurSpaeter.schnitt, nurSpaeter.einsaetze], [null, 0]);
+
+  // Was ein Punkt kostet
+  pruefe("Preis je Punkt", Math.round(preisJePunkt(20_000_000, 268)), 74627);
+  pruefe("Preis: negative Erwartung ist kein Schnäppchen", preisJePunkt(10_000_000, -5), null);
+  pruefe("Preis: null Punkte, kein Preis", preisJePunkt(10_000_000, 0), null);
+  pruefe("Preis: ohne Marktwert nichts", preisJePunkt(null, 50), null);
+  pruefe("Preis: Marktwert als Text (NUMERIC)", preisJePunkt("5000000", 50), 100000);
+}
 
 console.log(`matchup: ${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

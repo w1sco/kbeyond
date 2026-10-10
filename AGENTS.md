@@ -604,6 +604,57 @@ Samstagsfall, alte Saison, negative Punkte, und jede Bedingung fürs
 geklickt, 7 Spieler geholt (einer mit 404), Tabelle zeigt 33 / 22 / 17,5 wie
 vorab gerechnet.
 
+### Dritte Ansicht: Erwartung je Spieler
+
+`?ansicht=spieler` rechnet die Erwartung für jeden **einzelnen Spieler**
+statt für einen Mannschaftsteil — für das nächste Spiel, die nächsten 3 und
+die nächsten 5:
+
+```
+Erwartung je Partie = eigene Punkte je Einsatz (im gewählten Zeitraum)
+                    + was der Gegner auf seiner Position je Spieler zulässt
+                    − Ligaschnitt je Spieler auf dieser Position
+```
+
+Dieselbe Form wie „mit eigener Stärke“, nur mit dem Schnitt des Spielers
+statt dem seiner Mannschaft. Über 3 und 5 Partien wird **aufsummiert** —
+das ist, was er in dieser Zeit voraussichtlich holt —, mit denselben Regeln
+wie im Programm: nur, wenn jeder dieser Gegner bekannt ist, sonst „2 von 3“;
+weniger Partien übrig heißt „nur 2“. Gemessen wird **immer je Spieler**,
+auch wenn oben „je Mannschaft“ gewählt war; der Schalter fehlt in dieser
+Ansicht. Der eigene Schnitt zählt auch Einsätze beim früheren Verein, die
+Gegner sind die des heutigen.
+
+**Mio/Pkt** = Marktwert ÷ erwartete Punkte über den gewählten Vorlauf
+(`?vor=1|3|5`). Ohne positive Erwartung steht dort nichts — ein negativer
+Preis sähe in der Sortierung aus wie ein Schnäppchen (`preisJePunkt()`).
+
+**Die Startelf-Chance wird gefiltert, nicht eingerechnet.** Der Schnitt ist
+je Einsatz und weiß nicht, ob jemand spielt. Eine Gewichtung mit fünf groben
+Stufen wäre erfundene Genauigkeit; der Filter ist derselbe wie auf der
+Marktseite (`ELF_GRUPPEN` liegt deshalb jetzt in `lib/startelf.js`). Unter
+`MIN_SPIELE` Einsätzen ist ein Schnitt Zufall — „ab 3 Einsätzen“ ist
+deshalb vorbelegt.
+
+**„Vor Anpfiff am Markt“** nimmt nur **freie** Spieler, deren Angebot vor
+dem nächsten Anpfiff ausläuft (✓ oder ~ aus `vorAnpfiff()`). Gerechnet wird
+im Browser mit dem gemerkten Rhythmus der Marktseite (`app/_ui/zyklus.js`,
+derselbe `localStorage`-Schlüssel); der Regler steht dort. Wer in einem
+Kader steht, folgt keinem Rhythmus und bekommt nur eine Angabe, wenn er
+gerade angeboten wird. Der Anpfiff kommt aus `ermittleAnpfiff()` in
+`lib/anpfiff.js`, die die Marktseite jetzt ebenfalls benutzt.
+
+Kein zusätzlicher Kickbase-Aufruf: Leistungen, Pool, Startelf, Besitz und
+Markt-Mitschrift stehen in der Datenbank, und geladen wird das nur, wenn die
+Ansicht gewählt ist. Sortiert und gefiltert wird im Browser.
+
+19 Fälle in `pruefstand/matchup.mjs` (zusammen 109): Schnitt, Ligaschnitt,
+Summe über 3, „nur 3“ bei 5, Vereinswechsel, unvollständiger Gegner, ohne
+Einsatz/Position/Verein, Zeitraum, und der Preis samt negativer Erwartung.
+Im Prüfstand von Hand nachgerechnet: Kane 16 + 21 − 17,4 = 19,6 → „20“,
+über zwei Partien 29,2; Schick 61,8 Punkte über drei, 29,4 Mio → 0,476
+Mio/Pkt.
+
 ### Es ginge billiger — wenn es den Endpunkt gibt
 
 Ein Endpunkt mit den Punkten **aller Spieler einer Partie** machte aus rund
@@ -1551,6 +1602,9 @@ app/
   liga/elf/page.js                 Aufgestellte Elf: Summe der Punkteschnitte je Manager
   liga/matchup/page.js             Matchups: wer lässt zu, und wer hat das leichte Programm
   liga/matchup/Matchupholen.jsx    "use client" — Punkte je Spiel holen, Browser fasst nach
+  liga/matchup/Spielerliste.jsx    "use client" — Erwartung je Spieler, Ranking, Filter
+  _ui/zyklus.js                    "use client" — gemerkter Markt-Rhythmus (useZyklus)
+  _ui/Marktprognose.jsx            „wieder am Markt“ und „vor Anpfiff“ als Anzeige
   api/matchup/route.js             Ein Bündel Leistungsreihen holen
   liga/manager/[id]/page.js        Managerseite: Kennzahlen, Finanzen, Kader, Transfers
   liga/manager/[id]/Verkaufsrechner.jsx  "use client" — Verkäufe durchspielen
@@ -1603,7 +1657,9 @@ lib/
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   elfstaerke.js     bewerteElf() — aufgestellte Elf nach Punkteschnitt, ohne DB
   matchup.js        werteMatchupsAus(), programm(), vollstaendigeSeiten(),
-                    werIstOffen(), teileAuf() — ohne DB
+                    werIstOffen(), teileAuf(), spielerErwartung(),
+                    preisJePunkt() — ohne DB
+  anpfiff.js        ermittleAnpfiff() — Spielplan, sonst Einstellung
   matchupabruf.js   importiereLeistungen(), standLeistungen() — /performance je Spieler
   verlauf.js        tagesraster(), tagesreihen(), tageZwischen(), wertAmTag()
                     — Tagesstützstellen 0 Uhr, ohne DB

@@ -1,9 +1,12 @@
 "use client";
-import { useState, useMemo, useSyncExternalStore } from "react";
+import { useState, useMemo } from "react";
 import { euro, euroKurz, zeitpunkt, POS_ORDNUNG } from "@/lib/format";
 import { prognostiziere, vorAnpfiff, ZYKLUS_TAGE, ZYKLUS_BEREICH } from "@/lib/rhythmus";
+import { ELF_GRUPPEN, OHNE_NIE } from "@/lib/startelf";
+import { useZyklus } from "../../_ui/zyklus";
 import Kaufrechner from "../../_ui/Kaufrechner";
 import Startelf from "../../_ui/Startelf";
+import { Prognose, VorAnpfiff } from "../../_ui/Marktprognose";
 
 const SPALTEN = [
   { key: "name", label: "Spieler", text: true },
@@ -41,32 +44,6 @@ function prognoseRang(p) {
   }
 }
 
-// ── Der gemerkte Rhythmus, als externer Speicher ───────────────────
-//
-// Der localStorage ist ein Speicher außerhalb von React, und genau so wird
-// er gelesen: über useSyncExternalStore. Das löst zwei Dinge auf einmal —
-// auf dem Server gilt die Vorgabe (kein Hydrierungskonflikt, der hier
-// schon einmal die Aufstellungsauswahl gekostet hat), und es braucht kein
-// setState in einem Effekt, das der Linter zu Recht anmahnt.
-const hoerer = new Set();
-function abonniere(cb) {
-  hoerer.add(cb);
-  window.addEventListener("storage", cb);
-  return () => { hoerer.delete(cb); window.removeEventListener("storage", cb); };
-}
-function ladeZyklus(schluessel) {
-  try {
-    const n = Number(localStorage.getItem(schluessel));
-    return n >= ZYKLUS_BEREICH[0] && n <= ZYKLUS_BEREICH[1] ? n : ZYKLUS_TAGE;
-  } catch {
-    return ZYKLUS_TAGE; // kein Speicher (privater Modus o. ä.) – dann die Vorgabe
-  }
-}
-function merkeZyklus(schluessel, n) {
-  try { localStorage.setItem(schluessel, String(n)); } catch { /* dann nur bis zum Neuladen */ }
-  for (const cb of hoerer) cb();
-}
-
 // ── Filter nach Startelf-Chance ─────────────────────────────────────
 //
 // Fünf Gruppen, **überschneidungsfrei** — nur so ergibt eine Mehrfachauswahl
@@ -82,68 +59,8 @@ function merkeZyklus(schluessel, n) {
 // Wer keine Angabe hat, ist eine eigene Gruppe: weder sicher noch
 // vielleicht, aber auch nicht „spielt nicht". Eine fehlende Angabe ist
 // keine Aussage.
-const ELF_GRUPPEN = [
-  { schluessel: "sicher", label: "★ ✔ spielt sicher", passt: (st) => st === 1 || st === 2 },
-  { schluessel: "evtl",   label: "? spielt evtl.",    passt: (st) => st === 3 },
-  { schluessel: "kaum",   label: "! eher nicht",      passt: (st) => st === 4 },
-  { schluessel: "nie",    label: "✕ spielt nicht",    passt: (st) => st === 5 },
-  { schluessel: "offen",  label: "ohne Angabe",       passt: (st) => st == null },
-];
-// Die Abkürzung für „alle raus, die definitiv nicht spielen".
-const OHNE_NIE = ELF_GRUPPEN.map((g) => g.schluessel).filter((s) => s !== "nie");
-
-// Das Zeichen zur Frage „läuft er noch vor dem Anpfiff aus?"
-function VorAnpfiff({ a }) {
-  if (!a || !a.lage) return null;
-  const wann = a.ablauf ? ` · Ablauf ${zeitpunkt(a.ablauf)}` : "";
-  const form = {
-    sicher:     ["kb-anpfiff kb-anpfiff--ja",    "✓", "vor Anpfiff",  `Läuft vor dem Anpfiff aus${wann}`],
-    vielleicht: ["kb-anpfiff kb-anpfiff--knapp", "~", "knapp",        `Könnte noch vor dem Anpfiff auslaufen${wann}`],
-    nein:       ["kb-anpfiff kb-anpfiff--nein",  "✕", "erst danach",  `Läuft erst nach dem Anpfiff aus${wann}`],
-  }[a.lage];
-  if (!form) return null;
-  const [klasse, zeichen, text, titel] = form;
-  return (
-    <span className={klasse} title={titel}>
-      <span aria-hidden="true">{zeichen}</span> {text}
-    </span>
-  );
-}
-
-function Prognose({ p, zyklus }) {
-  if (!p) return <span className="kb-gedaempft">–</span>;
-
-  switch (p.lage) {
-    case "aufMarkt":
-      return <span className="kb-plus"><strong>jetzt am Markt</strong></span>;
-
-    case "ueberfaellig":
-      return (
-        <span title={`Erwartet war ${zeitpunkt(p.naechster)}`}>
-          jederzeit
-          <span className="kb-leise"> überfällig</span>
-        </span>
-      );
-
-    case "erwartet": {
-      const tage = Math.round(p.tageHin);
-      const text = tage <= 0 ? "heute" : tage === 1 ? "morgen" : `in ${tage} Tagen`;
-      const woher = p.durchVerkauf ? "Verkauf" : "Auftritt";
-      return (
-        <span title={`${woher} am ${zeitpunkt(p.anker)} · alle ${zyklus} Tage`}>
-          {text}
-          {p.sicherheit !== "gut" && <span className="kb-leise"> ca.</span>}
-        </span>
-      );
-    }
-
-    case "nieDagewesen":
-      return <span className="kb-gedaempft">kommt demnächst</span>;
-
-    default:
-      return <span className="kb-gedaempft">–</span>;
-  }
-}
+// Die Gruppen selbst stehen in lib/startelf.js — die Matchup-Seite
+// filtert genauso.
 
 export default function Freieliste({
   spieler, leagueId, jetzt, anpfiff = null, anpfiffQuelle = null,
@@ -170,17 +87,8 @@ export default function Freieliste({
   // rechnet sofort neu, weil die Anker je Spieler hier liegen und die
   // Rechnung ohne Datenbank auskommt.
   //
-  // Gemerkt wird im Browser, je Liga — siehe oben, wie.
-  const schluessel = `kb_zyklus_${leagueId}`;
-  const gemerkt = useSyncExternalStore(
-    abonniere, () => ladeZyklus(schluessel), () => ZYKLUS_TAGE);
-  // Fällt der Speicher aus, hält der Zustand den Wert bis zum Neuladen.
-  const [ungespeichert, setUngespeichert] = useState(null);
-  const zyklus = ungespeichert ?? gemerkt;
-  function zyklusSetzen(n) {
-    setUngespeichert(n);
-    merkeZyklus(schluessel, n);
-  }
+  // Gemerkt wird im Browser, je Liga — siehe app/_ui/zyklus.js.
+  const [zyklus, zyklusSetzen] = useZyklus(leagueId);
 
   // `jetzt` kommt vom Server: ein Date.now() beim Rendern liefe beim
   // Hydrieren auseinander.
