@@ -62,6 +62,23 @@ function prognoseRang(p) {
 // Die Gruppen selbst stehen in lib/startelf.js — die Matchup-Seite
 // filtert genauso.
 
+// ── Filter: kommt er vor Spieltagsbeginn? ───────────────────────────
+//
+// Dieselbe Aussage wie das Zeichen in der Spalte „Wieder am Markt“
+// (vorAnpfiff() in lib/rhythmus.js): Das Angebot läuft vor dem ersten
+// Anpfiff aus, man kann ihn also noch aufstellen. Wer jetzt am Markt steht
+// und rechtzeitig ausläuft, zählt mit. „~ knapp“ ist eine eigene Stufe,
+// weil der Termin auf einen Tag genau nicht zu haben ist.
+const VOR_ANPFIFF = [
+  { schluessel: "alle", label: "alle Termine" },
+  { schluessel: "vor", label: "✓ ~ kommt vor Anpfiff",
+    titel: "Läuft vor dem Anpfiff aus oder knapp davor",
+    passt: (lage) => lage === "sicher" || lage === "vielleicht" },
+  { schluessel: "sicher", label: "✓ sicher vor Anpfiff",
+    titel: "Läuft mit mindestens einem Tag Luft vor dem Anpfiff aus",
+    passt: (lage) => lage === "sicher" },
+];
+
 export default function Freieliste({
   spieler, leagueId, jetzt, anpfiff = null, anpfiffQuelle = null,
   konto = null, teamwert = 0, ligaAufschlag = null, eigenerKader = [], boni = null,
@@ -108,18 +125,31 @@ export default function Freieliste({
   const [absteigend, setAbsteigend] = useState(true);
   const [suche, setSuche] = useState("");
   const [pos, setPos] = useState("alle");
+  const [anpfiffWahl, setAnpfiffWahl] = useState("alle");
+  const passtAnpfiff = (x, wahl = anpfiffWahl) => {
+    const f = VOR_ANPFIFF.find((v) => v.schluessel === wahl);
+    return !f?.passt || f.passt(x.anpfiff?.lage ?? null);
+  };
+  const passtElf = (x) => elfWahl.size === 0 ||
+    ELF_GRUPPEN.some((g) => elfWahl.has(g.schluessel) && g.passt(x.startelf ?? null));
 
   // Gezählt wird innerhalb der gewählten Position — sonst stünde auf dem
   // Chip „12 spielen sicher" und die Liste zeigte drei Torhüter.
+  // Ebenso innerhalb des Anpfiff-Filters, und umgekehrt.
   const jeGruppe = useMemo(() => {
-    const basis = pos === "alle" ? spieler : spieler.filter((x) => x.position === pos);
+    const basis = (pos === "alle" ? mitPrognose : mitPrognose.filter((x) => x.position === pos))
+      .filter((x) => passtAnpfiff(x));
     const z = new Map([["alle", basis.length]]);
     for (const g of ELF_GRUPPEN) {
       z.set(g.schluessel, basis.filter((x) => g.passt(x.startelf ?? null)).length);
     }
     z.set("ohneNie", basis.filter((x) => (x.startelf ?? null) !== 5).length);
+    const fuerAnpfiff = (pos === "alle" ? mitPrognose : mitPrognose.filter((x) => x.position === pos))
+      .filter(passtElf);
+    for (const v of VOR_ANPFIFF) z.set(`a_${v.schluessel}`, fuerAnpfiff.filter((x) => passtAnpfiff(x, v.schluessel)).length);
     return z;
-  }, [spieler, pos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mitPrognose, pos, anpfiffWahl, elfWahl]);
 
   // Wie viele freie Spieler es je Position gibt. Steht auf den Chips, damit
   // man vor dem Klick sieht, ob sich einer lohnt.
@@ -136,6 +166,7 @@ export default function Freieliste({
       const aktiv = ELF_GRUPPEN.filter((g) => elfWahl.has(g.schluessel));
       gefiltert = gefiltert.filter((x) => aktiv.some((g) => g.passt(x.startelf ?? null)));
     }
+    if (anpfiffWahl !== "alle") gefiltert = gefiltert.filter((x) => passtAnpfiff(x));
     if (s) gefiltert = gefiltert.filter((x) => (x.name ?? "").toLowerCase().includes(s));
 
     const kopie = [...gefiltert];
@@ -168,7 +199,8 @@ export default function Freieliste({
         : Number(a[sortKey] ?? 0) - Number(b[sortKey] ?? 0);
     });
     return kopie;
-  }, [mitPrognose, sortKey, absteigend, suche, pos, elfWahl, alleGruppen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mitPrognose, sortKey, absteigend, suche, pos, elfWahl, alleGruppen, anpfiffWahl]);
 
   function klick(key) {
     if (key === sortKey) setAbsteigend(!absteigend);
@@ -227,6 +259,20 @@ export default function Freieliste({
         {anpfiff
           ? <>Nächster Anpfiff: <strong>{zeitpunkt(anpfiff)}</strong> ({anpfiffQuelle})</>
           : <>Kein Anpfiff bekannt — die Frage „vor dem Anpfiff?&ldquo; bleibt offen.</>}
+      </div>
+
+      {/* Nur, wer vor Spieltagsbeginn kommt — und damit noch aufgestellt
+          werden kann. Ohne bekannten Anpfiff gibt es nichts zu filtern. */}
+      <div className="kb-sortleiste kb-sortleiste--immer" role="group" aria-label="Vor Anpfiff" style={{ marginBottom: 8 }}>
+        {VOR_ANPFIFF.map((v) => (
+          <button key={v.schluessel} type="button" title={v.titel}
+                  className={`kb-sortchip${anpfiffWahl === v.schluessel ? " kb-sortchip--aktiv" : ""}`}
+                  aria-pressed={anpfiffWahl === v.schluessel}
+                  disabled={!anpfiff && v.schluessel !== "alle"}
+                  onClick={() => setAnpfiffWahl(v.schluessel)}>
+            {v.label} <span className="kb-chipzahl">{jeGruppe.get(`a_${v.schluessel}`)}</span>
+          </button>
+        ))}
       </div>
 
       {/* Filter nach Startelf-Chance: Mehrfachauswahl. Gewählt = nur

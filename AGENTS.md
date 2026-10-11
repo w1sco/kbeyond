@@ -913,6 +913,17 @@ gilt der eingestellte Spieltagsbeginn (`liga_settings.spieltag_start`: Freitag
 Seite nennt die Quelle („Spielplan" oder „Einstellung (Freitag)"), statt beide
 gleich aussehen zu lassen.
 
+### Filter: kommt er vor Spieltagsbeginn?
+
+Über der Liste der freien Spieler: **alle Termine · ✓ ~ kommt vor Anpfiff ·
+✓ sicher vor Anpfiff**. Das ist dieselbe Aussage wie das Zeichen in der Spalte
+„Wieder am Markt“ (`vorAnpfiff()`): Das Angebot läuft vor dem ersten Anpfiff
+aus, der Spieler lässt sich also noch aufstellen. Wer gerade am Markt steht
+und rechtzeitig ausläuft, zählt mit. Der Regler für den Rhythmus wirkt sofort
+mit — bei 7 Tagen kommen andere Spieler in Frage als bei 14. Ohne bekannten
+Anpfiff sind die beiden Chips gesperrt. Die Zahlen darauf zählen innerhalb von
+Position und Startelf-Filter und umgekehrt.
+
 ### Filter nach Startelf-Chance
 
 Über der Liste: **Alle · ohne ✕** und fünf überschneidungsfreie Gruppen —
