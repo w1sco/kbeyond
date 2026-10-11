@@ -6,11 +6,13 @@ import { berechneKonten, kommendeLoginBoni } from "@/lib/ledger";
 import { geheimeZugaenge } from "@/lib/zugang";
 import { wenVerbergen, verbergeKonten } from "@/lib/privatsphaere";
 import Schloss from "@/app/_ui/Schloss";
-import { sitzung, verlangeLiga } from "@/lib/auth";
+import { sitzung, verlangeLiga, istMitglied } from "@/lib/auth";
+import { abgleich } from "@/lib/abgleichdaten";
+import { leseBetrag } from "@/lib/abgleich";
 import { holeNamen, benenne } from "@/lib/spielernamen";
 import { holeAufschlaege, aktuellAmMarkt } from "@/lib/marktbeobachtung";
 import { werteAus } from "@/lib/aufschlag";
-import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe, restzeit, tagKurz } from "@/lib/format";
+import { euro, euroKurz, prozent, zeitpunkt, normalisiereSpieler, findeSpielerListe, restzeit, tagKurz, ausEingabe, fuerEingabe, fuerTag } from "@/lib/format";
 import Verkaufsrechner from "./Verkaufsrechner";
 import Aufstellung from "./Aufstellung";
 import Blaettern from "./Blaettern";
@@ -20,6 +22,74 @@ import { erlaubtesMinus } from "@/lib/gebot";
 import { holeMitspieler } from "@/lib/mitspieler";
 
 export const dynamic = "force-dynamic";
+
+// ── Abgleich mit einem echten Kontostand ────────────────────────────
+//
+// Beide Aktionen prüfen selbst: Sie sind eigene Adressen und lassen sich
+// ohne die Seite aufrufen. Und beide verweigern den Abgleich, wenn der
+// Manager seine Zahlen vor diesem Betrachter verbirgt — die berechnete
+// Zahl stünde sonst als „Differenz“ wieder da.
+async function zugangZumAbgleich(formData) {
+  const { token, nutzer, uid, name } = await sitzung();
+  const leagueId = String(formData.get("league") ?? "");
+  const managerId = String(formData.get("manager") ?? "");
+  if (!(await istMitglied(leagueId, token))) throw new Error("Kein Zugriff auf diese Liga");
+  await initSchema();
+  const settings = await getSettings(leagueId, nutzer);
+  const ranking = await kbFetch(`/v4/leagues/${leagueId}/ranking`, token);
+  const alle = await holeMitspieler(leagueId, ranking, settings);
+  const manager = alle.find((m) => String(m.i) === managerId);
+  if (!manager) throw new Error("Manager nicht gefunden");
+  const betrachterId = alle.find((m) => (uid && String(m.i) === uid) || (name && m.n === name))?.i ?? null;
+  const geheim = wenVerbergen({ zugaenge: await geheimeZugaenge(), spieler: alle, betrachterId });
+  if (geheim.has(String(manager.i))) throw new Error("Dieser Manager zeigt seine Zahlen nicht");
+  const zurueck = `/liga/manager/${encodeURIComponent(managerId)}?league=${encodeURIComponent(leagueId)}`;
+  return { leagueId, nutzer, settings, alle, manager, zurueck };
+}
+
+async function kontrollwertSpeichern(formData) {
+  "use server";
+  const { leagueId, nutzer, manager, zurueck } = await zugangZumAbgleich(formData);
+  if (formData.get("loeschen")) {
+    await sql`
+      DELETE FROM kontrollwert
+      WHERE league_id = ${leagueId} AND user_id = ${nutzer} AND manager_id = ${String(manager.i)}`;
+    redirect(zurueck);
+  }
+  const betrag = leseBetrag(formData.get("betrag"));
+  const wann = ausEingabe(formData.get("zeitpunkt"));
+  if (betrag == null || !wann) {
+    redirect(`${zurueck}&abgleich=${encodeURIComponent("Betrag oder Zeitpunkt nicht lesbar")}`);
+  }
+  await sql`
+    INSERT INTO kontrollwert (league_id, user_id, manager_id, betrag, zeitpunkt)
+    VALUES (${leagueId}, ${nutzer}, ${String(manager.i)}, ${Math.round(betrag)}, ${wann})
+    ON CONFLICT (league_id, user_id, manager_id) DO UPDATE
+      SET betrag = EXCLUDED.betrag, zeitpunkt = EXCLUDED.zeitpunkt, eingetragen = NOW()`;
+  redirect(`${zurueck}#abgleich`);
+}
+
+// Die Differenz als Korrektur: neu gerechnet, nie aus dem Formular.
+async function korrekturUebernehmen(formData) {
+  "use server";
+  const { leagueId, nutzer, settings, alle, manager, zurueck } = await zugangZumAbgleich(formData);
+  const a = await abgleich({ leagueId, settings, alle, manager, nutzer });
+  if (a && Math.abs(a.diff) >= 1) {
+    const grund = `Abgleich mit Kontostand vom ${zeitpunkt(a.zeitpunkt)}`;
+    await sql`
+      INSERT INTO korrektur (league_id, user_id, manager, betrag, grund)
+      VALUES (${leagueId}, ${nutzer}, ${manager.n}, ${Math.round(a.diff)}, ${grund})
+      ON CONFLICT (league_id, user_id, manager) DO UPDATE
+        SET betrag = korrektur.betrag + ${Math.round(a.diff)}, grund = ${grund}`;
+  }
+  redirect(`${zurueck}#abgleich`);
+}
+
+// Tag d der Login-Staffel als Datum: die d-te Mitternacht nach dem Start.
+function loginTag(start, d) {
+  const basis = Date.parse(`${fuerTag(start)}T12:00:00Z`);
+  return tagKurz(new Date(basis + d * 86_400_000));
+}
 
 // Ab hier gilt ein Spieler als Topspieler.
 const TOPSPIELER_AB = 25_000_000;
@@ -105,6 +175,7 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
   // hier nichts abzuleiten — `null + Zahl` wäre eine Zahl, und die sähe
   // aus wie ein Ergebnis.
   const geheim = k.finanzenGeheim === true;
+  const abg = geheim ? null : await abgleich({ leagueId, settings, alle, manager, nutzer });
   const limit = geheim ? null : erlaubtesMinus(teamwert, k.konto);
   const maxGebot = geheim ? null : k.konto + limit;
   const gesamtwert = geheim ? null : k.konto + teamwert;
@@ -409,6 +480,135 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
         </>
         )}
       </section>
+
+      {!geheim && (
+        <section className="kb-karte" id="abgleich">
+          <h2 className="kb-abschnitt-titel">Abgleich mit echtem Kontostand</h2>
+          <p className="kb-info" style={{ marginTop: 0 }}>
+            Hat {manager.n} seinen Kontostand gezeigt (Screenshot)? Betrag und Uhrzeit
+            eintragen — gerechnet wird zu genau diesem Zeitpunkt, spätere Käufe zählen
+            nicht mit.
+          </p>
+          {p.abgleich && <div className="kb-hinweis kb-hinweis--warn">{p.abgleich}</div>}
+          <form action={kontrollwertSpeichern} className="kb-zeile-form">
+            <input type="hidden" name="league" value={leagueId} />
+            <input type="hidden" name="manager" value={String(manager.i)} />
+            <label className="kb-label">
+              Echter Kontostand{" "}
+              <input name="betrag" className="kb-eingabe" inputMode="text" placeholder="-4.500.972"
+                     defaultValue={abg ? String(abg.echt) : ""} required />
+            </label>
+            <label className="kb-label">
+              abgelesen am{" "}
+              <input type="datetime-local" name="zeitpunkt" className="kb-eingabe" required
+                     defaultValue={fuerEingabe(abg ? abg.zeitpunkt : new Date())} />
+            </label>
+            <button type="submit" className="kb-btn">Abgleichen</button>
+            {abg && <button type="submit" name="loeschen" value="1" className="kb-btn kb-btn--klein">Löschen</button>}
+          </form>
+
+          {abg && (
+            <>
+              <table className="kb-liste" style={{ marginTop: 12 }}>
+                <tbody>
+                  <tr><td>Echt, am {zeitpunkt(abg.zeitpunkt)}</td><td className={abg.echt < 0 ? "kb-minus" : undefined}>{euro(abg.echt)}</td></tr>
+                  <tr><td>KBeyond zum selben Zeitpunkt</td><td className={abg.berechnet < 0 ? "kb-minus" : undefined}>{euro(abg.berechnet)}</td></tr>
+                  <tr className="kb-liste-summe">
+                    <td>Differenz (echt − KBeyond)</td>
+                    <td className={Math.abs(abg.diff) < 1 ? "kb-plus" : "kb-minus"}>
+                      {Math.abs(abg.diff) < 1 ? "stimmt auf den Euro" : euro(abg.diff)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="kb-leise" style={{ margin: "6px 0 0" }}>
+                Darin: Login-Bonus {euro(abg.posten.loginBonus)} ({abg.tage} Tage) · Punkte-Bonus{" "}
+                {euro(abg.posten.punkteBonus)} ({abg.posten.punkte} Punkte) · Käufe{" "}
+                {euro(-abg.posten.kaeufe)} · Verkäufe {euro(abg.posten.verkaeufe)} · Strafen{" "}
+                {euro(abg.posten.strafen)} · Korrektur {euro(abg.posten.korrektur)}
+              </p>
+
+              {abg.danach.length > 0 && (
+                <p className="kb-info">
+                  <strong>Nicht mitgerechnet, weil danach:</strong>{" "}
+                  {abg.danach.map((x) => `${x.kauf ? "Kauf" : "Verkauf"} ${x.spieler} ${euro(x.kauf ? -x.preis : x.preis)} (${zeitpunkt(x.dt)})`).join(" · ")}
+                </p>
+              )}
+              {abg.punkteUnsicher && (
+                <p className="kb-hinweis kb-hinweis--warn">
+                  Seit dem Ablesen wurde gespielt. Gerechnet ist mit den Punkten von jetzt —
+                  der Punkte-Bonus kann deshalb um die Punkte seither daneben liegen.
+                </p>
+              )}
+              {abg.mehrdeutig && (
+                <p className="kb-hinweis kb-hinweis--warn">
+                  Ein zweiter Manager heißt genauso — die Transfers lassen sich nicht sicher
+                  zuordnen.
+                </p>
+              )}
+
+              {Math.abs(abg.diff) >= 1 && (
+                <>
+                  <h3 className="kb-label" style={{ marginTop: 12 }}>Was genau passt</h3>
+                  {abg.erklaerungen.length === 0 ? (
+                    <p className="kb-info">
+                      Keine einzelne Ursache passt auf den Euro — auch kein ausgelassener Login
+                      und kein einzelner Transfer. Wahrscheinlich kommen mehrere Dinge zusammen,
+                      oder es fehlt ein Transfer ganz (etwa aus einer Feed-Lücke). Die Liste der
+                      Transfers unten mit {manager.n}s Kickbase-Verlauf vergleichen hilft.
+                    </p>
+                  ) : (
+                    <ul className="kb-info">
+                      {abg.erklaerungen.map((e, i) => (
+                        <li key={i}>
+                          {e.teile.map((x, j) => (
+                            <span key={j}>
+                              {j > 0 && " und "}
+                              {x.art === "login" && (
+                                <>
+                                  {x.ausfaelle === 1 ? "ein ausgelassener Login" : "zwei ausgelassene Logins"}{" "}
+                                  ({euro(x.betrag)}), am{" "}
+                                  {x.varianten.slice(0, 4).map((v) => v.map((d) => loginTag(abg.loginStart, d)).join(" + ")).join(" oder ")}
+                                  {x.varianten.length > 4 && ` oder ${x.varianten.length - 4} weiteren`}
+                                </>
+                              )}
+                              {x.art === "transfer" && (
+                                <>
+                                  {x.transfer.kauf ? "Kauf" : "Verkauf"} {x.transfer.spieler} am{" "}
+                                  {zeitpunkt(x.transfer.dt)} ({euro(x.transfer.preis)},{" "}
+                                  {x.transfer.quelle === "rk" ? "aus der Rekonstruktion" : "aus dem Feed"})
+                                  zählt, gab es so aber nicht
+                                </>
+                              )}
+                              {x.art === "punkte" && (
+                                <>Punkte-Bonus um {Math.abs(x.punkte)} Punkte {x.punkte > 0 ? "zu niedrig" : "zu hoch"}</>
+                              )}
+                            </span>
+                          ))}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {abg.doppelt.length > 0 && (
+                    <p className="kb-hinweis kb-hinweis--warn">
+                      Vermutlich doppelt erfasst:{" "}
+                      {abg.doppelt.map((d) => `${d.rk.spieler} ${euro(d.rk.preis)} (Feed ${zeitpunkt(d.feed.dt)}, Rekonstruktion ${zeitpunkt(d.rk.dt)})`).join(" · ")}
+                    </p>
+                  )}
+                  <form action={korrekturUebernehmen} style={{ marginTop: 10 }}>
+                    <input type="hidden" name="league" value={leagueId} />
+                    <input type="hidden" name="manager" value={String(manager.i)} />
+                    <button type="submit" className="kb-btn">
+                      Differenz {euro(abg.diff)} als Korrektur übernehmen
+                    </button>
+                    <span className="kb-leise"> — danach stimmt {manager.n} zu diesem Zeitpunkt auf den Euro</span>
+                  </form>
+                </>
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       <section className="kb-karte">
         <h2 className="kb-abschnitt-titel">

@@ -761,6 +761,15 @@ stillschweigend jede manuelle Korrektur.
 
 ---
 
+### Abgleich mit einem echten Kontostand
+
+Auf der Managerseite: den Kontostand eintragen, den ein Mitspieler gezeigt
+hat, samt Uhrzeit. KBeyond rechnet zu genau diesem Zeitpunkt (spätere Käufe
+zählen nicht und stehen eigens da), nennt die Differenz und, was **genau**
+darauf passt — ausgelassene Logins mit den möglichen Tagen, ein falsch
+gezählter Transfer, Punkte. Ein Knopf übernimmt die Differenz als Korrektur.
+Nicht bei Managern, die ihre Zahlen verbergen.
+
 ## 8. Aktualisieren
 
 **Es gibt genau einen Knopf.** Er macht nacheinander: Feed importieren,

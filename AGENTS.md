@@ -35,6 +35,34 @@ Kontostand = Startbudget
 
 **Wichtige Einschränkung dieser Kalibrierung:** Sie beweist die Formel nur für den eigenen Datensatz. Ein Fehler, der nur Gegner betrifft (fehlende Strafen, fehlende Transfers aus Zeiträumen, in denen man selbst nicht gehandelt hat), bleibt unsichtbar. Genau so wurden mehrere Bugs lange übersehen.
 
+### Abgleich mit dem Kontostand eines Mitspielers
+
+Zeigt ein Mitspieler seinen echten Kontostand (Screenshot), lässt er sich auf
+seiner Managerseite eintragen — **mit der Uhrzeit des Screenshots**. Gerechnet
+wird dann zu genau diesem Zeitpunkt (`berechneKonten(…, { bis })`): Transfers
+und Strafen bis dahin, Login-Bonus bis zu diesem Tag. Ein Kauf danach gehört
+nicht in die Rechnung und steht eigens unter „Nicht mitgerechnet“ — sonst
+stünde sein Preis als Differenz da.
+
+`erklaereDifferenz()` in `lib/abgleich.js` sucht **nur genaue Treffer**:
+ein oder zwei ausgelassene Logins (danach beginnt die Staffel neu bei
+10.000 €; einer kostet mitten in der Staffel 550.000 €, und wegen der
+Symmetrie passen meist mehrere Tage — sie stehen in einer Erklärung), ein
+Transfer, der gezählt wird, den es so nicht gab, ein ganzzahliger
+Punkte-Bonus-Unterschied, oder ein Paar aus Login und Transfer. Kickbase-Preise
+sind krumme Beträge, ein Treffer auf den Euro ist deshalb ein starker Hinweis.
+Dazu `doppelteVerdacht()`: derselbe Kauf aus Feed und Rekonstruktion.
+
+„Differenz als Korrektur übernehmen“ rechnet die Differenz auf dem Server
+neu, statt sie aus dem Formular zu nehmen, und schreibt sie in die
+Korrektur des Nutzers. Danach stimmt der Manager zu diesem Zeitpunkt auf den
+Euro. Wer seine Zahlen verbirgt, bekommt keinen Abgleich — die berechnete
+Zahl stünde sonst als Differenz wieder da; beide Aktionen prüfen das selbst.
+
+28 Fälle in `pruefstand/abgleich.mjs`, dazu im Browser: −550.000 € als
+„ein ausgelassener Login“ erkannt, nach Übernahme „stimmt auf den Euro“, ein
+Kauf nach dem Ablesezeitpunkt unter „Nicht mitgerechnet“.
+
 ---
 
 ## Datenquellen: Kickbase-API (inoffiziell)
@@ -317,6 +345,8 @@ zugang_sitzung(finger PK, kennung, angelegt)
 liga_settings(league_id PK, stichtag, startbudget, punkte_bonus, login_aktiv,
               login_start, spieltag_start, admin_zeigen, notiz)
 korrektur(league_id, manager, betrag, grund)          -- PK (league_id, manager)
+kontrollwert(league_id, user_id, manager_id, betrag, zeitpunkt, eingetragen)
+  echter Kontostand eines Mitspielers zum Abgleich, je Nutzer
 import_log(league_id PK, letzter_lauf, neue_events, gesamt, offset_pos, komplett)
 rekon_log(league_id PK, position, fertig, letzter, gefunden)
 feed_luecke(league_id, von, bis, erkannt, quelle)     -- PK (league_id, von)
@@ -1746,7 +1776,9 @@ lib/
   kader.js          ladeKader(), ladeAufstellungen() — Kader und Startelf
   manager.js        spieltMit(), nurMitspieler(), ADMIN_MODI — ohne DB
   mitspieler.js     holeMitspieler() — die Managerliste für ALLE Seiten
-  ledger.js         berechneKonten() — das Herzstück
+  ledger.js         berechneKonten() — das Herzstück, optional zu einem Zeitpunkt (bis)
+  abgleich.js       erklaereDifferenz(), loginVerlust(), leseBetrag() — ohne DB
+  abgleichdaten.js  abgleich() — Kontostand zum Ablesezeitpunkt und Erklärungen
   gebot.js          erlaubtesMinus(), maxGebot() — die Kickbase-Regel, ohne DB
   aufstellung.js    findeAufstellung(), felderAnalyse() — Startelf erkennen, ohne DB
   loginbonus.js     loginBonus(), tagesBonus(), kommendeLoginBoni() — ohne DB
