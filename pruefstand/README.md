@@ -292,3 +292,11 @@ Mit `KB_FEED` trägt Spieler 302 außerdem eine Transferhistorie: ein Kauf in
 der Lücke, einer in der stillen Zeit vom 23.09. bis 01.10. (erst nach
 „Übernehmen und nachholen“ auf der Ligaseite) und einer aus lückenloser Zeit,
 der nie hereinkommen darf.
+
+## KB_MDP
+
+`KB_MDP=1` (mit `KB_PUNKTE=1`) gibt den Managern Punkte des laufenden
+Spieltags (`mdp`: 63 / 40 / −5), wie die echte Rangliste. Läuft laut
+`spiele` gerade ein Spieltag, zählen diese Punkte nicht im Kontostand —
+Kickbase zahlt sie erst Montagabend aus. Ohne `KB_MDP` greift die eigene
+Messung vom Tag vor dem Anpfiff, ohne die steht „unbekannt“.

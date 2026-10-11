@@ -278,7 +278,14 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
   const posten = [
     { label: "Startbudget", betrag: Number(settings.startbudget) },
     { label: "Login-Bonus", betrag: k.loginBonus },
-    { label: `Punkte-Bonus (${k.punkte} × ${euro(Number(settings.punkte_bonus))})`, betrag: k.punkteBonus },
+    {
+      // Ausgezahlt sind nur die Punkte bis zum letzten abgeschlossenen
+      // Spieltag; die des laufenden kommen erst Montagabend.
+      label: k.punkteOffen
+        ? `Punkte-Bonus (${k.punkte - k.punkteOffen} × ${euro(Number(settings.punkte_bonus))}, ausgezahlt)`
+        : `Punkte-Bonus (${k.punkte} × ${euro(Number(settings.punkte_bonus))})`,
+      betrag: k.punkteBonus,
+    },
     { label: `Verkäufe (${k.anzVerkauf})`, betrag: k.verkaeufe },
     { label: `Käufe (${k.anzKauf})`, betrag: -k.kaeufe },
     { label: `Strafen (${k.anzStrafen})`, betrag: k.strafen },
@@ -473,6 +480,23 @@ export default async function ManagerSeite({ params, searchParams, imPanel = fal
             </tr>
           </tbody>
         </table>
+        {k.punkteAuszahlung && (
+          <p className={`kb-info${k.punkteOffenUnbekannt ? " kb-hinweis kb-hinweis--warn" : ""}`} style={{ margin: "12px 0 0" }}>
+            {k.punkteOffenUnbekannt ? (
+              <>
+                Der laufende Spieltag ist noch nicht ausgezahlt, aber wie viele seiner Punkte
+                aussteht, ist unbekannt — der Punkte-Bonus enthält sie deshalb noch.
+              </>
+            ) : (
+              <>
+                Noch nicht ausgezahlt: <strong>{k.punkteOffen} Punkte</strong> vom laufenden
+                Spieltag = {euro(k.punkteBonusOffen)}. Kickbase zahlt sie voraussichtlich{" "}
+                {zeitpunkt(k.punkteAuszahlung)} aus; bis dahin zählen sie nicht im
+                Kontostand.
+              </>
+            )}
+          </p>
+        )}
         <p className="kb-info" style={{ margin: "12px 0 0" }}>
           Der Login-Bonus ist für alle Manager gleich hochgerechnet ({k.tageGezaehlt} Tage ab{" "}
           {k.bonusQuelle}) – Kickbase liefert im Feed nur den eigenen.

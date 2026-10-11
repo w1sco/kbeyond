@@ -13,10 +13,13 @@ const LIGA = "1";
 // Mit KB_PUNKTE=1 tragen die Manager Saisonpunkte — sonst stünde der
 // Punkte-Bonus überall auf 0, und ein Fehler darin bliebe unsichtbar.
 const PUNKTE = process.env.KB_PUNKTE === "1";
+// Mit KB_MDP=1 dazu die Punkte des laufenden Spieltags (`mdp`), wie die
+// echte Rangliste sie führt — die Probe für „Punkte-Bonus erst Montag“.
+const MDP = process.env.KB_MDP === "1";
 const MANAGER = [
-  { i: 1, n: "W1zco",     sp: PUNKTE ? 600 : 0, tv: 180000000, spl: 1 },
-  { i: 2, n: "yannick15", sp: PUNKTE ? 450 : 0, tv: 165000000, spl: 2 },
-  { i: 3, n: "PetzS",     sp: PUNKTE ? 300 : 0, tv: 150000000, spl: 3 },
+  { i: 1, n: "W1zco",     sp: PUNKTE ? 600 : 0, ...(MDP ? { mdp: 63 } : {}), tv: 180000000, spl: 1 },
+  { i: 2, n: "yannick15", sp: PUNKTE ? 450 : 0, ...(MDP ? { mdp: 40 } : {}), tv: 165000000, spl: 2 },
+  { i: 3, n: "PetzS",     sp: PUNKTE ? 300 : 0, ...(MDP ? { mdp: -5 } : {}), tv: 150000000, spl: 3 },
   // Der Admin. Mit KB_ADMIN_SPIELT=1 hat er eine Mannschaft und muss dann
   // überall als normaler Manager auftauchen.
   {

@@ -1782,6 +1782,7 @@ lib/
   gebot.js          erlaubtesMinus(), maxGebot() — die Kickbase-Regel, ohne DB
   aufstellung.js    findeAufstellung(), felderAnalyse() — Startelf erkennen, ohne DB
   loginbonus.js     loginBonus(), tagesBonus(), kommendeLoginBoni() — ohne DB
+  punktebonus.js    offenerSpieltag(), offenePunkte() — Bonus erst Montagabend, ohne DB
   schnappschuss.js  baueSchnappschuss() — Datensatz für die Frage-Funktion
   teamwerte.js      ladeTeamwerte()
   format.js         euro, euroKurz, prozent, zeitpunkt, tagKurz, vorZeit, restzeit, position,
@@ -1972,6 +1973,24 @@ sind fast immer glatte Beträge — so kamen „227 Tage Login-Bonus" bei einer 
 20 Tage alt ist. Ein Tagesäquivalent wird jetzt nur genannt, wenn es überhaupt in die
 Laufzeit der Liga passt; sonst stehen dort nur die beiden wahrscheinlichen Ursachen
 (Login-Bonus, alte Strafe) ohne erfundene Genauigkeit.
+
+**Der Punkte-Bonus des laufenden Spieltags ist noch nicht auf dem Konto.**
+Kickbase zahlt ihn **Montagabend** aus, die Saisonpunkte `sp` der Rangliste zählen
+aber live mit, sobald angepfiffen ist. `sp × 1.000 €` schrieb deshalb von Freitag
+bis Montag Geld gut, das noch nicht da war — jeder Kontostand und jedes Max-Gebot
+lag um die laufenden Spieltagspunkte zu hoch. Unabhängig davon, wann aktualisiert
+wurde: Login- und Punkte-Bonus rechnet `berechneKonten()` bei jedem Seitenaufruf
+aus Tagen seit dem Reset und den Punkten von jetzt, nichts davon wird gesammelt.
+
+`lib/punktebonus.js`: Offen ist ein Spieltag ab seinem ersten Anpfiff bis zum
+**Tag nach seinem letzten Spiel, 20:00** (Spielplan aus `spiele`). Die Uhrzeit ist
+eine Annahme nach Aussage des Nutzers, ebenso das Verhalten unter der Woche —
+lieber eine Stunde zu lange zurückhalten als Geld zeigen, das fehlt. Wie viele
+Punkte ausstehen, sagt `mdp` aus der Rangliste (belegt an einem echten Eintrag:
+`sp: 448, mdp: 448`); fehlt es, die eigene Messung vom Tag vor dem Anpfiff
+(`punkteAmTag`). Fehlt beides, zählt alles wie bisher und die Managerseite sagt,
+dass es unbekannt ist. 16 Fälle in `pruefstand/punktebonus.mjs`, dazu im
+Prüfstand alle drei Wege (`KB_MDP=1`).
 
 **Punkte-Bonus: 1.000 € je Punkt.** Lange stand hier 10.000 € — eine Annahme aus der Zeit, als alle bei `sp: 0` standen und sich nichts prüfen ließ. Der Wert ist inzwischen belegt; bestehende Ligen wurden einmalig mitgezogen (nur die, die noch auf dem alten Wert standen).
 
