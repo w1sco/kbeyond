@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { kbFetch } from "@/lib/kickbase";
-import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTagesverlauf, sql, getVortag } from "@/lib/db";
+import { initSchema, getSettings, getImportStatus, getTeamwerte, getMwTrend, getTagesverlauf, sql, getVortag, getLuecken, verdaechtigeStille, STILLE_STUNDEN } from "@/lib/db";
 import { berechneKonten } from "@/lib/ledger";
 import { euro, zeitpunkt, vorZeit, inZeit, fuerTag, tagKurz, MW_UHRZEIT } from "@/lib/format";
 import Tabelle from "./Tabelle";
@@ -201,6 +201,16 @@ export default async function Liga({ searchParams }) {
   const lueckeStd = feedStart && feedStart > stich ? (feedStart - stich) / 3_600_000 : 0;
   const lueckeTage = Math.round((lueckeStd / 24) * 10) / 10;
 
+  // Lücken mitten im Feed: zu lange nicht aktualisiert, Kickbase liefert nur
+  // die letzten ~670 Einträge. Festgehaltene und verdächtige getrennt —
+  // die einen sind belegt, die anderen nur eine lange Stille.
+  const feedLuecken = await getLuecken(leagueId);
+  const stille = await verdaechtigeStille(leagueId, settings.stichtag);
+  const dauer = (l) => {
+    const std = (l.bis - l.von) / 3_600_000;
+    return std >= 48 ? `${Math.round(std / 24 * 10) / 10} Tage` : `${Math.round(std)} Std.`;
+  };
+
   // ── Verlauf über die Zeit ──────────────────────────────────────────
   //
   // Grundlage ist `tagesstand`: je Manager und Kalendertag Kaderwert,
@@ -242,8 +252,9 @@ export default async function Liga({ searchParams }) {
     {
       schluessel: "punkte", name: "Punkte", einheit: "zahl", reihen: reihenFuer("punkte"),
       leerGrund:
-        "Punkte werden erst seit dem ersten Aktualisieren mitgeschrieben — " +
-        "rückwirkend stehen sie nirgends und werden nicht geschätzt.",
+        "Punkte stehen nur an Tagen, an denen aktualisiert wurde, und an Tagen " +
+        "dazwischen, an denen kein Spiel lag — sonst stehen sie nirgends und " +
+        "werden nicht geschätzt.",
     },
   ];
 
@@ -312,6 +323,68 @@ export default async function Liga({ searchParams }) {
         </Hinweis>
       )}
 
+      {feedLuecken.length > 0 && (
+        <Hinweis
+          art="warn"
+          kurz={`Feed-Lücke: ${feedLuecken.length === 1 ? dauer(feedLuecken[0]) : `${feedLuecken.length} Zeiträume`} fehlen im Feed`}
+          titel="Lücke im Feed"
+        >
+          <p>
+            Kickbase liefert nur die letzten rund 670 Einträge. Zwischen zwei Läufen lag
+            mehr — was dazwischen geschah, kam nicht mehr herein:
+          </p>
+          <ul>
+            {feedLuecken.map((l) => (
+              <li key={l.von.toISOString()}>
+                {zeitpunkt(l.von)} bis {zeitpunkt(l.bis)} ({dauer(l)})
+              </li>
+            ))}
+          </ul>
+          <p>
+            <strong>Transfers</strong> holt „Alles aktualisieren“ über die Spielerhistorie
+            nach{status.rekonFertig ? " – das ist erledigt" : " – das läuft dort mit, solange es nicht fertig ist (mehrere Klicks)"}.
+            <strong> Strafen aus dieser Zeit sind verloren</strong>; der Liga-Admin kann sie
+            nennen, eintragen lassen sie sich als Korrektur unter{" "}
+            <a href={`/liga/einstellungen?league=${leagueId}`}>Einstellungen</a>.
+          </p>
+          <p>
+            Vermeiden lässt sich das nur, indem man öfter aktualisiert — spätestens alle
+            paar Tage.
+          </p>
+        </Hinweis>
+      )}
+
+      {stille.length > 0 && (
+        <Hinweis
+          art="warn"
+          kurz={`Verdacht auf Feed-Lücke: ${stille.length === 1 ? dauer(stille[0]) : `${stille.length} Zeiträume`} ohne ein einziges Event`}
+          titel="Verdacht auf Lücke im Feed"
+        >
+          <p>
+            In diesen Zeiträumen steht kein einziges Event — länger als {STILLE_STUNDEN}{" "}
+            Stunden. In einer laufenden Liga stellt Kickbase täglich Spieler auf den Markt,
+            und jeder davon ist ein Event. Am wahrscheinlichsten wurde hier zu lange nicht
+            aktualisiert und Kickbase hat den Zeitraum nicht mehr ausgeliefert; dann fehlen
+            Transfers und die Kontostände stimmen nicht.
+          </p>
+          <p>
+            Übernehmen heißt: „Alles aktualisieren“ geht die Transferhistorie aller Spieler
+            noch einmal durch und holt nach, was in diesem Zeitraum lag. Das sind rund 500
+            Abrufe, verteilt auf mehrere Klicks. Doppelt abgelegt wird dabei nichts — im
+            Zeitraum steht ja kein Feed-Event.
+          </p>
+          {stille.map((l) => (
+            <form key={l.von.toISOString()} method="post" action={`/api/luecke?league=${leagueId}`}
+                  className="kb-zeile-form">
+              <input type="hidden" name="von" value={l.von.toISOString()} />
+              <input type="hidden" name="bis" value={l.bis.toISOString()} />
+              <span>{zeitpunkt(l.von)} bis {zeitpunkt(l.bis)} ({dauer(l)})</span>{" "}
+              <button type="submit" className="kb-btn kb-btn--klein">Übernehmen und nachholen</button>
+            </form>
+          ))}
+        </Hinweis>
+      )}
+
       {p.neu !== undefined && <div className="kb-hinweis">{p.neu} neue Events importiert.</div>}
       {p.tw && <div className="kb-hinweis kb-hinweis--gut">{p.tw}</div>}
       {p.rekon && <div className="kb-hinweis kb-hinweis--info">{p.rekon}</div>}
@@ -349,7 +422,7 @@ export default async function Liga({ searchParams }) {
         vortag={Object.fromEntries(vortag.map)}
         vortagDatum={vortag.tag ? String(vortag.tag) : null}
         meineId={treffer.i}
-        unsicher={lueckeStd > 0}
+        unsicher={lueckeStd > 0 || feedLuecken.length > 0}
         leagueId={leagueId}
       />
 

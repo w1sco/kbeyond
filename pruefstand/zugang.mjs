@@ -71,6 +71,21 @@ for (const pfad of ["/liga", "/liga?league=1", "/zugang", ...DIAGNOSE]) {
   pruefe(`fremdes Token: ${pfad}`, [r.status, r.ziel.includes("/login")], [307, true]);
 }
 
+// Auch die schreibenden Routen. Sechs davon lasen das Token selbst aus dem
+// Cookie und prüften nur die Liga-Mitgliedschaft — ein Liga-Mitglied ohne
+// Freigabe hätte etwa rekonstruierte Einträge löschen können.
+for (const pfad of ["/api/aufraeumen?league=1&alles=1", "/api/import?league=1",
+  "/api/teamwerte?league=1", "/api/rekonstruieren?league=1", "/api/ich?league=1",
+  "/api/luecke?league=1"]) {
+  const res = await fetch(BASIS + pfad, {
+    method: "POST", redirect: "manual",
+    headers: { cookie: "kb_token=fremdes-token; kb_uid=1", origin: BASIS },
+  });
+  const zu = res.status === 403 || (res.status >= 300 && res.status < 400 &&
+    (res.headers.get("location") ?? "").includes("/login"));
+  pruefe(`fremdes Token, POST: ${pfad}`, zu, true);
+}
+
 // ── 3. Die erste Anmeldung ist eine Anfrage, keine Sitzung ─────────
 const neu = await anmelden("neu@pruefzugang.test");
 pruefe("neue Anmeldung: abgelehnt", neu.status, 403);

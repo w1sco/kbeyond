@@ -1,5 +1,5 @@
 // Die Bausteine des zurückgerechneten Verlaufs.
-import { tageZwischen, wertAmTag } from "../lib/verlauf.js";
+import { tageZwischen, wertAmTag, punkteAmTag } from "../lib/verlauf.js";
 
 let ok = 0, fehler = 0;
 const pruefe = (name, ist, soll) => {
@@ -36,6 +36,30 @@ pruefe("keine Reihe", wertAmTag(undefined, "2026-08-05"), null);
 
 // Ein Wert von 0 ist ein Wert, keine Lücke.
 pruefe("null ist ein Wert", wertAmTag([["2026-08-01", 0]], "2026-08-02"), 0);
+
+// ── Punkte an einem vergangenen Tag ────────────────────────────────
+//
+// Gemessen am 01.10. (100) und 08.10. (300); angepfiffen am 20.09., 03.10.
+// und 04.10. Punkte bewegen sich nur, wenn gespielt wird.
+{
+  const g = [["2026-10-01", 100], ["2026-10-08", 300]];
+  const a = ["2026-09-20", "2026-10-03", "2026-10-04"];
+  pruefe("Punkte: gemessener Tag", punkteAmTag("2026-10-01", g, a), 100);
+  pruefe("Punkte: kein Spiel seit der Messung davor", punkteAmTag("2026-10-02", g, a), 100);
+  pruefe("Punkte: Spieltag mitten in der Lücke — unbekannt", punkteAmTag("2026-10-03", g, a), null);
+  pruefe("Punkte: nach dem letzten Spiel gilt die Messung danach", punkteAmTag("2026-10-04", g, a), 300);
+  pruefe("Punkte: kein Spiel bis zur Messung danach", punkteAmTag("2026-10-06", g, a), 300);
+  pruefe("Punkte: vor dem ersten Anpfiff ist es 0", punkteAmTag("2026-09-10", g, a), 0);
+  pruefe("Punkte: vor der ersten Messung, ohne Spiel dazwischen", punkteAmTag("2026-09-25", g, a), 100);
+  pruefe("Punkte: Anpfiff am Messtag selbst zählt als Bewegung",
+    punkteAmTag("2026-10-05", [["2026-10-04", 250]], ["2026-10-04"]), null);
+  pruefe("Punkte: nach der letzten Messung, ohne Spiel seither",
+    punkteAmTag("2026-10-10", g, a), 300);
+  pruefe("Punkte: nichts gemessen, schon gespielt — unbekannt",
+    punkteAmTag("2026-10-02", [], a), null);
+  pruefe("Punkte: leere Messung wird übersprungen",
+    punkteAmTag("2026-10-02", [["2026-10-01", null]], a), null);
+}
 
 console.log(`\n${ok} ok, ${fehler} Fehler`);
 process.exit(fehler ? 1 : 0);

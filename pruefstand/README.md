@@ -274,3 +274,21 @@ node pruefstand/vorladen.cjs 3301
 Gezählt werden die Anfragen nach dem Laden und je Filterklick auf der
 Matchup-Seite; mehr als zwei je Klick ist ein Fehler.
 
+
+## KB_PUNKTE und KB_FEED
+
+`KB_PUNKTE=1` gibt den Managern Saisonpunkte (600 / 450 / 300). Ohne sie
+steht der Punkte-Bonus überall auf 0, und ein Fehler darin bleibt unsichtbar
+— genau so fehlte er in den zurückgerechneten Tagen.
+
+`KB_FEED=luecke` liefert zwei neue Events aus den letzten Tagen und dann das
+Ende des Feeds, ohne an den Bestand anzuschließen: so sieht es aus, wenn zu
+lange nicht aktualisiert wurde. Erwartet: „⚠ Feed-Lücke …“ in der
+Rückmeldung, eine Zeile in `feed_luecke`, `rekon_log` zurückgesetzt. Der
+zweite Lauf schließt an. `KB_FEED=anschluss` hängt ein altes Event an — keine
+Lücke.
+
+Mit `KB_FEED` trägt Spieler 302 außerdem eine Transferhistorie: ein Kauf in
+der Lücke, einer in der stillen Zeit vom 23.09. bis 01.10. (erst nach
+„Übernehmen und nachholen“ auf der Ligaseite) und einer aus lückenloser Zeit,
+der nie hereinkommen darf.

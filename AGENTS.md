@@ -121,6 +121,44 @@ Konsequenzen:
 - Die Datenbank ist ein **Archiv**: Was einmal importiert wurde, bleibt erhalten, auch wenn Kickbase es nicht mehr ausliefert. Regelmäßiges Aktualisieren macht die Grenze langfristig irrelevant.
 - Für die Lücke der Vergangenheit gibt es zwei Teillösungen (siehe Rekonstruktion) — und einen unlösbaren Rest.
 
+### Lücken mitten im Feed: wer zu lange nicht aktualisiert
+
+Die 670er-Grenze trifft nicht nur den Anfang. **Liegt zwischen zwei Läufen mehr,
+als der Feed noch ausliefert, fehlt der Zeitraum dazwischen** — Transfers und
+Strafen, und damit stimmen die Kontostände aller Beteiligten nicht mehr.
+Früher fiel das niemandem auf: Der Lauf las bis zum Ende des Feeds, speicherte,
+was kam, und meldete „fertig“.
+
+Dazu ein zweiter Weg zum selben Loch: Der Importer hörte auf, sobald eine Seite
+**nur Bekanntes** trug. Brach ein Lauf nach einer Pause mittendrin ab
+(Drosselung, Zeitbudget), standen die neuesten Seiten schon in der Datenbank —
+der nächste Lauf traf sofort auf „bekannt“ und kam an den älteren Teil nie
+mehr heran.
+
+Beides löst **`import_log.lueckenlos_bis`**: der jüngste Zeitpunkt, bis zu dem
+der Feed ohne Loch in der Datenbank steht. Ein Lauf liest, bis er ein Event
+erreicht, das nicht jünger ist — erst dort schließt er an. Ein abgebrochener
+Lauf lässt die Marke stehen, der nächste fängt oben neu an. Endet der Feed,
+bevor er anschließt, ist die Lücke belegt: Sie kommt nach **`feed_luecke`**,
+die Historie läuft noch einmal über alle Spieler (`rekon_log` zurückgesetzt)
+und legt Transfers **in** der Lücke ab, dieselbe Zeitgrenze wie am Anfang,
+nur innen, mit einer Sekunde Abstand zu den Rändern (Mikro- gegen
+Millisekunden). Die Rückmeldung nennt sie, die Ligaseite warnt, die Tabelle
+setzt `~`. **Strafen aus der Lücke sind verloren** — Admin fragen, Korrektur.
+
+**Lücken von früher** erkennt der Importer nicht mehr. `verdaechtigeStille()`
+sucht deshalb Zeiträume über 36 Stunden ohne ein einziges Feed-Event — in einer
+laufenden Liga stellt Kickbase täglich Spieler auf den Markt. Das ist ein
+Verdacht, kein Beleg: Die Ligaseite nennt ihn und bietet je Zeitraum „Übernehmen
+und nachholen“ an (`/api/luecke`, nimmt nur Zeiträume an, die sie selbst als
+still erkannt hat — ein beliebiges Fenster könnte Feed-Events enthalten, und
+die Historie legte sie doppelt ab). Kosten: ein Historien-Durchlauf, rund 500
+Abrufe über mehrere Klicks.
+
+Nachgemessen (`KB_FEED=luecke` / `anschluss`): Lücke vom 08.10. 07:23 bis
+10.10. 07:09 erkannt, der zweite Lauf schließt an; von drei Historien-Käufen
+kommen genau die zwei in Lücken herein, der dritte aus lückenloser Zeit nicht.
+
 ---
 
 ## Rekonstruktion: die Lücke schließen
@@ -281,6 +319,8 @@ liga_settings(league_id PK, stichtag, startbudget, punkte_bonus, login_aktiv,
 korrektur(league_id, manager, betrag, grund)          -- PK (league_id, manager)
 import_log(league_id PK, letzter_lauf, neue_events, gesamt, offset_pos, komplett)
 rekon_log(league_id PK, position, fertig, letzter, gefunden)
+feed_luecke(league_id, von, bis, erkannt, quelle)     -- PK (league_id, von)
+  Zeiträume, die der Feed nicht mehr ausliefert; import_log.lueckenlos_bis = Marke
 pool_cache(id PK, daten JSONB)                        -- 'bundesliga', 24h TTL
 teamwerte(league_id, manager_id, teamwert, spieler, stand)  -- PK (league_id, manager_id)
 marktwert_verlauf(player_id, tag, marktwert)                -- PK (player_id, tag), ligaunabhängig
@@ -1027,8 +1067,17 @@ einzelnen Tag. `rekonstruiereVerlauf()` läuft Tag für Tag vom Stichtag bis heu
 **Das kostet keinen einzigen Kickbase-Aufruf** — alles steht in der Datenbank. Der
 Lauf hängt deshalb im Aktualisieren-Knopf mit drin.
 
-**Gemessene Tage werden nicht überschrieben** (`ON CONFLICT DO NOTHING`). Was beim
-Aktualisieren wirklich abgelesen wurde, ist besser als jede Rückrechnung.
+**Gemessene Tage werden nicht überschrieben.** Was beim Aktualisieren wirklich
+abgelesen wurde, ist besser als jede Rückrechnung. **Zurückgerechnete dagegen
+schon** (`DO UPDATE … WHERE rekonstruiert`): Sie werden besser, sobald eine
+Messung, ein nachgeholter Transfer oder ein behobener Fehler dazukommt. Mit
+`DO NOTHING` blieben sie für immer auf dem Stand ihres ersten Laufs.
+
+**Nach einer Pause füllt die Rückrechnung die Tage zwischen zwei Läufen** — und
+dort lag sie daneben: ohne Punkte-Bonus, also um Punkte × 1.000 € unter den
+gemessenen Tagen daneben. Im Verlauf ein Einbruch, den es nie gab; und weil
+`getVortag()` den jüngsten Tag vor heute nahm, verglichen die
+Platzierungspfeile gegen genau diesen falschen Stand, mit 0 Punkten.
 
 ### Was dabei fehlt, fehlt sichtbar
 
@@ -1036,10 +1085,19 @@ Aktualisieren wirklich abgelesen wurde, ist besser als jede Rückrechnung.
   Marktwert eines Spielers, wäre die Summe zu niedrig — und eine zu niedrige Linie
   sieht aus wie ein Einbruch, den es nie gab. Dann steht dort `NULL` und die Linie
   hat eine Lücke. `mw_bekannt`/`mw_gesamt` halten fest, wie vollständig es war.
-- **Punkte werden nicht zurückgerechnet.** Wie viele Punkte ein Manager an einem
-  vergangenen Tag hatte, steht nirgends. Rekonstruierte Tage tragen deshalb `NULL`,
-  und der Punkte-Verlauf beginnt beim ersten Aktualisieren. Aus demselben Grund
-  fehlt im zurückgerechneten Kontostand der Punkte-Bonus.
+- **Punkte stehen nur, wo sie sicher sind.** Gemessen werden sie beim
+  Aktualisieren; dazwischen ändern sie sich **nur, wenn gespielt wird** — und
+  wann, sagt der Spielplan. `punkteAmTag()` in `lib/verlauf.js` übernimmt die
+  Messung davor, wenn seither nicht angepfiffen wurde, die danach, wenn bis
+  dahin nicht angepfiffen wurde, und 0 vor dem ersten Anpfiff der Saison.
+  Sonst `NULL` — und dann auch **kein Kontostand**, denn ohne Punkte fehlt der
+  Punkte-Bonus. Eine Lücke in der Linie statt eines Einbruchs. 11 Fälle in
+  `pruefstand/tagesverlauf.mjs`.
+- **Der Vergleich für die Pfeile ist der jüngste *gemessene* Tag**, nie ein
+  zurückgerechneter.
+- **Korrekturen nur des Nutzers, mit dessen Einstellungen gerechnet wird** —
+  wie im Ledger. Die Rückrechnung summierte über alle Nutzer und zählte eine
+  Korrektur doppelt, sobald zwei Leute denselben Manager korrigiert hatten.
 
 ### Diagramme
 
@@ -1119,7 +1177,15 @@ ist es bei der Frage, ob die eigenen Finanzzahlen wirklich verborgen sind:
 zu den verbergbaren Zahlen.
 
 Jetzt läuft jede Seite über `sitzung()`, und `/bonus` ist nur für den
-Betreiber offen. **Neue Seiten holen das Token nie selbst aus dem Cookie.**
+Betreiber offen.
+
+**Dasselbe bei den API-Routen.** Sechs (`aufraeumen`, `import`, `teamwerte`,
+`rekonstruieren`, `ich`, `modelle`) lasen das Token selbst und kamen nur durch
+`pruefeApi()`, das die Mitgliedschaft prüfte, nicht die Freigabe. Gemessen: Mit
+einem fremden Token löschte `/api/aufraeumen?alles=1` die rekonstruierten
+Einträge. `pruefeApi()` prüft die Freigabe jetzt selbst — eine Stelle, die alle
+schreibenden Routen durchlaufen. Gegen den alten Stand schlägt `zugang.mjs`
+fünfmal an. **Neue Seiten holen das Token nie selbst aus dem Cookie.**
 `pruefstand/zugang.mjs` führt alle Diagnoseseiten in der Probe mit dem
 fremden Token; gegen den alten Stand schlägt er elfmal an.
 
@@ -1640,6 +1706,7 @@ app/
   api/rekonstruieren/route.js      Historie nachladen
   api/teamwerte/route.js           Teamwerte je Manager laden
   api/aufraeumen/route.js          rk-Einträge löschen (?alles=1 für alle)
+  api/luecke/route.js              stillen Zeitraum als Feed-Lücke übernehmen
   markt/page.js                    Transfermarkt (früh gebaut, wenig gepflegt)
   bonus/page.js                    Diagnose: Login-Bonus-Verlauf
   rk/page.js                       Diagnose: rekonstruierte Einträge + Feed-Vergleich

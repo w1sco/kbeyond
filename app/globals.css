@@ -2106,3 +2106,13 @@ details[open] > summary.kb-aufklappzeile::before { content: "▾ "; }
    H/A und dem, was sie zulassen. Untereinander statt nebeneinander, damit
    fünf Vereinsnamen auch auf dem Handy lesbar bleiben. */
 .kb-programm { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+
+/* Eine Zeile mit Angabe und Knopf, etwa ein Zeitraum zum Übernehmen.
+   Bricht auf schmalen Displays um, statt den Knopf aus dem Fenster zu schieben. */
+.kb-zeile-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 8px 0;
+}

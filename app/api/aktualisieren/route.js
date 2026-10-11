@@ -1,4 +1,4 @@
-import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDaten, mitternachtDeutsch, sql, merkeTagesstand, getTeamwerte } from "@/lib/db";
+import { initSchema, getSettings, logImport, getImportStatus, werBrauchtNeueDaten, mitternachtDeutsch, sql, merkeTagesstand, getTeamwerte, merkeLuecke } from "@/lib/db";
 import { kbFetch } from "@/lib/kickbase";
 import { importiere } from "@/lib/importer";
 import { berechneKonten } from "@/lib/ledger";
@@ -12,7 +12,7 @@ import { importiereSpielplan } from "@/lib/spieleabruf";
 import { pruefeApi, sitzung } from "@/lib/auth";
 import { bremseZuruecksetzen } from "@/lib/kickbase";
 import { holeMitspieler } from "@/lib/mitspieler";
-import { letztesMwUpdate } from "@/lib/format";
+import { letztesMwUpdate, zeitpunkt } from "@/lib/format";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -74,9 +74,18 @@ export async function POST(request) {
       vollstaendig: erstlauf,
       startAb: erstlauf ? status.offsetPos : 0,
       zeitbudgetMs: Math.max(MINDESTZEIT_MS, rest() - 20_000),
+      lueckenlosBis: erstlauf ? null : status.lueckenlosBis,
     });
     await logImport(leagueId, imp.neu, imp.gesamt, imp.naechsterStart, erstlauf ? imp.fertig : true);
+    await sql`UPDATE import_log SET lueckenlos_bis = ${imp.lueckenlosBis} WHERE league_id = ${leagueId}`;
     erledigt.push(`${imp.neu} neue Events`);
+    // Zu lange nicht aktualisiert: Kickbase liefert nur die letzten ~670
+    // Einträge. Was dazwischen lag, holt die Historie nach (Transfers) —
+    // Strafen aus dieser Zeit sind verloren, und das muss man sehen.
+    if (imp.luecke) {
+      await merkeLuecke(leagueId, imp.luecke.von, imp.luecke.bis, "Import");
+      erledigt.push(`⚠ Feed-Lücke ${zeitpunkt(imp.luecke.von)} bis ${zeitpunkt(imp.luecke.bis)}: Transfers holt die Historie nach, Strafen daraus fehlen`);
+    }
     // gestoppt setzt der Importer auch, wenn er normal fertig ist ("bekannte
     // Events erreicht"). Offen ist der Feed nur, wenn er NICHT fertig wurde.
     if (imp.gestoppt && !imp.fertig) offen.push("Feed");

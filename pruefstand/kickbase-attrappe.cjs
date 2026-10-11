@@ -10,10 +10,13 @@
 
 const LIGA = "1";
 
+// Mit KB_PUNKTE=1 tragen die Manager Saisonpunkte — sonst stünde der
+// Punkte-Bonus überall auf 0, und ein Fehler darin bliebe unsichtbar.
+const PUNKTE = process.env.KB_PUNKTE === "1";
 const MANAGER = [
-  { i: 1, n: "W1zco",     sp: 0, tv: 180000000, spl: 1 },
-  { i: 2, n: "yannick15", sp: 0, tv: 165000000, spl: 2 },
-  { i: 3, n: "PetzS",     sp: 0, tv: 150000000, spl: 3 },
+  { i: 1, n: "W1zco",     sp: PUNKTE ? 600 : 0, tv: 180000000, spl: 1 },
+  { i: 2, n: "yannick15", sp: PUNKTE ? 450 : 0, tv: 165000000, spl: 2 },
+  { i: 3, n: "PetzS",     sp: PUNKTE ? 300 : 0, tv: 150000000, spl: 3 },
   // Der Admin. Mit KB_ADMIN_SPIELT=1 hat er eine Mannschaft und muss dann
   // überall als normaler Manager auftauchen.
   {
@@ -123,8 +126,25 @@ function fuerPfad(pfad) {
     return { ti: "Prüfstand-Liga", us: MANAGER };
   }
   if (pfad.includes("/activitiesFeed")) {
-    // Der Importer stoppt bei bekannten Events – leere Seite reicht
-    return { af: [] };
+    // Ohne Schalter: leere Seite — der Importer findet nichts Neues.
+    //
+    // KB_FEED=luecke: zwei neue Events aus den letzten Tagen, und dann ist
+    // der Feed zu Ende, ohne an den Bestand anzuschließen. So sieht es aus,
+    // wenn zu lange nicht aktualisiert wurde.
+    // KB_FEED=anschluss: dieselben, dazu eines, das älter ist als alles
+    // Gespeicherte — der Lauf schließt an, keine Lücke.
+    const art = process.env.KB_FEED;
+    const start = Number(new URL("https://x" + pfad).searchParams.get("start") ?? 0);
+    if (!art || start > 0) return { af: [] };
+    const vor = (h) => new Date(Date.now() - h * 3600_000).toISOString();
+    const af = [
+      { i: "feed-neu-1", t: 15, dt: vor(20), data: { byr: "W1zco", trp: 1000000, pi: "302", pn: "Freier Verteidiger" } },
+      { i: "feed-neu-2", t: 3, dt: vor(30), data: { pi: "303", fn: "Billiger", ln: "Ersatz", mv: 400000 } },
+    ];
+    if (art === "anschluss") {
+      af.push({ i: "feed-alt-1", t: 3, dt: "2026-09-01T10:00:00Z", data: { pi: "303", fn: "Billiger", ln: "Ersatz", mv: 400000 } });
+    }
+    return { af };
   }
   if (pfad.includes(`/leagues/${LIGA}/market`)) return { it: MARKT };
 
@@ -316,6 +336,18 @@ function fuerPfad(pfad) {
   }
 
   const hist = pfad.match(/\/players\/(\d+)\/transferHistory/);
+  // Mit KB_FEED trägt Spieler 302 eine Historie: ein Kauf in der Lücke vom
+  // 08.–10.10., einer in der stillen Zeit vom 23.09.–01.10. und einer am
+  // 03.10., als der Feed lückenlos war. Nachgeholt werden dürfen nur die
+  // ersten beiden — der dritte stünde sonst doppelt da.
+  if (hist && process.env.KB_FEED && hist[1] === "302") {
+    return { it: [
+      { dt: "2026-08-07T00:41:00Z", trp: 0, t: 4 },
+      { dt: "2026-09-25T12:00:00Z", trp: 700000, unm: "W1zco", t: 1 },
+      { dt: "2026-10-03T12:00:00Z", trp: 900000, unm: "PetzS", t: 3 },
+      { dt: "2026-10-09T12:00:00Z", trp: 2500000, unm: "yannick15", t: 3 },
+    ] };
+  }
   if (hist) return { it: [] };
 
   // Marktwert-Historie: nur wenn KB_MW gesetzt ist, und nur unter genau

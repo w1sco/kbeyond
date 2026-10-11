@@ -771,6 +771,20 @@ geklickt hat.
 **Die Aktualisierung ist ausdrücklich manuell** — kein automatischer Lauf im
 Hintergrund.
 
+### Nach einer Pause
+
+Kickbase liefert nur die letzten rund 670 Feed-Einträge. Wer länger nicht
+aktualisiert, als das reicht, verliert den Zeitraum dazwischen. Der Lauf
+**merkt das** (er schließt nicht an den lückenlosen Bestand an), meldet
+„⚠ Feed-Lücke … bis …“, holt die Transfers daraus über die Spielerhistorie
+nach (mehrere Klicks) und markiert die Kontostände mit `~` — Strafen aus der
+Lücke sind verloren. Lücken von früher zeigt die Ligaseite als Verdacht
+(über 36 Stunden ohne Event) mit „Übernehmen und nachholen“.
+
+Die Tage zwischen zwei Läufen rechnet der Lauf zurück — mit Punkte-Bonus, wo
+die Punkte sicher feststehen (kein Spiel dazwischen), sonst als Lücke. Die
+Platzierungspfeile vergleichen immer gegen den letzten gemessenen Tag.
+
 ### Nur holen, was sich geändert hat
 
 Kein Zeitfenster, sondern nachsehen. Ein erster Versuch mit „Teamwerte alle
