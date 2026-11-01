@@ -19,7 +19,7 @@ const SEITEN = [
 ];
 
 (async () => {
-  const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+  const b = await chromium.launch({ executablePath: process.env.KB_CHROMIUM ?? "/opt/pw-browsers/chromium" });
   const ctx = await b.newContext({ viewport: { width: 390, height: 900 }, isMobile: true });
   await ctx.addCookies([{ name: "kb_token", value: "pruef", domain: "localhost", path: "/" },
                         { name: "kb_uid", value: "1", domain: "localhost", path: "/" }]);

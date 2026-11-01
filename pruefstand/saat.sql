@@ -102,3 +102,15 @@ INSERT INTO mw_beobachtung (player_id, tag, marktwert) VALUES
 
 -- Der Spielplan wird NICHT gesaet: Er kommt im Aktualisieren-Lauf aus
 -- der Attrappe, damit der echte Importweg mitgeprueft wird.
+
+-- Ein gemessener Vortag. Die Platzierungspfeile vergleichen nur gegen
+-- gemessene Tage, nie gegen zurückgerechnete — ohne diese Zeilen gäbe es in
+-- einer frischen Datenbank keinen Vortag, und die Probe, ob ein verborgener
+-- Kontostand dort fehlt, hätte nichts zu prüfen.
+INSERT INTO tagesstand (league_id, manager_id, tag, teamwert, konto, punkte, rekonstruiert) VALUES
+ ('1', '1', (NOW() - '1 day'::interval)::date, 180000000, 30000000, 0, FALSE),
+ ('1', '2', (NOW() - '1 day'::interval)::date, 165000000, 20000000, 0, FALSE),
+ ('1', '3', (NOW() - '1 day'::interval)::date, 150000000, 10000000, 0, FALSE)
+ON CONFLICT (league_id, manager_id, tag) DO UPDATE
+  SET teamwert = EXCLUDED.teamwert, konto = EXCLUDED.konto,
+      punkte = EXCLUDED.punkte, rekonstruiert = FALSE;

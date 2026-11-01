@@ -906,8 +906,15 @@ gerade am Markt steht, hat eine echte Uhr** (`aufMarktBis`), da gibt es kein
 „vielleicht". Und der Regler verschiebt das Urteil mit — bei 7 Tagen wird aus
 einem ✕ ein ✓.
 
-**Der Anpfiff kommt aus dem Spielplan** (`naechsterAnpfiff()`: das erste Spiel
-mit `datum > NOW()`) — dafür ist die Tabelle `spiele` noch da. Kennt er keins,
+**Der Anpfiff kommt aus dem Spielplan** (`naechsterAnpfiff()`: der erste
+Anpfiff des **nächsten Spieltags, der noch nicht begonnen hat**) — dafür ist die
+Tabelle `spiele` noch da. Früher war es schlicht das nächste Spiel mit
+`datum > NOW()`. Lief ein Spieltag seit Freitagabend, war das das Samstagsspiel
+**desselben** Spieltags: Die Marktseite rechnete bis Sonntag oder Montag gegen
+einen Spieltag, für den sich nichts mehr aufstellen lässt, statt gegen den
+kommenden. Jetzt springt sie mit dem ersten Anpfiff auf den nächsten. Ein
+Nachholspiel eines alten Spieltags zieht dabei nicht, dessen Spieltag hat längst
+begonnen. Die Zeile über der Liste nennt den Spieltag („Spielplan, Spieltag 10“). Kennt er keins,
 gilt der eingestellte Spieltagsbeginn (`liga_settings.spieltag_start`: Freitag
 20:30, Samstag 15:30), gerechnet über `ausEingabe()` in deutscher Ortszeit; die
 Seite nennt die Quelle („Spielplan" oder „Einstellung (Freitag)"), statt beide

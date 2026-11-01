@@ -300,3 +300,10 @@ Spieltags (`mdp`: 63 / 40 / −5), wie die echte Rangliste. Läuft laut
 `spiele` gerade ein Spieltag, zählen diese Punkte nicht im Kontostand —
 Kickbase zahlt sie erst Montagabend aus. Ohne `KB_MDP` greift die eigene
 Messung vom Tag vor dem Anpfiff, ohne die steht „unbekannt“.
+
+## Browser
+
+Die Skripte starten Chromium über `/opt/pw-browsers/chromium` — einen Link,
+der den Versionswechsel der Umgebung übersteht (vorher stand dort fest
+`chromium-1194`, und nach einem neuen Container lief kein Browserlauf mehr).
+Anderswo: `KB_CHROMIUM=/pfad/zu/chrome`.

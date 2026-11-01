@@ -161,7 +161,7 @@ export default function Spielerliste({ spieler, leagueId, jetzt, anpfiff = null,
     <>
       <div className="kb-anpfiffzeile kb-leise">
         {anpfiff
-          ? <>Nächster Anpfiff: <strong>{zeitpunkt(anpfiff)}</strong> ({anpfiffQuelle}) · Markt-Rhythmus {zyklus} Tage</>
+          ? <>Nächster Spieltag beginnt: <strong>{zeitpunkt(anpfiff)}</strong> ({anpfiffQuelle}) · Markt-Rhythmus {zyklus} Tage</>
           : <>Kein Anpfiff bekannt — „vor Anpfiff am Markt“ bleibt offen.</>}
       </div>
 

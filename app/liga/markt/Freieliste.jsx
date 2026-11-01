@@ -257,7 +257,7 @@ export default function Freieliste({
           Anpfiff gerechnet wird — und woher der stammt. */}
       <div className="kb-anpfiffzeile kb-leise">
         {anpfiff
-          ? <>Nächster Anpfiff: <strong>{zeitpunkt(anpfiff)}</strong> ({anpfiffQuelle})</>
+          ? <>Nächster Spieltag beginnt: <strong>{zeitpunkt(anpfiff)}</strong> ({anpfiffQuelle})</>
           : <>Kein Anpfiff bekannt — die Frage „vor dem Anpfiff?&ldquo; bleibt offen.</>}
       </div>
 

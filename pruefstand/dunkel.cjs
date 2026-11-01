@@ -111,7 +111,7 @@ function unterKontrast(m) {
 }
 
 (async () => {
-  const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args:["--no-sandbox"] });
+  const b = await chromium.launch({ executablePath: process.env.KB_CHROMIUM ?? "/opt/pw-browsers/chromium", args:["--no-sandbox"] });
   let schlecht = 0;
   for (const thema of ["dark", "light"]) {
   const dunkel = thema === "dark";

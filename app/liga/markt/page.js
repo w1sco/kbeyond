@@ -299,7 +299,9 @@ export default async function Markt({ searchParams }) {
           <strong>Vor dem Anpfiff?</strong> Wer einen Spieler am Spieltag aufstellen will,
           braucht ihn vorher — das Angebot muss <strong>abgelaufen</strong> sein, bevor das
           erste Spiel beginnt. Gerechnet wird Erscheinen + {ANGEBOT_DAUER_H} Stunden gegen
-          den nächsten Anpfiff aus dem Spielplan. <span className="kb-plus">✓</span> heißt:
+          den Beginn des nächsten Spieltags aus dem Spielplan — sobald ein Spieltag
+          angepfiffen ist, also schon gegen den danach; für den laufenden lässt sich ohnehin
+          nichts mehr aufstellen. <span className="kb-plus">✓</span> heißt:
           mit einem Tag Luft vorher. <span className="kb-warntext">~</span> heißt: Ablauf
           liegt im Bereich eines Tages um den Anpfiff, oder der Spieler ist überfällig und
           kann jeden Tag kommen. <span className="kb-gedaempft">✕</span> heißt: mit einem Tag

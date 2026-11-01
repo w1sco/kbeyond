@@ -44,7 +44,7 @@ const SEITEN = [
 (async () => {
   const port = process.argv[2] ?? "3300";
   const browser = await chromium.launch({
-    executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+    executablePath: process.env.KB_CHROMIUM ?? "/opt/pw-browsers/chromium",
   });
   const ctx = await browser.newContext({ viewport: { width: 390, height: 900 }, isMobile: true });
   await ctx.addCookies([
