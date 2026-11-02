@@ -996,6 +996,14 @@ th.kb-namensspalte { z-index: 3; }
 .kb-fadenkreuz { stroke: var(--kb-text-schwach); stroke-width: 1; stroke-dasharray: 3 3; }
 .kb-punkt { stroke: var(--kb-flaeche); stroke-width: 2; }
 
+/* Wert und Punkte: ein Punkt je Manager, die eigene in der Akzentfarbe.
+   Die Gerade gestrichelt — sie ist eine Rechnung, keine Beobachtung. */
+.kb-wolkenpunkt { fill: var(--kb-text-leise); stroke: var(--kb-flaeche); stroke-width: 2; }
+.kb-wolkenpunkt--ich { fill: var(--kb-akzent); }
+.kb-wolkenpunkt--bei { stroke: var(--kb-text); }
+.kb-trendgerade { stroke: var(--kb-text-schwach); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.kb-linienname--ich { fill: var(--kb-akzent); font-weight: 700; }
+
 .kb-tooltip {
   position: absolute;
   top: 8px;

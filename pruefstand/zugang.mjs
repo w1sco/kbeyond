@@ -228,6 +228,20 @@ pruefe("Managerseite ohne Verkaufsrechner",
 const markt = await html("/liga/markt?league=1");
 pruefe("Marktseite rechnet ohne ihn", markt.includes("der sichtbaren Manager"), true);
 
+// Wert & Punkte: Gesamtwert minus Teamwert wäre das Konto. Weder in der
+// Zeile noch als Weg durch die Saison darf er stehen.
+const gesamtVon = (text, id) => {
+  const t = text.replaceAll("\\", "");
+  const m = t.match(new RegExp(`"id":"?${id}"?,"name":"[^"]*","punkte":[^,]*,"geheim":[^,]*,"gesamt":([^,}]+)`));
+  return m ? m[1] : "fehlt";
+};
+const wegVon = (text, id) => text.replaceAll("\\", "").includes(`"pfade":{`) &&
+  new RegExp(`"pfade":\\{[^]*?"${id}":\\[`).test(text.replaceAll("\\", "").split('"manager":')[0]);
+const wp = await html("/liga/wertpunkte?league=1");
+pruefe("Wert & Punkte: kein Gesamtwert", gesamtVon(wp, 2), "null");
+pruefe("Wert & Punkte: kein Weg durch die Saison", wegVon(wp, 2), false);
+pruefe("Wert & Punkte: eigener Gesamtwert bleibt", gesamtVon(wp, 1) !== "null" && gesamtVon(wp, 1) !== "fehlt", true);
+
 // ── Die Gegenprobe ─────────────────────────────────────────────────
 //
 // Ohne sie bewiese das alles nichts: Die Zahlen könnten auch fehlen,
@@ -237,6 +251,9 @@ await db.query(
 const offen = await html("/liga?league=1");
 pruefe("Gegenprobe: Kontolinie ist wieder da", reihenVon(offen, "kontostand")?.includes("2"), true);
 pruefe("Gegenprobe: Vortag ist wieder da", kontoImVortag(offen, 2) !== "null", true);
+const wpOffen = await html("/liga/wertpunkte?league=1");
+pruefe("Gegenprobe: Gesamtwert ist wieder da", gesamtVon(wpOffen, 2) !== "null", true);
+pruefe("Gegenprobe: Weg ist wieder da", wegVon(wpOffen, 2), true);
 // (Manager 3 verbirgt in der Saat dauerhaft — deshalb wird hier nicht
 // die Zahl der Schlösser gezählt, sondern Manager 2 gezielt geprüft.)
 

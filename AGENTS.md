@@ -1714,6 +1714,8 @@ app/
   liga/Tabelle.jsx                 "use client" — sortierbar, Namensspalte sticky
   liga/aufschlaege/page.js         Aufschläge über Marktwert, je Herkunft und Zeitraum
   liga/elf/page.js                 Aufgestellte Elf: Summe der Punkteschnitte je Manager
+  liga/wertpunkte/page.js          Wert & Punkte: Gesamtwert gegen Saisonpunkte je Manager
+  liga/wertpunkte/Ansicht.jsx      "use client" — Punktwolke, Saisonwege, sortierbare Tabelle
   liga/matchup/page.js             Matchups: wer lässt zu, und wer hat das leichte Programm
   liga/matchup/Matchupholen.jsx    "use client" — Punkte je Spiel holen, Browser fasst nach
   liga/matchup/Spielerliste.jsx    "use client" — Erwartung je Spieler, Ranking, Filter
@@ -1771,6 +1773,7 @@ lib/
   rhythmus.js       bildeAuftritte(), prognostiziere(), vorAnpfiff() — 14 Tage, ohne DB
   aufschlag.js      werteAus(), proManager() — Aufschlag über Marktwert
   elfstaerke.js     bewerteElf() — aufgestellte Elf nach Punkteschnitt, ohne DB
+  wertpunkte.js     trendlinie(), werteAus(), pfade() — Wert gegen Punkte, ohne DB
   matchup.js        werteMatchupsAus(), programm(), vollstaendigeSeiten(),
                     werIstOffen(), teileAuf(), spielerErwartung(),
                     preisJePunkt() — ohne DB
@@ -2241,6 +2244,29 @@ Einschränkung wie bei der Managerseite, und die Seite nennt den Stand.
 
 `lib/elfstaerke.js` ist reine Rechnung; 13 Fälle in `pruefstand/elfstaerke.mjs`
 (Bank zählt nicht, Lücke gezählt, gleicher Rang, Zahlen als Text aus NUMERIC).
+
+### Wert & Punkte
+
+`/liga/wertpunkte`: Gesamtwert (Teamwert + Konto) gegen Saisonpunkte je
+Manager — heute als Punktwolke mit einer Geraden der Liga, über die Saison
+als Weg je Manager (`tagesstand`, nur Tage mit Punkten **und** Gesamtwert),
+dazu eine sortierbare Tabelle mit € je Punkt und Abstand zur Geraden.
+
+**Der Abstand zur Geraden ist die eigentliche Aussage, nicht € je Punkt.**
+Alle starten mit demselben Budget; früh in der Saison ist das Verhältnis für
+jeden riesig. Die Gerade (kleinste Quadrate, mit Achsenabschnitt) fängt das
+Startbudget ab. Unter drei Managern oder ohne Streuung der Punkte gibt es
+keine — eine Gerade durch zwei Punkte sagt nichts über die Liga.
+
+**Wer seine Zahlen verbirgt, fehlt in Wolke, Wegen und Gerade**, nicht nur in
+der Zelle: Gesamtwert minus Teamwert ist das Konto. Ein fehlender Teamwert
+wird nicht als 0 gelesen (sähe aus wie ein leerer Kader). Die Gerade wird
+per `clipPath` an den Rahmen geschnitten, nicht an den Enden festgeklemmt —
+das verfälschte ihre Steigung.
+
+`lib/wertpunkte.js` ist reine Rechnung, 18 Fälle in `pruefstand/wertpunkte.mjs`;
+`zugang.mjs` prüft, dass ein verborgener Manager weder Gesamtwert noch Weg
+ausgeliefert bekommt, samt Gegenprobe.
 
 ### Wahrscheinliche Aufstellung
 

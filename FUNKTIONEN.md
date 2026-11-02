@@ -676,6 +676,24 @@ daraus entsteht eine Tabelle mit Rang. Der Name klappt die Elf auf.
   beim Aktualisieren. Die Aufstellung ist entsprechend so alt wie der letzte
   Lauf.
 
+### 7.12a Wert & Punkte
+
+Wie steht der **Gesamtwert** eines Managers (Teamwert + Kontostand) zu seinen
+**Saisonpunkten**? Drei Teile auf `/liga/wertpunkte`:
+
+- **Heute:** ein Punkt je Manager (Punkte nach rechts, Gesamtwert nach oben),
+  dazu eine gestrichelte **Gerade der Liga** (kleinste Quadrate). Darüber: mehr
+  Vermögen, als die Punkte erwarten lassen; darunter: mehr Punkte aus weniger
+  Vermögen. Erst ab drei Managern mit unterschiedlich vielen Punkten.
+- **Saisonverlauf:** der Weg jedes Managers dorthin, ein Punkt je Tag, an dem
+  Punkte und Gesamtwert zugleich bekannt sind (aus `tagesstand`). Alle grau,
+  gewählte farbig, wie im Teamwert-Verlauf.
+- **Tabelle**, sortierbar: Punkte, Gesamtwert, € je Punkt, Abstand zur Geraden.
+
+Wer seine Finanzzahlen verbirgt, hat keinen Gesamtwert — Gesamtwert minus
+Teamwert wäre das Konto. Er steht mit Schloss in der Tabelle und fehlt in
+beiden Diagrammen und in der Geraden. Kein zusätzlicher Kickbase-Aufruf.
+
 ### 7.12b Matchups
 
 *Gegen wen hat mein Stürmer am Wochenende leichtes Spiel?* Je Verein die

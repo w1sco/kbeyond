@@ -19,6 +19,7 @@ const SEITEN = [
   ["Transfermarkt", `/liga/transfermarkt?league=${LIGA}`],
   ["Aufschläge", `/liga/aufschlaege?league=${LIGA}`],
   ["Aufgestellte Elf", `/liga/elf?league=${LIGA}`],
+  ["Wert & Punkte", `/liga/wertpunkte?league=${LIGA}`],
   ["Matchups", `/liga/matchup?league=${LIGA}`],
   ["Matchups Programm", `/liga/matchup?league=${LIGA}&ansicht=programm`],
   ["Matchups Spieler", `/liga/matchup?league=${LIGA}&ansicht=spieler&zeit=alle`],
