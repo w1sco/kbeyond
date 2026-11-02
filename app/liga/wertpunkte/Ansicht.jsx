@@ -51,14 +51,18 @@ function schritte(min, max, anzahl = 5, ganz = false) {
   return raus;
 }
 
-// Die Skala über alle Werte, die ein Diagramm zeigt. Punkte beginnen bei 0:
-// Der Abstand zum Ursprung ist hier die Aussage („wie weit ist er“).
-// Der Gesamtwert nicht — sonst klebte alles oben am Rand.
+// Die Skala über alle Werte, die ein Diagramm zeigt. Keine Achse beginnt
+// zwangsläufig bei 0: Mitten in der Saison liegen alle Manager bei einigen
+// tausend Punkten, und eine Achse ab 0 ließe den halben Rahmen leer. Der
+// Saisonverlauf beginnt trotzdem bei 0, weil seine Wege dort anfangen.
 function skala(punkte, B) {
   if (punkte.length === 0) return null;
   const xs = punkte.map((p) => p.x);
   const ys = punkte.map((p) => p.y);
-  const xMax = Math.max(...xs, 1) * 1.05;
+  const xRoh = [Math.min(...xs), Math.max(...xs)];
+  const luftX = (xRoh[1] - xRoh[0]) * 0.06 || xRoh[1] * 0.05 || 1;
+  const xMin = Math.max(0, xRoh[0] - luftX);
+  const xMax = xRoh[1] + luftX;
   let yMin = Math.min(...ys);
   let yMax = Math.max(...ys);
   const luft = (yMax - yMin) * 0.08 || Math.abs(yMax) * 0.05 || 1;
@@ -67,10 +71,10 @@ function skala(punkte, B) {
   const innenB = B.breite - B.links - B.rechts;
   const innenH = B.hoehe - B.oben - B.unten;
   return {
-    xMax, yMin, yMax,
-    x: (w) => B.links + (w / xMax) * innenB,
+    xMin, xMax, yMin, yMax,
+    x: (w) => B.links + ((w - xMin) / (xMax - xMin)) * innenB,
     y: (w) => B.oben + innenH - ((w - yMin) / (yMax - yMin)) * innenH,
-    xStriche: schritte(0, xMax, 5, true),
+    xStriche: schritte(xMin, xMax, 5, true),
     yStriche: schritte(yMin, yMax, 4),
   };
 }
@@ -175,14 +179,12 @@ function Wolke({ zeilen, trend, meineId, B, schmal }) {
   const punkte = sichtbar.map((z) => ({ ...z, sx: s.x(z.punkte), sy: s.y(z.gesamt) }));
   const ich = (z) => String(z.id) === String(meineId);
 
-  // Die Gerade von 0 bis zum Manager mit den meisten Punkten. Was über den
-  // Rahmen hinausliefe, schneidet der clipPath ab — ein Festklemmen der
-  // Enden würde ihre Steigung verfälschen.
+  // Die Gerade über die ganze Breite des Rahmens. Was oben oder unten
+  // hinausliefe, schneidet der clipPath ab — ein Festklemmen der Enden würde
+  // ihre Steigung verfälschen.
   const linie = trend
-    ? (() => {
-        const bis = Math.max(...sichtbar.map((z) => z.punkte));
-        return { x1: s.x(0), y1: s.y(trend.a), x2: s.x(bis), y2: s.y(trend.a + trend.b * bis) };
-      })()
+    ? { x1: s.x(s.xMin), y1: s.y(trend.a + trend.b * s.xMin),
+        x2: s.x(s.xMax), y2: s.y(trend.a + trend.b * s.xMax) }
     : null;
 
   const marken = B.namen
