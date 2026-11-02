@@ -25,7 +25,7 @@ const MAX_FARBIG = FARBEN.length;
 // Dieselben zwei Geometrien wie im Verlauf; rechts braucht es hier keinen
 // Platz für Namen am Linienende, die Namen stehen an den Punkten.
 const BREIT = { breite: 860, hoehe: 380, links: 62, rechts: 24, oben: 14, unten: 40, schrift: 11, namen: true };
-const SCHMAL = { breite: 420, hoehe: 380, links: 58, rechts: 12, oben: 12, unten: 38, schrift: 12, namen: false };
+const SCHMAL = { breite: 420, hoehe: 460, links: 58, rechts: 12, oben: 12, unten: 38, schrift: 12, namen: false };
 
 function useSchmal() {
   const [schmal, setSchmal] = useState(false);
@@ -120,19 +120,58 @@ function marke(id, name, sx, sy, B, ich = false) {
   return { id, name, ich, x: links ? sx - 9 : sx + 9, y: sy + 4, anker: links ? "end" : "start" };
 }
 
-// Namen an den Punkten dürfen sich nicht überdecken: wer zu dicht über
-// einem anderen steht, rückt nach unten.
-function entzerre(marken, abstand = 14) {
-  const sortiert = [...marken].sort((a, b) => a.y - b.y);
-  for (let i = 1; i < sortiert.length; i++) {
-    for (let j = 0; j < i; j++) {
-      const a = sortiert[j];
-      const b = sortiert[i];
-      const nebeneinander = Math.abs(a.x - b.x) < 90;
-      if (nebeneinander && b.y - a.y < abstand) b.y = a.y + abstand;
+// Jeder Punkt bekommt seinen Namen — die Grafik soll auch als Bildschirmfoto
+// verständlich sein, ohne Tooltip. Gesetzt wird der Reihe nach (der eigene
+// zuerst): je Punkt die erste Stelle aus einer festen Liste, an der der Name
+// weder einen anderen Namen noch einen fremden Punkt verdeckt und im Rahmen
+// bleibt. Passt keine, gewinnt die mit der kleinsten Überdeckung. Steht ein
+// Name weiter weg, führt eine feine Linie zu seinem Punkt.
+const STELLEN = [
+  [9, 4, "start"], [-9, 4, "end"], [0, -10, "middle"], [0, 18, "middle"],
+  [7, -7, "start"], [-7, -7, "end"], [7, 15, "start"], [-7, 15, "end"],
+  [12, -20, "start"], [-12, -20, "end"], [12, 28, "start"], [-12, 28, "end"],
+  [0, -26, "middle"], [0, 34, "middle"],
+  [16, -34, "start"], [-16, -34, "end"], [16, 42, "start"], [-16, 42, "end"],
+];
+
+function platziere(punkte, B, istIch) {
+  const hoehe = B.schrift * 1.15;
+  const breiteVon = (p) => p.name.length * B.schrift * (istIch(p) ? 0.64 : 0.58);
+  const kasten = (x, y, b, anker) => {
+    const x0 = anker === "start" ? x : anker === "end" ? x - b : x - b / 2;
+    return { x0, x1: x0 + b, y0: y - hoehe * 0.8, y1: y + hoehe * 0.25 };
+  };
+  const ueber = (a, c) =>
+    Math.max(0, Math.min(a.x1, c.x1) - Math.max(a.x0, c.x0)) *
+    Math.max(0, Math.min(a.y1, c.y1) - Math.max(a.y0, c.y0));
+  const rahmen = { x0: 2, x1: B.breite - 2, y0: 0, y1: B.hoehe - B.unten + 2 };
+  const draussen = (k) =>
+    Math.max(0, rahmen.x0 - k.x0) + Math.max(0, k.x1 - rahmen.x1) +
+    Math.max(0, rahmen.y0 - k.y0) + Math.max(0, k.y1 - rahmen.y1);
+  const punktKasten = (p) => ({ x0: p.sx - 7, x1: p.sx + 7, y0: p.sy - 7, y1: p.sy + 7 });
+
+  const belegt = [];
+  const raus = [];
+  const reihe = [...punkte].sort((a, b) => (istIch(b) - istIch(a)) || a.sy - b.sy);
+  for (const p of reihe) {
+    const b = breiteVon(p);
+    const hindernisse = [...belegt, ...punkte.filter((q) => q !== p).map(punktKasten)];
+    let best = null;
+    for (const [dx, dy, anker] of STELLEN) {
+      const x = p.sx + dx;
+      const y = p.sy + dy;
+      const k = kasten(x, y, b, anker);
+      const kosten = draussen(k) * 1000 + hindernisse.reduce((sum, h) => sum + ueber(k, h), 0);
+      if (!best || kosten < best.kosten) best = { x, y, anker, k, kosten, weit: Math.abs(dy) > 20 };
+      if (kosten === 0) break;
     }
+    belegt.push(best.k);
+    raus.push({
+      id: p.id, name: p.name, ich: istIch(p), x: best.x, y: best.y, anker: best.anker,
+      fuehrung: best.weit ? { x1: p.sx, y1: p.sy, x2: best.x, y2: best.y - hoehe * 0.3 } : null,
+    });
   }
-  return sortiert;
+  return raus;
 }
 
 export default function Ansicht({ zeilen, trend, pfade, meineId, manager }) {
@@ -187,9 +226,7 @@ function Wolke({ zeilen, trend, meineId, B, schmal }) {
         x2: s.x(s.xMax), y2: s.y(trend.a + trend.b * s.xMax) }
     : null;
 
-  const marken = B.namen
-    ? entzerre(punkte.map((p) => marke(p.id, p.name, p.sx, p.sy, B, ich(p))))
-    : punkte.filter(ich).map((p) => marke(p.id, p.name, p.sx, p.sy, B, true));
+  const marken = platziere(punkte, B, ich);
 
   return (
     <div className="kb-diagramm">
@@ -213,9 +250,12 @@ function Wolke({ zeilen, trend, meineId, B, schmal }) {
             className={`kb-wolkenpunkt${ich(p) ? " kb-wolkenpunkt--ich" : ""}${bei?.id === p.id ? " kb-wolkenpunkt--bei" : ""}`}
           />
         ))}
+        {marken.map((m) => m.fuehrung && (
+          <line key={`f${m.id}`} {...m.fuehrung} className="kb-fuehrung" />
+        ))}
         {marken.map((m) => (
           <text key={m.id} x={m.x} y={m.y} textAnchor={m.anker}
-                className={`kb-linienname${m.ich ? " kb-linienname--ich" : ""}`}>
+                className={`kb-linienname kb-wolkenname${m.ich ? " kb-linienname--ich" : ""}`}>
             {m.name}
           </text>
         ))}

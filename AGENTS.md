@@ -2264,6 +2264,13 @@ wird nicht als 0 gelesen (sähe aus wie ein leerer Kader). Die Gerade wird
 per `clipPath` an den Rahmen geschnitten, nicht an den Enden festgeklemmt —
 das verfälschte ihre Steigung.
 
+**Jeder Punkt trägt seinen Namen, auch auf dem Handy** — die Grafik wird als
+Bildschirmfoto herumgeschickt und muss ohne Tooltip lesbar sein. `platziere()`
+setzt die Namen der Reihe nach an die erste freie Stelle aus einer festen
+Liste (rechts, links, oben, unten, weiter weg mit Führungslinie); ein Rand in
+Hintergrundfarbe hält sie über der Geraden lesbar. Die Punkteachse beginnt
+bei den Daten, nicht bei 0.
+
 `lib/wertpunkte.js` ist reine Rechnung, 18 Fälle in `pruefstand/wertpunkte.mjs`;
 `zugang.mjs` prüft, dass ein verborgener Manager weder Gesamtwert noch Weg
 ausgeliefert bekommt, samt Gegenprobe.
